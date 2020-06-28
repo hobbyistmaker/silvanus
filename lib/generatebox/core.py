@@ -44,11 +44,18 @@ class Repository:
     thickness_groups = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(list))))
     enabled = { }
 
+    orientation = 0
+    root = None
+    preview = False
+
     def clear(self):
         self.axes.clear()
         self.names.clear()
         self.thickness_groups.clear()
         self.enabled.clear()
+        self.preview = False
+        self.root = None
+        self.orientation = 0
 
 
 class Process:
@@ -94,24 +101,33 @@ class Core:
 
     def __init__(self, config):
         self._config = config
+
         self._repository = Repository()
         self._processes = ProcessManager()
 
-    def execute(self, *args, **kwargs):
+    def execute(self, *, orientation, component):
+        self._repository.orientation = orientation
+        self._repository.root = component
+
         self._processes.create_process(DefinePanels)
         self._processes.create_process(RenderPanels)
 
         self._processes._config = self._config
         self._processes._repository = self._repository
-        self._processes.process(*args, **kwargs)
+        self._processes.process()
         self.clear()
 
-    def preview(self, *args, **kwargs):
+    def preview(self, *, orientation, component):
+        self._repository.orientation = orientation
+        self._repository.root = component
+        self._repository.preview = True
+
         self._processes.create_process(DefinePanels)
+        self._processes.create_process(RenderPanels)
 
         self._processes._config = self._config
         self._processes._repository = self._repository
-        self._processes.process(*args, **kwargs)
+        self._processes.process()
         self.clear()
 
     def clear(self):
@@ -128,7 +144,8 @@ class DefinePanels(ProcessManager):
 
 class ConfigurePanels(ProcessManager):
 
-    def process(self, orientation, *_):
+    def process(self):
+        orientation = self._repository.orientation
         panel_instances = { }
 
         self._configure_basic_panels(orientation)
@@ -139,7 +156,7 @@ class ConfigurePanels(ProcessManager):
     def _configure_basic_panels(self, orientation):
         for panel, data in self._config.panels.items():
             axis = data[ConfigItem.Axis]
-            name = data[ConfigItem.Name]
+            name = data[ConfigItem.Name].value
 
             enabled = self._config.controls[data[ConfigItem.Enabled]].value
 
@@ -183,19 +200,18 @@ class ConfigurePanels(ProcessManager):
 
     def _organize_profile_groups(self, panel_instances):
         for panel_id, panel in self._repository.panels.items():
-            self._repository.names[panel.enabled][panel.axis.value][panel.profile].append(panel.name.name)
+            self._repository.names[panel.enabled][panel.axis.value][panel.profile].append(panel.name)
             self._repository.axes[panel.enabled][panel.axis.value][panel.profile] = {
                 ConfigItem.ProfileTransform: panel.transform,
                 ConfigItem.PlaneSelector:    panel.plane_selector,
                 ConfigItem.Profile:          panel.profile
             }
-            panel_instances[panel.name.name] = {
+            panel_instances[panel.name] = {
                 ConfigItem.Panel:     panel,
                 ConfigItem.PanelData: self._config.panels[panel_id]
             }
 
     def _configure_panels_and_faces(self, panel_instances):
-
         for name, panel_info in panel_instances.items():
             panel = panel_info[ConfigItem.Panel]
             data = panel_info[ConfigItem.PanelData]
@@ -369,7 +385,7 @@ class ConfigurePanels(ProcessManager):
 
 class DefineEnabledPanels(Process):
 
-    def process(self, *_, **__):
+    def process(self):
         enabled_panels = self._repository.thickness_groups[True]
 
         self._repository.enabled = {
@@ -421,7 +437,9 @@ class DefineEnabledPanels(Process):
 
 class RenderPanels(ProcessManager):
 
-    def process(self, orientation, root):
+    def process(self):
+        root = self._repository.root
+
         for axis_key, axis in self._repository.enabled.items():
             for profile in axis.items():
                 self._render_profiles(root, profile)
@@ -455,17 +473,33 @@ class RenderPanels(ProcessManager):
 
     def _render_single_extrusion(self, root, profile, panel):
         extrusion = profile.extrude(panel.offset, panel.thickness, panel.direction)
-        extrusion.name = f'{panel.name.name} Panel Extrusion'
+        extrusion.name = f'{panel.name} Panel Extrusion'
         body = extrusion.bodies.item(0)
-        body.name = f'{panel.name.name} Panel Body'
+        body.name = f'{panel.name} Panel Body'
 
+        if not self._repository.preview:
+            self._render_finger_cuts(root, extrusion, panel)
+
+        return extrusion
+
+    @staticmethod
+    def _render_copy_extrusion(_, reference, panel):
+        with FaceProfile(reference, name='') as profile:
+            extrusion = profile.extrude(panel.offset, panel.thickness, panel.direction)
+            extrusion.name = f'{panel.name} Panel Extrusion'
+            body = extrusion.bodies.item(0)
+            body.name = f'{panel.name} Panel Body'
+
+        return reference
+
+    def _render_finger_cuts(self, root, extrusion, panel):
         cuts_to_make = self._render_finger_profiles(panel, extrusion)
         for axes, cut_config in cuts_to_make.items():
             cuts = []
 
             for sketch, face, finger in cut_config[ConfigItem.FingerCuts]:
                 cuts.append(
-                        self._render_finger_cut(sketch, face, finger)
+                        self._render_finger_cut(sketch, face)
                 )
 
             axes = cut_config[ConfigItem.FingerAxis]
@@ -476,21 +510,8 @@ class RenderPanels(ProcessManager):
             replicator = FingerCutsPattern(root, orientation)
             replicator.copy(axes=axes, cuts=cuts, distance=distance, count=count)
 
-        return extrusion
-
-    @staticmethod
-    def _render_copy_extrusion(_, reference, panel):
-        with FaceProfile(reference, name='') as profile:
-            extrusion = profile.extrude(panel.offset, panel.thickness, panel.direction)
-            extrusion.name = f'{panel.name.name} Panel Extrusion'
-            body = extrusion.bodies.item(0)
-            body.name = f'{panel.name.name} Panel Body'
-
-        return reference
-
     def _render_finger_profiles(self, panel, extrusion):
         face_selectors = panel.face_selectors
-
         finger_config = self._configure_fingers(panel)
 
         cuts_config = defaultdict(lambda: {
@@ -500,48 +521,53 @@ class RenderPanels(ProcessManager):
             ConfigItem.FingerCuts:            []
         })
 
-        for axis, axes_data in finger_config.items():
-            for profile, profile_data in axes_data.items():
-                for axes, finger_type_data in profile_data.items():
-                    for finger_type, finger_type_config in finger_type_data.items():
-                        faces_data = finger_type_config[ConfigItem.Faces]
-                        finger_data = finger_type_config[ConfigItem.Fingers]
+        finger_data = (
+            (axis, profile, axes, finger_type, finger_type_config)
+            for axis, axes_data in finger_config.items()
+            for profile, profile_data in axes_data.items()
+            for axes, finger_type_data in profile_data.items()
+            for finger_type, finger_type_config in finger_type_data.items()
+        )
 
-                        offset = finger_data[ConfigItem.FingerOffset]
-                        finger_width = finger_data[ConfigItem.FingerWidth]
+        for axis, profile, axes, finger_type, finger_type_config in finger_data:
+            faces_data = finger_type_config[ConfigItem.Faces]
+            finger_data = finger_type_config[ConfigItem.Fingers]
 
-                        distance = finger_data[ConfigItem.FingerPatternDistance]
-                        count = finger_data[ConfigItem.FingerCount]
+            offset = finger_data[ConfigItem.FingerOffset]
+            finger_width = finger_data[ConfigItem.FingerWidth]
 
-                        sorted_faces = sorted(faces_data, key=lambda f: f[ConfigItem.Offset].value)
-                        names = '-'.join([item[ConfigItem.Face].name for item in sorted_faces])
+            distance = finger_data[ConfigItem.FingerPatternDistance]
+            count = finger_data[ConfigItem.FingerCount]
 
-                        first_face = sorted_faces[0][ConfigItem.Face]
+            sorted_faces = sorted(faces_data, key=lambda f: f[ConfigItem.Offset].value)
+            names = '-'.join([item[ConfigItem.Face].name for item in sorted_faces])
 
-                        with PanelFingerSketch(
-                                extrusion=extrusion,
-                                selector=face_selectors[first_face],
-                                name=f'{panel.name.name} {names}',
-                                start=offset,
-                                end=(finger_width, panel.thickness.value),
-                                transform=panel.transform,
-                                orientation=panel.orientation
-                        ) as sketch:
-                            for face in sorted_faces:
-                                cuts_config[axes].update({
-                                    ConfigItem.FingerAxis:            axes,
-                                    ConfigItem.FingerPatternDistance: distance,
-                                    ConfigItem.FingerCount:           count,
-                                    ConfigItem.Orientation:           panel.orientation
-                                })
-                                cuts_config[axes][ConfigItem.FingerCuts].append(
-                                        (sketch, face, finger_data)
-                                )
+            first_face = sorted_faces[0][ConfigItem.Face]
+
+            with PanelFingerSketch(
+                    extrusion=extrusion,
+                    selector=face_selectors[first_face],
+                    name=f'{panel.name} {names}',
+                    start=offset,
+                    end=(finger_width, panel.thickness.value),
+                    transform=panel.transform,
+                    orientation=panel.orientation
+            ) as sketch:
+                for face in sorted_faces:
+                    cuts_config[axes].update({
+                        ConfigItem.FingerAxis: axes,
+                        ConfigItem.FingerPatternDistance: distance,
+                        ConfigItem.FingerCount: count,
+                        ConfigItem.Orientation: panel.orientation
+                    })
+                    cuts_config[axes][ConfigItem.FingerCuts].append(
+                        (sketch, face, finger_data)
+                    )
 
         return cuts_config
 
     @staticmethod
-    def _render_finger_cut(sketch, face, finger):
+    def _render_finger_cut(sketch, face):
         real_offset = face[ConfigItem.Offset].value - face[ConfigItem.FingerDepth].value
         feature = sketch.cut(real_offset, face[ConfigItem.FingerDepth].value)
         return feature
@@ -554,23 +580,23 @@ class RenderPanels(ProcessManager):
                     ConfigItem.Faces:   []
                 }))))
 
-        finger_info = [
+        finger_info = (
             (axis_id, profile, axes, finger_type, finger_data)
             for axis_id, axis_data in panel.faces.items()
             for profile, profile_data in axis_data.items()
             for axes, axes_data in profile_data.items()
             for finger_type, finger_data in axes_data.items()
-        ]
+        )
 
-        thickness_values = [
-            (axis, profile, axes, finger_type, fingers)
+        thickness_values = (
+            (axis, profile, axes, finger_type, finger)
             for axis, profile, axes, finger_type, finger_data in finger_info
             for fingers in finger_data.values()
-        ]
+            for finger in fingers
+        )
 
-        for axis, profile, axes, finger_type, fingers in thickness_values:
-            for finger in fingers:
-                depth = finger[ConfigItem.Face][ConfigItem.FingerDepth].expression
-                finger_config[axis][profile][axes][finger_type][ConfigItem.Fingers] = finger[ConfigItem.Fingers]
-                finger_config[axis][profile][axes][finger_type][ConfigItem.Faces].append(finger[ConfigItem.Face])
+        for axis, profile, axes, finger_type, finger in thickness_values:
+            finger_config[axis][profile][axes][finger_type][ConfigItem.Fingers] = finger[ConfigItem.Fingers]
+            finger_config[axis][profile][axes][finger_type][ConfigItem.Faces].append(finger[ConfigItem.Face])
+
         return finger_config

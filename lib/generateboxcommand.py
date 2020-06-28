@@ -331,14 +331,14 @@ class GenerateBoxCommand(Fusion360Command):
         preferences = self._app.preferences.generalPreferences
         orientation = preferences.defaultModelingOrientation
 
-        self._core.execute(orientation, root)
+        self._core.execute(orientation=orientation, component=root)
 
     def on_preview(self, inputs):
         root = self._app.activeProduct.rootComponent
         preferences = self._app.preferences.generalPreferences
         orientation = preferences.defaultModelingOrientation
 
-        self._core.preview(orientation, root)
+        self._core.preview(orientation=orientation, component=root)
 
     def on_validate(self, inputs):
         logger.debug('Command on_validate event fired.')

@@ -288,8 +288,8 @@ class Override:
 
 
 @dataclass(eq=True, frozen=True)
-class PanelGroup:
-    name: str
+class PanelName:
+    value: str
 
 
 @dataclass
@@ -341,7 +341,7 @@ class PanelProfile:
 @dataclass
 class Panel:
     axis: Axis
-    name: PanelGroup
+    name: str
     orientation: int
     enabled: Enabled
     finger_width: FingerWidth

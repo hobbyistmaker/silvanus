@@ -280,7 +280,7 @@ class PanelProfileSketch(Sketch):
 
         add_geometric_constraints(sketch)
         add_origin_constraint(sketch)
-        add_default_dimensions(sketch)
+        add_profile_dimensions(sketch)
 
         return lines
 
@@ -426,16 +426,21 @@ def add_face_origin_constraint(sketch, lines, point):
             break
 
 
-def add_default_dimensions(sketch):
+def add_profile_dimensions(sketch):
     """ Add dimension constraints to the first horizontal line of the given sketch.
     """
-    add_line_default_dimensions(sketch, sketch.lines)
+    for line in sketch.lines[:2]:
+        add_distance_dimension(sketch, line)
 
 
 def add_line_default_dimensions(sketch, lines):
-    """ Add a dimension constraint to the first horizontal line of the specified lines on the sketch.
+    """ Add a distance dimension constraint to the first horizontal line of the specified lines on the sketch.
     """
     line = list(filter(lambda l: l.startSketchPoint.geometry.y == l.endSketchPoint.geometry.y, lines[:2]))[0]
+    add_distance_dimension(sketch, line)
+
+
+def add_distance_dimension(sketch, line):
     text_point = line.startSketchPoint.geometry
     text_point.x -= 1
     text_point.y -= 1
