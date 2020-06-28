@@ -1,9 +1,24 @@
+import logging
+
 import adsk.core
 
 from .uicontext import uicontext
 
-
 handlers = []
+
+logger = logging.getLogger('silvanus').getChild(__name__)
+
+
+class CommandDestroyHandler(adsk.core.CommandEventHandler):
+
+    def __init__(self, command):
+        super().__init__()
+        self.app = command.app
+        self.command = command
+
+    def notify(self, args):
+        with uicontext(self.app):
+            self.command.on_destroy(args)
 
 
 class CommandExecuteHandler(adsk.core.CommandEventHandler):
@@ -30,10 +45,9 @@ class InputChangedHandler(adsk.core.InputChangedEventHandler):
 
     def notify(self, args):
         with uicontext(self.app):
-            command = args.firingEvent.sender
-            inputs = command.commandInputs
+            cmd_input = args.input
 
-            self.command.on_change(inputs)
+            self.command.on_change(cmd_input)
 
 
 class ExecutePreviewHandler(adsk.core.CommandEventHandler):
@@ -49,13 +63,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
             command = args.firingEvent.sender
             inputs = command.commandInputs
 
-            preview = inputs.itemById(self.preview_id)
-
-            if preview.value:
-                args.isValidResult = True
-                self.command.on_preview(inputs)
-            else:
-                args.isValidResult = False
+            self.command.on_preview(inputs)
 
 
 class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
@@ -70,7 +78,7 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
             command = args.firingEvent.sender
             inputs = command.commandInputs
 
-            self.command.on_validate(inputs)
+            args.areInputsValid = self.command.on_validate(inputs)
 
 
 class CreatedEventHandler(adsk.core.CommandCreatedEventHandler):
@@ -86,7 +94,6 @@ class CreatedEventHandler(adsk.core.CommandCreatedEventHandler):
 
         with uicontext(self.app):
             command = args.command
-            inputs = command.commandInputs
 
             on_execute = CommandExecuteHandler(self.command)
             command.execute.add(on_execute)
@@ -104,4 +111,8 @@ class CreatedEventHandler(adsk.core.CommandCreatedEventHandler):
             command.validateInputs.add(on_validate)
             handlers.append(on_validate)
 
-            self.command.on_create(inputs=inputs)
+            on_destroy = CommandDestroyHandler(self.command)
+            command.destroy.add(on_destroy)
+            handlers.append(on_destroy)
+
+            self.command.on_create(command)

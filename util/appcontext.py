@@ -8,7 +8,7 @@ from contextlib import contextmanager
 # noinspection PyBroadException
 @contextmanager
 def appcontext():
-    app = adsk.core.Application.cast(adsk.core.Application.get())
+    app = adsk.core.Application.get()
     try:
         yield app
     except:

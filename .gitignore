@@ -2,3 +2,5 @@
 .vscode/
 .idea/
 tests/
+.DS_Store
+*.log

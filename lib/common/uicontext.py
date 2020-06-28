@@ -1,13 +1,18 @@
+import logging
 import traceback
 
 from contextlib import contextmanager
 
+
 # noinspection SpellCheckingInspection
 # noinspection PyBroadException
 @contextmanager
-def uicontext(app):
+def uicontext(app, level=''):
+    logger = logging.getLogger('silvanus').getChild(level)
+
     try:
         yield
     except:
         trace = traceback.format_exc()
-        app.ui.messageBox(f'{trace}')
+        logger.error(f'{level}: {trace}')
+        app.userInterface.messageBox(f'{trace}')
