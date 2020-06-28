@@ -1,0 +1,120 @@
+{
+        "input_defaults": {
+                "imperial": {
+                        "length"        : 10,
+                        "width"         : 5,
+                        "height"        : 2,
+                        "thickness"     : 0.0625,
+                        "finger_width"  : 1
+                },
+                "metric"  : {
+                        "length"        : 245,
+                        "width"         : 142.5,
+                        "height"        : 40,
+                        "thickness"     : 3.2,
+                        "finger_width"  : 9.6
+                }
+        },
+        "inputs": {
+                "dimensions_group": {
+                        "id": "basicBoxDimensionGroupId",
+                        "name": "Dimensions",
+                        "parameter": ""
+                },
+                "length_command": {
+                        "id": "basicLengthCommandInput",
+                        "name": "Length",
+                        "parameter": "length"
+                },
+                "width_command": {
+                        "id": "basicWidthCommandInput",
+                        "name": "Width",
+                        "parameter": "width"
+                },
+                "height_command": {
+                        "id": "basicHeightCommandInput",
+                        "name": "Height",
+                        "parameter": "height"
+                },
+                "thickness_command": {
+                        "id": "basicThicknessCommandInput",
+                        "name": "Thickness",
+                        "parameter": "thickness"
+                },
+                "finger_width_command": {
+                        "id": "basicFingerWidthCommandInput",
+                        "name": "Finger Width",
+                        "parameter": "dfingerw"
+                },
+                "kerf_command": {
+                        "id": "basicKerfCommandInput",
+                        "name": "Kerf Adjustment",
+                        "parameter": "kerf"
+                },
+                "back_panel_enabled": {
+                        "id": "backPanelEnabledId"
+                },
+                "back_panel_thickness": {
+                        "id": "backPanelThicknessId",
+                        "name": "Back Panel Thickness",
+                        "parameter": "back_thickness",
+                        "default": "thickness"
+                },
+                "front_panel_enabled": {
+                        "id": "frontPanelEnabledId"
+                },
+                "front_panel_thickness": {
+                        "id": "frontPanelThicknessId",
+                        "name": "Front Panel Thickness",
+                        "parameter": "front_thickness",
+                        "default": "thickness"
+                },
+                "left_panel_enabled": {
+                        "id": "leftPanelEnabledId"
+                },
+                "left_panel_thickness": {
+                        "id": "leftPanelThicknessId",
+                        "name": "Left Panel Thickness",
+                        "parameter": "left_thickness",
+                        "default": "thickness"
+                },
+                "right_panel_enabled": {
+                        "id": "rightPanelEnabledId"
+                },
+                "right_panel_thickness": {
+                        "id": "rightPanelThicknessId",
+                        "name": "Right Panel Thickness",
+                        "parameter": "right_thickness",
+                        "default": "thickness"
+                },
+                "top_panel_enabled": {
+                        "id": "topPanelEnabledId"
+                },
+                "top_panel_thickness": {
+                        "id": "topPanelThicknessId",
+                        "name": "Top Panel Thickness",
+                        "parameter": "top_thickness",
+                        "default": "thickness"
+                },
+                "bottom_panel_enabled": {
+                        "id": "bottomPanelEnabledId"
+                },
+                "bottom_panel_thickness": {
+                        "id": "bottomPanelThicknessId",
+                        "name": "Bottom Panel Thickness",
+                        "parameter": "bottom_thickness",
+                        "default": "thickness"
+                }
+        },
+        "command_ids": {
+                "preview_enabled_id": "previewEnabledId"
+        },
+        "command_names": {
+                "group_command_title": "Dimensions",
+                "length_command_title": "Length",
+                "width_command_title": "Width",
+                "height_command_title": "Height",
+                "thickness_command_title": "Thickness",
+                "finger_width_command_title": "Finger Width"
+        }
+}
