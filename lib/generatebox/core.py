@@ -1,16 +1,21 @@
 import logging
 import math
 from collections import defaultdict
+from pprint import pformat
 
-from .entities import ActualFingerCount
-from .entities import ActualFingerWidth
+import adsk.core
+import adsk.fusion
+
 from .entities import AxisDirection
 from .entities import AxisFlag
 from .entities import ConfigItem
 from .entities import DefaultFingers
 from .entities import EstimatedFingers
+from .entities import ActualFingerWidth
 from .entities import FingerOffset
+from .entities import ActualFingerCount
 from .entities import FingerPatternDistance
+from .entities import FingerDepth
 from .entities import FingerType
 from .entities import FingerWidth
 from .entities import Height
@@ -144,7 +149,6 @@ class ConfigurePanels(ProcessManager):
             length = self._dimension(data, ConfigItem.Length, Length)
             override = Override(self._config.controls[data[ConfigItem.Override]].value)
             thickness = self._thickness(data, override, ConfigItem.Thickness)
-            # offset = self._offset(data, ConfigItem.Offset, Offset, orientation)
             offset = Offset(*self._control_parameter(data[ConfigItem.Offset][orientation]))
 
             profile = self._profile(data, ConfigItem.Profile, kerf)
@@ -205,7 +209,7 @@ class ConfigurePanels(ProcessManager):
                                 lambda: defaultdict(
                                         lambda: defaultdict(
                                                 lambda: defaultdict(list)
-                                        )))))
+        )))))
 
         finger_selector = {
             FingerType.Normal:  self._configure_normal_fingers,
@@ -257,28 +261,28 @@ class ConfigurePanels(ProcessManager):
     @staticmethod
     def _configure_normal_fingers(length, finger_width):
         default_fingers = DefaultFingers(
-                math.ceil(length.value / finger_width.value),
-                f'ceil({length.expression} / {finger_width.expression})'
+            math.ceil(length.value / finger_width.value),
+            f'ceil({length.expression} / {finger_width.expression})'
         )
         estimated_fingers = EstimatedFingers(
-                max(3, (math.floor(default_fingers.value / 2) * 2) - 1),
-                f'max(3; (floor({default_fingers.expression} / 2) * 2) - 1)'
+            max(3, (math.floor(default_fingers.value / 2) * 2) - 1),
+            f'max(3; (floor({default_fingers.expression} / 2) * 2) - 1)'
         )
         actual_finger_width = ActualFingerWidth(
-                length.value / estimated_fingers.value,
-                f'{length.expression} / {estimated_fingers.expression}'
+            length.value / estimated_fingers.value,
+            f'{length.expression} / {estimated_fingers.expression}'
         )
         finger_offset = FingerOffset(
-                actual_finger_width.value,
-                f'{actual_finger_width.expression}'
+            actual_finger_width.value,
+            f'{actual_finger_width.expression}'
         )
         actual_number_fingers = ActualFingerCount(
-                math.floor(estimated_fingers.value / 2),
-                f'floor({estimated_fingers.expression} / 2)'
+            math.floor(estimated_fingers.value / 2),
+            f'floor({estimated_fingers.expression} / 2)'
         )
         distance = FingerPatternDistance(
-                (estimated_fingers.value - 3) * actual_finger_width.value,
-                f'({estimated_fingers.expression} - 3) * {actual_finger_width.expression}'
+            (estimated_fingers.value - 3) * actual_finger_width.value,
+            f'({estimated_fingers.expression} - 3) * {actual_finger_width.expression}'
         )
 
         return {
@@ -367,6 +371,7 @@ class DefineEnabledPanels(Process):
 
     def process(self, *_, **__):
         enabled_panels = self._repository.thickness_groups[True]
+
         self._repository.enabled = {
             axis: {
                 profile_key: {

@@ -558,7 +558,6 @@ def initialize():
             for axis in axes:
                 _PLANE_TO_DIRECTION_MAP[axis][orientation] = direction
 
-
     _PROFILE_TRANSFORM = {
         AxisFlag.Height: {
             yup: lambda x, y, z: (x, -y, z),
@@ -586,25 +585,36 @@ def initialize():
             }
 
     # Setup the main configuration map used by the plugin
-    _CONFIG_MAP = {ConfigItem.Inputs: {
-        key: {
-            InputProperty.Id: (_INPUT_ID_MAP[key], _INPUT_LABELS[key]),
-            InputProperty.Enabled: True
-        } for key in ID_LABELS
-    }, ConfigItem.Tooltips: {}, ConfigItem.Parameters: {}, ConfigItem.DimensionsGroup: [
-        Inputs.Length, Inputs.Width, Inputs.Height, Inputs.Thickness, Inputs.FingerWidth, Inputs.Kerf
-    ], ConfigItem.Axis: {
-        (Inputs.Length, AxisFlag.Length),
-        (Inputs.Width, AxisFlag.Width),
-        (Inputs.Height, AxisFlag.Height)
-    }, ConfigItem.Panels: _PANEL_CONFIGS, ConfigItem.Planes: _PLANE_CONFIG, ConfigItem.InputGroups: {
-        PanelBody.Top: (Inputs.TopEnabled, Inputs.TopOverride, Inputs.TopThickness),
-        PanelBody.Bottom: (Inputs.BottomEnabled, Inputs.BottomOverride, Inputs.BottomThickness),
-        PanelBody.Left: (Inputs.LeftEnabled, Inputs.LeftOverride, Inputs.LeftThickness),
-        PanelBody.Right: (Inputs.RightEnabled, Inputs.RightOverride, Inputs.RightThickness),
-        PanelBody.Front: (Inputs.FrontEnabled, Inputs.FrontOverride, Inputs.FrontThickness),
-        PanelBody.Back: (Inputs.BackEnabled, Inputs.BackOverride, Inputs.BackThickness)
-    }}
+    _CONFIG_MAP = {
+        ConfigItem.Inputs:          {
+            key: {
+                InputProperty.Id:      (_INPUT_ID_MAP[key], _INPUT_LABELS[key]),
+                InputProperty.Enabled: True
+            } for key in ID_LABELS
+        },
+        ConfigItem.Tooltips:        { },
+        ConfigItem.Parameters:      { },
+        ConfigItem.DimensionsGroup: [
+            Inputs.Length, Inputs.Width, Inputs.Height, Inputs.Thickness, Inputs.FingerWidth, Inputs.Kerf
+        ],
+        ConfigItem.Axis:            {
+            (Inputs.Length, AxisFlag.Length),
+            (Inputs.Width, AxisFlag.Width),
+            (Inputs.Height, AxisFlag.Height)
+        },
+        ConfigItem.Panels:          _PANEL_CONFIGS,
+        ConfigItem.Planes:          _PLANE_CONFIG,
+        ConfigItem.InputGroups:     {
+            PanelBody.Top:    (Inputs.TopEnabled, Inputs.TopOverride, Inputs.TopThickness),
+            PanelBody.Bottom: (Inputs.BottomEnabled, Inputs.BottomOverride, Inputs.BottomThickness),
+            PanelBody.Left:   (Inputs.LeftEnabled, Inputs.LeftOverride, Inputs.LeftThickness),
+            PanelBody.Right:  (Inputs.RightEnabled, Inputs.RightOverride, Inputs.RightThickness),
+            PanelBody.Front:  (Inputs.FrontEnabled, Inputs.FrontOverride, Inputs.FrontThickness),
+            PanelBody.Back:   (Inputs.BackEnabled, Inputs.BackOverride, Inputs.BackThickness)
+        }
+    }
+
+    logger.debug(f'Config Map: {_CONFIG_MAP}')
 
     for key in list(_INPUT_DEFAULTS.keys() & ID_LABELS):
         for input_ in _INPUT_DEFAULTS[key]:

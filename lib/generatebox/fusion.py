@@ -63,8 +63,10 @@ class Sketch:
         # connected to a line on the sketch.
         self._default_points = [
             point
-            for points in [[line.startSketchPoint, line.endSketchPoint]
-            for line in self.lines]
+            for points in [
+                [line.startSketchPoint, line.endSketchPoint]
+                for line in self.lines
+            ]
             for point in points
         ]
 
@@ -152,7 +154,8 @@ class Sketch:
         start_x, start_y, start_z = start.geometry.x, start.geometry.y, start.geometry.z
         return adsk.core.Point3D.create(start_x + length * factor_x, start_y + width, start_z + height)
 
-    def point_to_tuple(self, point):
+    @staticmethod
+    def point_to_tuple(point):
         """ Return a tuple of (x, y, z) coordinates from the given point.
         """
         return point.x, point.y, point.z
@@ -199,7 +202,7 @@ class FaceProfile:
         )
 
 
-def extrude_simple(sketch, direction, distance):
+def extrude_simple(sketch, distance):
     distance = adsk.core.ValueInput.createByReal(distance)
     extrusion = sketch.features.addSimple(
             sketch.profile, distance, adsk.fusion.FeatureOperations.NewBodyFeatureOperation
@@ -207,30 +210,34 @@ def extrude_simple(sketch, direction, distance):
     return extrusion
 
 
-def extrude_offset(sketch, offset, direction, multiplier, distance):
+def create_extrusion(sketch, offset, direction, multiplier, distance, operation):
     distance = adsk.core.ValueInput.createByReal(distance)
     offset = adsk.core.ValueInput.createByReal(offset * multiplier)
 
     extent = adsk.fusion.DistanceExtentDefinition.create(distance)
     start = adsk.fusion.FromEntityStartDefinition.create(sketch.plane, offset)
 
-    input_ = sketch.features.createInput(sketch.profile, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
+    input_ = sketch.features.createInput(sketch.profile, operation)
     input_.setOneSideExtent(extent, direction)
     input_.startExtent = start
+    return input_
+
+
+def extrude_offset(sketch, offset, direction, multiplier, distance):
+    input_ = create_extrusion(
+            sketch, offset, direction, multiplier, distance, adsk.fusion.FeatureOperations.NewBodyFeatureOperation
+    )
 
     return sketch.features.add(input_)
 
 
-def cut_offset(sketch, offset, direction, multiplier, distance, body):
-    distance = adsk.core.ValueInput.createByReal(distance)
-    offset = adsk.core.ValueInput.createByReal(offset * multiplier)
-
-    extent = adsk.fusion.DistanceExtentDefinition.create(distance)
-    start = adsk.fusion.FromEntityStartDefinition.create(sketch.plane, offset)
-
-    input_ = sketch.features.createInput(sketch.profile, adsk.fusion.FeatureOperations.CutFeatureOperation)
-    input_.setOneSideExtent(extent, direction)
-    input_.startExtent = start
+def cut_offset(sketch, offset, direction, distance, body):
+    """ Cut an extrusion using the first profile from the given sketch, using the specified offset and
+        thickness/distance within the body.
+    """
+    input_ = create_extrusion(
+            sketch, offset, direction, -1, distance, adsk.fusion.FeatureOperations.CutFeatureOperation
+    )
     input_.participantBodies = [body]
 
     return sketch.features.add(input_)
@@ -259,12 +266,17 @@ class PanelProfileSketch(Sketch):
     def __exit__(self, *args):
         super().__exit__(*args)
 
-    @staticmethod
-    def draw_profile(sketch, line_transform, origin, end):
+    def draw_profile(self, sketch, line_transform, origin, end):
+        """ Draw a square panel profile on the given sketch, using a two point rectangle from the specified
+            origin point, to the end point; with the (x, y, z) coordinates transformed by the given function.
+        """
         origin_point = adsk.core.Point3D.create(*line_transform(*origin, 0))
         end_point = adsk.core.Point3D.create(*line_transform(*end, 0))
+        self.draw_two_point_rectangle(sketch, origin_point, end_point)
 
-        lines = sketch.lines.addTwoPointRectangle(origin_point, end_point)
+    @staticmethod
+    def draw_two_point_rectangle(sketch, origin, end):
+        lines = sketch.lines.addTwoPointRectangle(origin, end)
 
         add_geometric_constraints(sketch)
         add_origin_constraint(sketch)
@@ -277,11 +289,10 @@ class PanelFingerSketch(Sketch):
 
     def __init__(self, *, extrusion, selector, start, end, transform, orientation, name=''):
         self._extrusion = extrusion
-        face = selector(self.body)
-
-        super().__init__(face, name=f'{name} Finger Sketch', construction=True)
-
         self._selector = selector
+
+        super().__init__(self.face, name=f'{name} Finger Sketch', construction=True)
+
         self._start = start
         self._end = end
         self._name = name
@@ -289,14 +300,16 @@ class PanelFingerSketch(Sketch):
         self._orientation = orientation
 
     def __enter__(self):
-        sketch = super().__enter__()
-        lines = self.draw_finger(self._start, self._end)
+        super().__enter__()
+        self.draw_finger(self._start, self._end)
         return self
 
     def __exit__(self, *args):
         super().__exit__(*args)
 
     def draw_finger(self, offset, end):
+        """ Draw the finger profile on the configured face.
+        """
         start_point = self.offset_sketch_point(self.min_point, (offset.value, 0, 0))
         end_point = self.offset_point(start_point, (end[0].value, end[1], 0))
         lines = self.lines.addTwoPointRectangle(start_point, end_point)
@@ -308,43 +321,34 @@ class PanelFingerSketch(Sketch):
         return lines
 
     def cut(self, offset, distance):
+        """ Cut a profile into the extrusion.
+        """
         return cut_offset(
                 self,
                 offset,
                 adsk.fusion.ExtentDirections.NegativeExtentDirection,
-                -1,
                 distance,
                 self.face.body
         )
 
     @property
     def body(self):
+        """ Return the body for the current extrusion object.
+        """
         return self._extrusion.bodies.item(0)
 
     @property
     def face(self):
+        """ Return the BRepFace object for the given face. This is looked up each time it is requested.
+        """
         return self._selector(self.body)
 
     @property
-    def edges(self):
-        return [edge for edge in filter(lambda e: e in self.face.edges, self.origin_point.edges)]
-
-    @property
-    def long_edge(self):
-        return sorted(self.edges, key=lambda e: e.length, reverse=True)[0]
-
-    @property
-    def far_edge(self):
-        return [edge for edge in filter(lambda e: e not in self.face.edges, self.origin_point.edges)][0]
-
-    @property
     def origin_point(self):
+        """ Find the point on the face closest to the world origin point.
+        """
         point = sorted(self.face.vertices, key=lambda p: p.geometry.asArray())
         return point[0]
-
-    @property
-    def pattern_edges(self):
-        return self.long_edge, self.far_edge
 
 
 class FingerCutsPattern:
@@ -354,14 +358,15 @@ class FingerCutsPattern:
         self._orientation = orientation
 
     def copy(self, *, axes, cuts, distance, count):
+        """ Copy an extrusion feature along a given distance with a <count> number of instances.
+        """
         if count.value <= 1:
             return
 
-        root = self._component
         axis_edges = axes_selector[self._orientation][axes]
 
-        first_edge, second_edge = axis_edges(root)
-        patterns = root.features.rectangularPatternFeatures
+        first_edge, second_edge = axis_edges(self._component)
+        patterns = self._component.features.rectangularPatternFeatures
 
         entities = adsk.core.ObjectCollection.create()
 
@@ -382,10 +387,14 @@ class FingerCutsPattern:
 
 
 def add_geometric_constraints(sketch):
+    """ Add vertical and horizontal geometric constraints to the lines of the sketch.
+    """
     add_line_geometric_constraints(sketch, sketch.lines)
 
 
 def add_line_geometric_constraints(sketch, lines):
+    """ Add vertical and horizontal geometric constraints to the specified lines of the sketch.
+    """
     constraints = {
         True: sketch.geometricConstraints.addVertical,
         False: sketch.geometricConstraints.addHorizontal
@@ -396,14 +405,20 @@ def add_line_geometric_constraints(sketch, lines):
 
 
 def equal_points(one, two):
+    """ Check if two (x,y,z) tuples are equivalent.
+    """
     return (one.x, one.y, one.z) == (two.x, two.y, two.z)
 
 
 def add_origin_constraint(sketch):
+    """ Add a coincident constraint to the first line that starts or ends on the sketch origin point.
+    """
     add_face_origin_constraint(sketch, sketch.lines, sketch.originPoint)
 
 
 def add_face_origin_constraint(sketch, lines, point):
+    """ Add a coincident constraint to the first line that starts or ends on the specified sketch point.
+    """
     origin = point.geometry
     for line in lines:
         if equal_points(origin, line.startSketchPoint.geometry):
@@ -412,12 +427,16 @@ def add_face_origin_constraint(sketch, lines, point):
 
 
 def add_default_dimensions(sketch):
+    """ Add dimension constraints to the first horizontal line of the given sketch.
+    """
     add_line_default_dimensions(sketch, sketch.lines)
 
 
 def add_line_default_dimensions(sketch, lines):
-    for line in lines[:2]:
-        text_point = line.startSketchPoint.geometry
-        text_point.x -= 1
-        text_point.y -= 1
-        sketch.sketchDimensions.addDistanceDimension(line.startSketchPoint, line.endSketchPoint, 0, text_point)
+    """ Add a dimension constraint to the first horizontal line of the specified lines on the sketch.
+    """
+    line = list(filter(lambda l: l.startSketchPoint.geometry.y == l.endSketchPoint.geometry.y, lines[:2]))[0]
+    text_point = line.startSketchPoint.geometry
+    text_point.x -= 1
+    text_point.y -= 1
+    sketch.sketchDimensions.addDistanceDimension(line.startSketchPoint, line.endSketchPoint, 0, text_point)
