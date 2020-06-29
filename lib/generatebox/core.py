@@ -266,7 +266,7 @@ class ConfigurePanels(ProcessManager):
             }
 
             finger_data = {
-                ConfigItem.Fingers: finger_selector[finger_type](length, panel.finger_width),
+                ConfigItem.Fingers: finger_selector[finger_type](length, panel.finger_width, panel.kerf),
                 ConfigItem.Face:    face_config
             }
 
@@ -275,7 +275,7 @@ class ConfigurePanels(ProcessManager):
         return faces_repository[True]
 
     @staticmethod
-    def _configure_normal_fingers(length, finger_width):
+    def _configure_normal_fingers(length, finger_width, kerf):
         default_fingers = DefaultFingers(
             math.ceil(length.value / finger_width.value),
             f'ceil({length.expression} / {finger_width.expression})'
@@ -284,21 +284,33 @@ class ConfigurePanels(ProcessManager):
             max(3, (math.floor(default_fingers.value / 2) * 2) - 1),
             f'max(3; (floor({default_fingers.expression} / 2) * 2) - 1)'
         )
+
+        desired_finger_width = length.value / estimated_fingers.value
+        afw_kerf_selector = {
+            True:  f'({length.expression} / {estimated_fingers.expression}) - {kerf.expression}',
+            False: f'{length.expression} / {estimated_fingers.expression}'
+        }
         actual_finger_width = ActualFingerWidth(
-            length.value / estimated_fingers.value,
-            f'{length.expression} / {estimated_fingers.expression}'
+            (length.value / estimated_fingers.value) - kerf.value,
+            afw_kerf_selector[bool(kerf.value)]
         )
+
+        fo_kerf_selector = {
+            True: f'({actual_finger_width.expression} + ({kerf.expression} * 2))',
+            False: f'{actual_finger_width.expression}'
+        }
         finger_offset = FingerOffset(
-            actual_finger_width.value,
-            f'{actual_finger_width.expression}'
+            actual_finger_width.value + (kerf.value * 2),
+            fo_kerf_selector[bool(kerf.value)]
         )
+
         actual_number_fingers = ActualFingerCount(
             math.floor(estimated_fingers.value / 2),
             f'floor({estimated_fingers.expression} / 2)'
         )
         distance = FingerPatternDistance(
-            (estimated_fingers.value - 3) * actual_finger_width.value,
-            f'({estimated_fingers.expression} - 3) * {actual_finger_width.expression}'
+            (estimated_fingers.value - 3) * desired_finger_width,
+            f'({estimated_fingers.expression} - 3) * ({afw_kerf_selector[bool(kerf.value)]})'
         )
 
         return {
@@ -310,7 +322,7 @@ class ConfigurePanels(ProcessManager):
         }
 
     @staticmethod
-    def _configure_inverse_fingers(length, finger_width):
+    def _configure_inverse_fingers(length, finger_width, kerf):
         default_fingers = DefaultFingers(
                 math.ceil(length.value / finger_width.value),
                 f'ceil({length.expression} / {finger_width.expression})'
@@ -319,21 +331,34 @@ class ConfigurePanels(ProcessManager):
                 max(3, (math.floor(default_fingers.value / 2) * 2) - 1),
                 f'max(3; (floor({default_fingers.expression} / 2) * 2) - 1)'
         )
+
+        desired_finger_width = length.value / estimated_fingers.value
+
+        afw_kerf_selector = {
+            True:  f'({length.expression} / {estimated_fingers.expression}) - {kerf.expression}',
+            False: f'{length.expression} / {estimated_fingers.expression}'
+        }
         actual_finger_width = ActualFingerWidth(
-                length.value / estimated_fingers.value,
-                f'{length.expression} / {estimated_fingers.expression}'
+            (length.value / estimated_fingers.value) - kerf.value,
+            afw_kerf_selector[bool(kerf.value)]
         )
+
+        fo_kerf_selector = {
+            True: f'({kerf.expression})',
+            False: ''
+        }
         finger_offset = FingerOffset(
-                0,
-                ''
+            0 + kerf.value,
+            fo_kerf_selector[bool(kerf.value)]
         )
+
         actual_number_fingers = ActualFingerCount(
                 math.ceil(estimated_fingers.value / 2),
                 f'ceil({estimated_fingers.expression} / 2)'
         )
         distance = FingerPatternDistance(
-                (estimated_fingers.value - 1) * actual_finger_width.value,
-                f'({estimated_fingers.expression} - 1) * {actual_finger_width.expression}'
+            (estimated_fingers.value - 1) * desired_finger_width,
+            f'({estimated_fingers.expression} - 1) * ({afw_kerf_selector[bool(kerf.value)]})'
         )
 
         return {
@@ -355,8 +380,9 @@ class ConfigurePanels(ProcessManager):
     def _control_parameter(self, key):
         return self._config.controls[key].value, self._config.parameters[key]
 
-    def _offset(self, data, key, wrapper, orientation):
-        return wrapper(*self._control_parameter(data[key][orientation]))
+    def _offset(self, data, key, wrapper, orientation, kerf):
+        offset = self._dimension(data[key], orientation, wrapper)
+        return wrapper(offset.value + kerf.value, f'{offset.expression} + {kerf.expression}')
 
     def _profile(self, data, key, kerf):
         length, width = data[key]
@@ -493,13 +519,29 @@ class RenderPanels(ProcessManager):
         return reference
 
     def _render_finger_cuts(self, root, extrusion, panel):
-        cuts_to_make = self._render_finger_profiles(panel, extrusion)
+        cuts_to_make, kerf_cuts_to_make = self._render_finger_profiles(panel, extrusion)
+        for axes, cut_config in kerf_cuts_to_make.items():
+            cuts = []
+
+            for sketch, face, finger in cut_config[ConfigItem.FingerCuts]:
+                cuts.append(
+                        self._render_finger_cut(sketch, face, panel.kerf)
+                )
+
+            axes = cut_config[ConfigItem.FingerAxis]
+            distance = cut_config[ConfigItem.FingerPatternDistance]
+            count = cut_config[ConfigItem.FingerCount]
+            orientation = cut_config[ConfigItem.Orientation]
+
+            replicator = FingerCutsPattern(root, orientation)
+            replicator.copy(axes=axes, cuts=cuts, distance=distance, count=count)
+
         for axes, cut_config in cuts_to_make.items():
             cuts = []
 
             for sketch, face, finger in cut_config[ConfigItem.FingerCuts]:
                 cuts.append(
-                        self._render_finger_cut(sketch, face)
+                        self._render_finger_cut(sketch, face, panel.kerf)
                 )
 
             axes = cut_config[ConfigItem.FingerAxis]
@@ -520,6 +562,12 @@ class RenderPanels(ProcessManager):
             ConfigItem.FingerCount:           0,
             ConfigItem.FingerCuts:            []
         })
+        kerf_config = defaultdict(lambda: {
+            ConfigItem.FingerAxis: (AxisFlag.Length, AxisFlag.Width),
+            ConfigItem.FingerPatternDistance: 0,
+            ConfigItem.FingerCount: 0,
+            ConfigItem.FingerCuts: []
+        })
 
         finger_data = (
             (axis, profile, axes, finger_type, finger_type_config)
@@ -533,9 +581,10 @@ class RenderPanels(ProcessManager):
             faces_data = finger_type_config[ConfigItem.Faces]
             finger_data = finger_type_config[ConfigItem.Fingers]
 
+            kerf = faces_data[0][ConfigItem.Kerf]
+
             offset = finger_data[ConfigItem.FingerOffset]
             finger_width = finger_data[ConfigItem.FingerWidth]
-
             distance = finger_data[ConfigItem.FingerPatternDistance]
             count = finger_data[ConfigItem.FingerCount]
 
@@ -543,6 +592,28 @@ class RenderPanels(ProcessManager):
             names = '-'.join([item[ConfigItem.Face].name for item in sorted_faces])
 
             first_face = sorted_faces[0][ConfigItem.Face]
+
+            if kerf.value and finger_type == FingerType.Inverse:
+                length = faces_data[0][ConfigItem.Length]
+                with PanelFingerSketch(
+                        extrusion=extrusion,
+                        selector=face_selectors[first_face],
+                        name=f'{panel.name} {names} Kerf',
+                        start=Offset(0, ''),
+                        end=(kerf, panel.thickness.value),
+                        transform=panel.transform,
+                        orientation=panel.orientation
+                ) as kerf_sketch:
+                    for face in sorted_faces:
+                        kerf_config[axes].update({
+                          ConfigItem.FingerAxis: axes,
+                          ConfigItem.FingerPatternDistance: length,
+                          ConfigItem.FingerCount: ActualFingerCount(2, '2'),
+                          ConfigItem.Orientation: panel.orientation
+                        })
+                        kerf_config[axes][ConfigItem.FingerCuts].append(
+                                (kerf_sketch, face, finger_data)
+                        )
 
             with PanelFingerSketch(
                     extrusion=extrusion,
@@ -564,12 +635,22 @@ class RenderPanels(ProcessManager):
                         (sketch, face, finger_data)
                     )
 
-        return cuts_config
+        return cuts_config, kerf_config
 
     @staticmethod
-    def _render_finger_cut(sketch, face):
+    def _render_finger_cut(sketch, face, kerf):
         real_offset = face[ConfigItem.Offset].value - face[ConfigItem.FingerDepth].value
-        feature = sketch.cut(real_offset, face[ConfigItem.FingerDepth].value)
+
+        kerf_selector = {
+            True: Offset(
+                real_offset + kerf.value,
+                f'({face[ConfigItem.Offset].expression} - {face[ConfigItem.FingerDepth].expression} + {kerf.expression})'
+            ),
+            False: Offset(real_offset, f'({face[ConfigItem.Offset].expression} - {face[ConfigItem.FingerDepth].expression})')
+        }
+        kerf_offset = kerf_selector[bool(kerf.value) and bool(real_offset)]
+
+        feature = sketch.cut(kerf_offset.value, face[ConfigItem.FingerDepth].value)
         return feature
 
     @staticmethod

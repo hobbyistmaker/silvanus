@@ -299,6 +299,8 @@ class PanelFingerSketch(Sketch):
         self._transform = transform
         self._orientation = orientation
 
+        logger.debug(f'start: {self._start}, end: {self._end}')
+
     def __enter__(self):
         super().__enter__()
         self.draw_finger(self._start, self._end)
