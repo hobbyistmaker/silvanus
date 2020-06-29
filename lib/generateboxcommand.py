@@ -19,6 +19,8 @@ class Config:
     panels = config[ConfigItem.Panels]
     planes = config[ConfigItem.Planes]
     parameters = config[ConfigItem.Parameters]
+    overrides = config[ConfigItem.Overrides]
+    enabled = config[ConfigItem.Enabled]
 
     axis_list = defaultdict(list)
 

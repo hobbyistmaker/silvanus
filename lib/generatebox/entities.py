@@ -15,6 +15,7 @@ class AxisFlag(Enum):
 
 class ConfigItem(Enum):
     Axis = 1
+    Control = 11
     Depth = 2
     DimensionsGroup = 3
     Enabled = 4
@@ -46,6 +47,7 @@ class ConfigItem(Enum):
     Offsets = 60
     Orientation = 61
     Override = 62
+    Overrides = 59
     Panel = 63
     PanelData = 64
     Panels = 65

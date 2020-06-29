@@ -1,6 +1,7 @@
 import logging
 import math
 from collections import defaultdict
+from pprint import pformat
 
 import adsk.core
 import adsk.fusion
@@ -41,7 +42,7 @@ class Repository:
     names = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
     panels = { }
     thickness_groups = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(list))))
-    parameters = set()
+    parameters = { }
     enabled = { }
 
     orientation = 0
@@ -150,10 +151,39 @@ class ConfigurePanels(ProcessManager):
         orientation = self._repository.orientation
         panel_instances = { }
 
+        self._configure_parameters()
         self._configure_basic_panels(orientation)
         self._organize_profile_groups(panel_instances)
         self._configure_panels_and_faces(panel_instances)
         self._separate_thickness_groups(panel_instances)
+
+    def _configure_parameters(self):
+        logger.debug(f'Config Parameters: {pformat(self._config.parameters.items())}')
+        self._repository.parameters = {
+            key: {
+                ConfigItem.Name: parameter[ConfigItem.Name],
+                ConfigItem.Control: self._config.controls[key],
+                ConfigItem.Enabled: parameter[ConfigItem.Enabled]
+            }
+            for key, parameter in self._config.parameters.items()
+        }
+
+        overrides = {
+            key: self._config.controls[value]
+            for key, value in self._config.overrides.items()
+        }
+        for key, parameter in filter(lambda o: not o[1].value, overrides.items()):
+            self._repository.parameters[key][ConfigItem.Control] = self._config.controls[Inputs.Thickness]
+            self._repository.parameters[key][ConfigItem.Name] = 'thickness'
+
+        enabled = {
+            key: self._config.controls[value]
+            for key, value in self._config.enabled.items()
+        }
+        for key, parameter in filter(lambda o: not o[1].value, enabled.items()):
+            self._repository.parameters[key][ConfigItem.Enabled] = False
+
+        logger.debug(f'Parameters: {pformat(self._repository.parameters)}')
 
     def _configure_basic_panels(self, orientation):
         for panel, data in self._config.panels.items():
@@ -172,9 +202,6 @@ class ConfigurePanels(ProcessManager):
 
             profile = self._profile(data, ConfigItem.Profile, kerf)
             width = self._dimension(data, ConfigItem.Width, Width)
-
-            for parameter in [finger_width, kerf, profile.length, thickness, profile.width]:
-                self._repository.parameters.add(parameter)
 
             planes = self._config.planes[axis.value]
             profile_transform = planes[orientation][ConfigItem.ProfileTransform]
@@ -384,7 +411,7 @@ class ConfigurePanels(ProcessManager):
 
     def _control_parameter(self, key):
         control = self._config.controls[key]
-        return control.value, self._config.parameters[key], control.unitType
+        return control.value, self._config.parameters[key][ConfigItem.Name], control.unitType
 
     def _offset(self, data, key, wrapper, orientation, kerf):
         offset = self._dimension(data[key], orientation, wrapper)
@@ -480,6 +507,11 @@ class RenderPanels(ProcessManager):
                 self._render_profiles(root, profile)
 
     def _render_profiles(self, root, profile):
+        app = adsk.core.Application.get()
+        timeline = app.activeProduct.timeline
+
+        start = timeline.markerPosition
+
         profile_key, profile_data = profile
 
         name = profile_data[ConfigItem.ProfileName]
@@ -493,6 +525,11 @@ class RenderPanels(ProcessManager):
         ) as profile_sketch:
             for group, panels in profile_data[ConfigItem.ThicknessGroups].items():
                 self._extrude_profiles(root, profile_sketch, group, panels)
+
+        end = timeline.markerPosition
+
+        group = timeline.timelineGroups.add(start, end - 1)
+        group.name = f'{name} Panel Group'
 
     def _extrude_profiles(self, root, profile, group, panels):
         _render_func = {
@@ -533,8 +570,10 @@ class RenderPanels(ProcessManager):
             cuts = []
 
             for sketch, face, finger in cut_config[ConfigItem.FingerCuts]:
+                cut = self._render_finger_cut(sketch, face, panel.kerf)
+                cut.name = f'{sketch._name} Kerf Extrusion'
                 cuts.append(
-                        self._render_finger_cut(sketch, face, panel.kerf)
+                        cut
                 )
 
             axes = cut_config[ConfigItem.FingerAxis]
@@ -608,7 +647,7 @@ class RenderPanels(ProcessManager):
                         extrusion=extrusion,
                         selector=face_selectors[first_face],
                         name=f'{panel.name} {names} Kerf',
-                        start=Offset(0, ''),
+                        start=Offset(0, '', 'cm'),
                         end=(kerf, panel.thickness.value),
                         transform=panel.transform,
                         orientation=panel.orientation
@@ -706,17 +745,27 @@ class SaveParameters(Process):
         self._store = self._app.activeProduct.userParameters
 
     def process(self):
-        parameters = set()
-
-        # Convert dimensions with parameters to straight parameters
-        for parameter in self._repository.parameters:
-            logger.debug(f'Parameter: {parameter}')
-            parameters.add(Parameter(parameter.expression, parameter.value, parameter.units))
+        parameters = self._convert_dimension_parameters()
 
         for parameter in parameters:
             self._find_or_create_parameter(parameter.name, parameter)
 
+    def _convert_dimension_parameters(self):
+        """ Convert the dimension controls to parameters, and override individual panel thickness parameters
+            if required.
+        """
+        parameters = set()
+        # Convert dimensions with parameters to straight parameters
+        for key, parameter in filter(lambda p: p[1][ConfigItem.Enabled], self._repository.parameters.items()):
+            logger.debug(f'Parameter: {parameter}')
+            control = parameter[ConfigItem.Control]
+            name = parameter[ConfigItem.Name]
+            parameters.add(Parameter(name, control.value, control.unitType))
+        return parameters
+
     def _find_or_create_parameter(self, name, parameter):
+        """ Find the parameter with the given name or create that parameter and return it.
+        """
         parameter_selector = {
             True: lambda e, p: self._update_parameter(e, p),
             False: lambda e, p: self._create_parameter(p)
@@ -726,10 +775,14 @@ class SaveParameters(Process):
         return parameter_selector[bool(existing_parameter)](existing_parameter, parameter)
 
     def _create_parameter(self, parameter):
+        """ Create the given user parameter in Fusion360.
+        """
         logger.debug(f'Storing: {parameter.name} of {parameter.value} {parameter.units}')
         value = adsk.core.ValueInput.createByReal(parameter.value)
         return self._store.add(parameter.name, value, parameter.units, '')
 
     def _update_parameter(self, existing, parameter):
+        """ Update the existing parameter with the current values specified by the user.
+        """
         existing.value = parameter.value
         existing.unit = parameter.units

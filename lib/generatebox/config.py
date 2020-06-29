@@ -440,92 +440,92 @@ def initialize():
     # Add per-panel configuration items
     # noinspection DuplicatedCode
     _PANEL_CONFIGS[Inputs.TopLabel].update({
-        ConfigItem.Name:      PanelName(_INPUT_LABELS[Inputs.TopLabel]),
-        ConfigItem.Label:     Inputs.TopLabel,
-        ConfigItem.Height:    Inputs.TopThickness,
-        ConfigItem.Thickness: Inputs.TopThickness,
-        ConfigItem.Offset:    {
+        ConfigItem.Name:          PanelName(_INPUT_LABELS[Inputs.TopLabel]),
+        ConfigItem.Label:         Inputs.TopLabel,
+        ConfigItem.Height:        Inputs.TopThickness,
+        ConfigItem.Thickness:     Inputs.TopThickness,
+        ConfigItem.Offset:        {
             yup: Inputs.Height,
             zup: Inputs.Height
         },
-        ConfigItem.Enabled:   Inputs.TopEnabled,
-        ConfigItem.Override:  Inputs.TopOverride,
-        ConfigItem.Faces:     _HEIGHT_PANEL_CONFIG,
+        ConfigItem.Enabled:       Inputs.TopEnabled,
+        ConfigItem.Override:      Inputs.TopOverride,
+        ConfigItem.Faces:         _HEIGHT_PANEL_CONFIG,
         ConfigItem.FaceSelectors: _FACE_SELECTOR
     })
     # noinspection DuplicatedCode
     _PANEL_CONFIGS[Inputs.BottomLabel].update({
-        ConfigItem.Name:      PanelName(_INPUT_LABELS[Inputs.BottomLabel]),
-        ConfigItem.Label:     Inputs.BottomLabel,
-        ConfigItem.Height:    Inputs.BottomThickness,
-        ConfigItem.Thickness: Inputs.BottomThickness,
-        ConfigItem.Offset:    {
+        ConfigItem.Name:          PanelName(_INPUT_LABELS[Inputs.BottomLabel]),
+        ConfigItem.Label:         Inputs.BottomLabel,
+        ConfigItem.Height:        Inputs.BottomThickness,
+        ConfigItem.Thickness:     Inputs.BottomThickness,
+        ConfigItem.Offset:        {
             yup: Inputs.BottomThickness,
             zup: Inputs.BottomThickness
         },
-        ConfigItem.Enabled:   Inputs.BottomEnabled,
-        ConfigItem.Override:  Inputs.BottomOverride,
-        ConfigItem.Faces:     _HEIGHT_PANEL_CONFIG,
+        ConfigItem.Enabled:       Inputs.BottomEnabled,
+        ConfigItem.Override:      Inputs.BottomOverride,
+        ConfigItem.Faces:         _HEIGHT_PANEL_CONFIG,
         ConfigItem.FaceSelectors: _FACE_SELECTOR
     })
     # noinspection DuplicatedCode
     _PANEL_CONFIGS[Inputs.LeftLabel].update({
-        ConfigItem.Name:      PanelName(_INPUT_LABELS[Inputs.LeftLabel]),
-        ConfigItem.Label:     Inputs.LeftLabel,
-        ConfigItem.Length:    Inputs.LeftThickness,
-        ConfigItem.Thickness: Inputs.LeftThickness,
-        ConfigItem.Offset:    {
+        ConfigItem.Name:          PanelName(_INPUT_LABELS[Inputs.LeftLabel]),
+        ConfigItem.Label:         Inputs.LeftLabel,
+        ConfigItem.Length:        Inputs.LeftThickness,
+        ConfigItem.Thickness:     Inputs.LeftThickness,
+        ConfigItem.Offset:        {
             yup: Inputs.LeftThickness,
             zup: Inputs.LeftThickness
         },
-        ConfigItem.Enabled:   Inputs.LeftEnabled,
-        ConfigItem.Override:  Inputs.LeftOverride,
-        ConfigItem.Faces:     _LENGTH_PANEL_CONFIG,
+        ConfigItem.Enabled:       Inputs.LeftEnabled,
+        ConfigItem.Override:      Inputs.LeftOverride,
+        ConfigItem.Faces:         _LENGTH_PANEL_CONFIG,
         ConfigItem.FaceSelectors: _FACE_SELECTOR
     })
     # noinspection DuplicatedCode
     _PANEL_CONFIGS[Inputs.RightLabel].update({
-        ConfigItem.Name:      PanelName(_INPUT_LABELS[Inputs.RightLabel]),
-        ConfigItem.Label:     Inputs.RightLabel,
-        ConfigItem.Length:    Inputs.RightThickness,
-        ConfigItem.Thickness: Inputs.RightThickness,
-        ConfigItem.Offset:    {
+        ConfigItem.Name:          PanelName(_INPUT_LABELS[Inputs.RightLabel]),
+        ConfigItem.Label:         Inputs.RightLabel,
+        ConfigItem.Length:        Inputs.RightThickness,
+        ConfigItem.Thickness:     Inputs.RightThickness,
+        ConfigItem.Offset:        {
             yup: Inputs.Length,
             zup: Inputs.Length
         },
-        ConfigItem.Enabled:   Inputs.RightEnabled,
-        ConfigItem.Override:  Inputs.RightOverride,
-        ConfigItem.Faces:     _LENGTH_PANEL_CONFIG,
+        ConfigItem.Enabled:       Inputs.RightEnabled,
+        ConfigItem.Override:      Inputs.RightOverride,
+        ConfigItem.Faces:         _LENGTH_PANEL_CONFIG,
         ConfigItem.FaceSelectors: _FACE_SELECTOR
     })
     # noinspection DuplicatedCode
     _PANEL_CONFIGS[Inputs.FrontLabel].update({
-        ConfigItem.Name:      PanelName(_INPUT_LABELS[Inputs.FrontLabel]),
-        ConfigItem.Label:     Inputs.FrontLabel,
-        ConfigItem.Width:     Inputs.FrontThickness,
-        ConfigItem.Thickness: Inputs.FrontThickness,
-        ConfigItem.Offset:    {
+        ConfigItem.Name:          PanelName(_INPUT_LABELS[Inputs.FrontLabel]),
+        ConfigItem.Label:         Inputs.FrontLabel,
+        ConfigItem.Width:         Inputs.FrontThickness,
+        ConfigItem.Thickness:     Inputs.FrontThickness,
+        ConfigItem.Offset:        {
             zup: Inputs.FrontThickness,
             yup: Inputs.Width
         },
-        ConfigItem.Enabled:   Inputs.FrontEnabled,
-        ConfigItem.Override:  Inputs.FrontOverride,
-        ConfigItem.Faces:     _WIDTH_PANEL_CONFIG,
+        ConfigItem.Enabled:       Inputs.FrontEnabled,
+        ConfigItem.Override:      Inputs.FrontOverride,
+        ConfigItem.Faces:         _WIDTH_PANEL_CONFIG,
         ConfigItem.FaceSelectors: _FACE_SELECTOR
     })
     # noinspection DuplicatedCode
     _PANEL_CONFIGS[Inputs.BackLabel].update({
-        ConfigItem.Name:      PanelName(_INPUT_LABELS[Inputs.BackLabel]),
-        ConfigItem.Label:     Inputs.BackLabel,
-        ConfigItem.Width:     Inputs.BackThickness,
-        ConfigItem.Thickness: Inputs.BackThickness,
-        ConfigItem.Offset:    {
+        ConfigItem.Name:          PanelName(_INPUT_LABELS[Inputs.BackLabel]),
+        ConfigItem.Label:         Inputs.BackLabel,
+        ConfigItem.Width:         Inputs.BackThickness,
+        ConfigItem.Thickness:     Inputs.BackThickness,
+        ConfigItem.Offset:        {
             zup: Inputs.Width,
             yup: Inputs.BackThickness
         },
-        ConfigItem.Enabled:   Inputs.BackEnabled,
-        ConfigItem.Override:  Inputs.BackOverride,
-        ConfigItem.Faces:     _WIDTH_PANEL_CONFIG,
+        ConfigItem.Enabled:       Inputs.BackEnabled,
+        ConfigItem.Override:      Inputs.BackOverride,
+        ConfigItem.Faces:         _WIDTH_PANEL_CONFIG,
         ConfigItem.FaceSelectors: _FACE_SELECTOR
     })
 
@@ -584,6 +584,26 @@ def initialize():
                 ConfigItem.ExtentDirection:  _PLANE_TO_DIRECTION_MAP[axis][orientation]
             }
 
+    logger.debug(f'PLANE CONFIG: {_PLANE_CONFIG}')
+
+    _COMMAND_OVERRIDES = {
+        Inputs.TopThickness:    Inputs.TopOverride,
+        Inputs.BottomThickness: Inputs.BottomOverride,
+        Inputs.LeftThickness:   Inputs.LeftOverride,
+        Inputs.RightThickness:  Inputs.RightOverride,
+        Inputs.FrontThickness:  Inputs.FrontOverride,
+        Inputs.BackThickness:   Inputs.BackOverride
+    }
+
+    _THICKNESS_ENABLED = {
+        Inputs.TopThickness:    Inputs.TopEnabled,
+        Inputs.BottomThickness: Inputs.BottomEnabled,
+        Inputs.LeftThickness:   Inputs.LeftEnabled,
+        Inputs.RightThickness:  Inputs.RightEnabled,
+        Inputs.FrontThickness:  Inputs.FrontEnabled,
+        Inputs.BackThickness:   Inputs.BackEnabled
+    }
+
     # Setup the main configuration map used by the plugin
     _CONFIG_MAP = {
         ConfigItem.Inputs:          {
@@ -594,6 +614,8 @@ def initialize():
         },
         ConfigItem.Tooltips:        { },
         ConfigItem.Parameters:      { },
+        ConfigItem.Overrides:       _COMMAND_OVERRIDES,
+        ConfigItem.Enabled:         _THICKNESS_ENABLED,
         ConfigItem.DimensionsGroup: [
             Inputs.Length, Inputs.Width, Inputs.Height, Inputs.Thickness, Inputs.FingerWidth, Inputs.Kerf
         ],
@@ -648,7 +670,12 @@ def initialize():
         _CONFIG_MAP[ConfigItem.Tooltips][key] = _TOOLTIPS[key]
 
     for key in list(_SAVE_PARAMETERS.keys() & ID_LABELS):
-        _CONFIG_MAP[ConfigItem.Parameters][key] = _SAVE_PARAMETERS[key]
+        _CONFIG_MAP[ConfigItem.Parameters][key] = {
+            ConfigItem.Name:    _SAVE_PARAMETERS[key],
+            ConfigItem.Enabled: True
+        }
+
+    _CONFIG_MAP[ConfigItem.Parameters][Inputs.Thickness][ConfigItem.Enabled] = False
 
     for key in set(_CHECKBOXES).intersection(ID_LABELS):
         _CONFIG_MAP[ConfigItem.Inputs][key][InputProperty.TurnedOn] = True
