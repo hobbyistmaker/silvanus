@@ -235,12 +235,14 @@ class Enabled:
 class FingerDepth:
     value: float
     expression: str
+    units: str
 
 
 @dataclass(eq=True, frozen=True)
 class FingerWidth:
     value: float
     expression: str
+    units: str
     # control: Any = field(hash=False)
 
 
@@ -248,6 +250,7 @@ class FingerWidth:
 class Height:
     value: float
     expression: str
+    units: str
     # control: Any = field(hash=False)
 
 
@@ -255,6 +258,7 @@ class Height:
 class Kerf:
     value: float
     expression: str
+    units: str
     # control: Any = field(hash=False)
 
 
@@ -262,6 +266,7 @@ class Kerf:
 class Length:
     value: float
     expression: str
+    units: str
     # control: Any = field(hash=False)
 
 
@@ -269,6 +274,7 @@ class Length:
 class Offset:
     value: float
     expression: str
+    units: str
     # control: Any = field(hash=False)
 
 
@@ -322,6 +328,7 @@ class ProfileTransform:
 class Thickness:
     value: float
     expression: str
+    units: str
     # control: Any = field(hash=False)
 
 
@@ -329,6 +336,7 @@ class Thickness:
 class Width:
     value: float
     expression: str
+    units: str
     # control: Any = field(hash=False)
 
 
@@ -366,3 +374,10 @@ class AxisDirection:
     profile_multiplier: int
     copy_extent_direction: int
     copy_multiplier: int
+
+
+@dataclass(eq=True, frozen=True)
+class Parameter:
+    name: str
+    value: float
+    units: str

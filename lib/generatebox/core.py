@@ -1,7 +1,6 @@
 import logging
 import math
 from collections import defaultdict
-from pprint import pformat
 
 import adsk.core
 import adsk.fusion
@@ -15,7 +14,6 @@ from .entities import ActualFingerWidth
 from .entities import FingerOffset
 from .entities import ActualFingerCount
 from .entities import FingerPatternDistance
-from .entities import FingerDepth
 from .entities import FingerType
 from .entities import FingerWidth
 from .entities import Height
@@ -26,6 +24,7 @@ from .entities import Offset
 from .entities import Override
 from .entities import Panel
 from .entities import PanelProfile
+from .entities import Parameter
 from .entities import Thickness
 from .entities import Width
 from .fusion import FaceProfile
@@ -42,6 +41,7 @@ class Repository:
     names = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
     panels = { }
     thickness_groups = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(list))))
+    parameters = set()
     enabled = { }
 
     orientation = 0
@@ -56,6 +56,7 @@ class Repository:
         self.preview = False
         self.root = None
         self.orientation = 0
+        self.parameters.clear()
 
 
 class Process:
@@ -111,6 +112,7 @@ class Core:
 
         self._processes.create_process(DefinePanels)
         self._processes.create_process(RenderPanels)
+        self._processes.create_process(SaveParameters)
 
         self._processes._config = self._config
         self._processes._repository = self._repository
@@ -170,6 +172,9 @@ class ConfigurePanels(ProcessManager):
 
             profile = self._profile(data, ConfigItem.Profile, kerf)
             width = self._dimension(data, ConfigItem.Width, Width)
+
+            for parameter in [finger_width, kerf, profile.length, thickness, profile.width]:
+                self._repository.parameters.add(parameter)
 
             planes = self._config.planes[axis.value]
             profile_transform = planes[orientation][ConfigItem.ProfileTransform]
@@ -378,7 +383,8 @@ class ConfigurePanels(ProcessManager):
         return wrapper(*self._control_parameter(data[key]))
 
     def _control_parameter(self, key):
-        return self._config.controls[key].value, self._config.parameters[key]
+        control = self._config.controls[key]
+        return control.value, self._config.parameters[key], control.unitType
 
     def _offset(self, data, key, wrapper, orientation, kerf):
         offset = self._dimension(data[key], orientation, wrapper)
@@ -393,15 +399,18 @@ class ConfigurePanels(ProcessManager):
         return PanelProfile(
                 Length(
                         profile_length.value + kerf.value,
-                        ' + '.join([val.expression for val in filter(lambda s: s.value, [profile_length, kerf])])
+                        ' + '.join([val.expression for val in filter(lambda s: s.value, [profile_length, kerf])]),
+                        profile_length.units
                 ),
                 Width(
                         profile_width.value + kerf.value,
-                        ' + '.join([val.expression for val in filter(lambda s: s.value, [profile_width, kerf])])
+                        ' + '.join([val.expression for val in filter(lambda s: s.value, [profile_width, kerf])]),
+                        profile_width.units
                 )
         )
 
     def _thickness(self, data, override, key):
+        logger.debug(f'Override value for {key} is {override.value}')
         selector = {
             True:  lambda d, k: self._dimension(d, k, Thickness),
             False: lambda d, k: Thickness(*self._control_parameter(Inputs.Thickness))
@@ -639,14 +648,20 @@ class RenderPanels(ProcessManager):
 
     @staticmethod
     def _render_finger_cut(sketch, face, kerf):
-        real_offset = face[ConfigItem.Offset].value - face[ConfigItem.FingerDepth].value
+        set_offset = face[ConfigItem.Offset]
+        real_offset = set_offset.value - face[ConfigItem.FingerDepth].value
 
         kerf_selector = {
             True: Offset(
                 real_offset + kerf.value,
-                f'({face[ConfigItem.Offset].expression} - {face[ConfigItem.FingerDepth].expression} + {kerf.expression})'
+                f'({face[ConfigItem.Offset].expression} - {face[ConfigItem.FingerDepth].expression} + {kerf.expression})',
+                set_offset.units
             ),
-            False: Offset(real_offset, f'({face[ConfigItem.Offset].expression} - {face[ConfigItem.FingerDepth].expression})')
+            False: Offset(
+                    real_offset,
+                    f'({face[ConfigItem.Offset].expression} - {face[ConfigItem.FingerDepth].expression})',
+                    set_offset.units
+            )
         }
         kerf_offset = kerf_selector[bool(kerf.value) and bool(real_offset)]
 
@@ -681,3 +696,40 @@ class RenderPanels(ProcessManager):
             finger_config[axis][profile][axes][finger_type][ConfigItem.Faces].append(finger[ConfigItem.Face])
 
         return finger_config
+
+
+class SaveParameters(Process):
+
+    def __init__(self):
+        self._app = adsk.core.Application.get()
+        self._parameters = self._app.activeProduct.allParameters
+        self._store = self._app.activeProduct.userParameters
+
+    def process(self):
+        parameters = set()
+
+        # Convert dimensions with parameters to straight parameters
+        for parameter in self._repository.parameters:
+            logger.debug(f'Parameter: {parameter}')
+            parameters.add(Parameter(parameter.expression, parameter.value, parameter.units))
+
+        for parameter in parameters:
+            self._find_or_create_parameter(parameter.name, parameter)
+
+    def _find_or_create_parameter(self, name, parameter):
+        parameter_selector = {
+            True: lambda e, p: self._update_parameter(e, p),
+            False: lambda e, p: self._create_parameter(p)
+        }
+
+        existing_parameter = self._parameters.itemByName(name)
+        return parameter_selector[bool(existing_parameter)](existing_parameter, parameter)
+
+    def _create_parameter(self, parameter):
+        logger.debug(f'Storing: {parameter.name} of {parameter.value} {parameter.units}')
+        value = adsk.core.ValueInput.createByReal(parameter.value)
+        return self._store.add(parameter.name, value, parameter.units, '')
+
+    def _update_parameter(self, existing, parameter):
+        existing.value = parameter.value
+        existing.unit = parameter.units
