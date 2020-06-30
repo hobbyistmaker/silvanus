@@ -254,6 +254,7 @@ class PanelProfileSketch(Sketch):
     def __init__(self, *, plane_selector, transform, end, name=''):
         super().__init__(plane_selector, name=f'{name} Profile Sketch' if name else name)
 
+        self.base_name = name
         self._transform = transform
         self._end = end
         self._profile_lines = None
@@ -296,6 +297,7 @@ class PanelFingerSketch(Sketch):
         self._start = start
         self._end = end
         self._name = name
+        self.base_name = name
         self._transform = transform
         self._orientation = orientation
 

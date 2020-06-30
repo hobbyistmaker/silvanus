@@ -48,6 +48,7 @@ class Repository:
     orientation = 0
     root = None
     preview = False
+    defined = False
 
     def clear(self):
         self.axes.clear()
@@ -130,6 +131,7 @@ class Core:
 
         self._processes._config = self._config
         self._processes._repository = self._repository
+
         self._processes.process()
         self.clear()
 
@@ -571,10 +573,8 @@ class RenderPanels(ProcessManager):
 
             for sketch, face, finger in cut_config[ConfigItem.FingerCuts]:
                 cut = self._render_finger_cut(sketch, face, panel.kerf)
-                cut.name = f'{sketch._name} Kerf Extrusion'
-                cuts.append(
-                        cut
-                )
+                cut.name = f'{sketch.base_name} Extrusion'
+                cuts.append(cut)
 
             axes = cut_config[ConfigItem.FingerAxis]
             distance = cut_config[ConfigItem.FingerPatternDistance]
@@ -582,15 +582,16 @@ class RenderPanels(ProcessManager):
             orientation = cut_config[ConfigItem.Orientation]
 
             replicator = FingerCutsPattern(root, orientation)
-            replicator.copy(axes=axes, cuts=cuts, distance=distance, count=count)
+            pattern = replicator.copy(axes=axes, cuts=cuts, distance=distance, count=count)
+            pattern.name = f'{sketch}'
 
         for axes, cut_config in cuts_to_make.items():
             cuts = []
 
             for sketch, face, finger in cut_config[ConfigItem.FingerCuts]:
-                cuts.append(
-                        self._render_finger_cut(sketch, face, panel.kerf)
-                )
+                cut = self._render_finger_cut(sketch, face, panel.kerf)
+                cut.name = f'{sketch.base_name} Finger Extrusion'
+                cuts.append(cut)
 
             axes = cut_config[ConfigItem.FingerAxis]
             distance = cut_config[ConfigItem.FingerPatternDistance]

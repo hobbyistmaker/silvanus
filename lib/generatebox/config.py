@@ -626,14 +626,6 @@ def initialize():
         },
         ConfigItem.Panels:          _PANEL_CONFIGS,
         ConfigItem.Planes:          _PLANE_CONFIG,
-        ConfigItem.InputGroups:     {
-            PanelBody.Top:    (Inputs.TopEnabled, Inputs.TopOverride, Inputs.TopThickness),
-            PanelBody.Bottom: (Inputs.BottomEnabled, Inputs.BottomOverride, Inputs.BottomThickness),
-            PanelBody.Left:   (Inputs.LeftEnabled, Inputs.LeftOverride, Inputs.LeftThickness),
-            PanelBody.Right:  (Inputs.RightEnabled, Inputs.RightOverride, Inputs.RightThickness),
-            PanelBody.Front:  (Inputs.FrontEnabled, Inputs.FrontOverride, Inputs.FrontThickness),
-            PanelBody.Back:   (Inputs.BackEnabled, Inputs.BackOverride, Inputs.BackThickness)
-        }
     }
 
     logger.debug(f'Config Map: {_CONFIG_MAP}')
