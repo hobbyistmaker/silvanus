@@ -161,11 +161,11 @@ class Sketch:
         return point.x, point.y, point.z
 
     def extrude(
-            self, offset, distance, direction
+            self, offset, distance, direction=1
     ):
         real_offset = offset.value - distance.value
         return extrude_offset(
-                self, real_offset, direction.profile_extent_direction, direction.profile_multiplier, distance.value
+                self, offset.value, adsk.fusion.ExtentDirections.PositiveExtentDirection, direction, distance.value
         )
 
 
@@ -194,11 +194,19 @@ class FaceProfile:
         return self._source.startFaces.item(0)
 
     def extrude(
-            self, offset, distance, direction
+            self, offset, distance, direction=1
     ):
         real_offset = offset.value
         return extrude_offset(
-                self, real_offset, direction.copy_extent_direction, direction.copy_multiplier, distance.value
+                self, offset.value, adsk.fusion.ExtentDirections.PositiveExtentDirection, direction, distance.value
+        )
+
+    def extrude_reverse(
+            self, offset, distance, direction=1
+    ):
+        real_offset = offset.value
+        return extrude_offset(
+                self, offset.value, adsk.fusion.ExtentDirections.NegativeExtentDirection, direction, distance.value
         )
 
 
@@ -300,8 +308,6 @@ class PanelFingerSketch(Sketch):
         self.base_name = name
         self._transform = transform
         self._orientation = orientation
-
-        logger.debug(f'start: {self._start}, end: {self._end}')
 
     def __enter__(self):
         super().__enter__()

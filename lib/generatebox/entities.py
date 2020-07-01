@@ -5,6 +5,9 @@ from enum import Enum
 from typing import Any
 from typing import Dict
 from typing import List
+from typing import NamedTuple
+from typing import Tuple
+from typing import Callable
 
 
 class AxisFlag(Enum):
@@ -71,6 +74,25 @@ class FaceItem(Enum):
     Right = 4
     Front = 5
     Back = 6
+
+
+class JointItem(Enum):
+    Axis = 1
+    JointOffset = 2
+    JointPanels = 3
+    JointParent = 4
+    Type = 5
+    FaceDistance = 6
+    ParentPanels = 7
+
+
+class GroupItem(Enum):
+    Names = 1
+    Thicknesses = 2
+    Profile = 3
+    Transform = 4
+    PlaneSelector = 5
+    Offsets = 6
 
 
 class InputProperty(Enum):
@@ -158,7 +180,7 @@ class JointFace(Enum):
     Front_Back = 12
 
 
-class PanelBody(Enum):
+class PanelType(Enum):
     Top = 1
     Bottom = 2
     Left = 3
@@ -173,7 +195,7 @@ class PlaneFlag(Enum):
     YZ = 3
 
 
-class OutsideType:
+class OutsideType(Enum):
     Top = 1
     Bottom = 2
     Left = 3
@@ -237,47 +259,42 @@ class Enabled:
 class FingerDepth:
     value: float
     expression: str
-    units: str
+    unitType: str
 
 
 @dataclass(eq=True, frozen=True)
 class FingerWidth:
     value: float
     expression: str
-    units: str
-    # control: Any = field(hash=False)
+    unitType: str
 
 
 @dataclass(eq=True, frozen=True)
 class Height:
     value: float
     expression: str
-    units: str
-    # control: Any = field(hash=False)
+    unitType: str
 
 
 @dataclass(eq=True, frozen=True)
 class Kerf:
     value: float
     expression: str
-    units: str
-    # control: Any = field(hash=False)
+    unitType: str
 
 
 @dataclass(eq=True, frozen=True)
 class Length:
     value: float
     expression: str
-    units: str
-    # control: Any = field(hash=False)
+    unitType: str
 
 
 @dataclass(eq=True, frozen=True)
-class Offset:
+class PanelOffset:
     value: float
     expression: str
-    units: str
-    # control: Any = field(hash=False)
+    unitType: str
 
 
 @dataclass(eq=True, frozen=True)
@@ -312,7 +329,7 @@ class PanelsList:
 
 @dataclass
 class PlaneSelector:
-    func: Any
+    plane: Any
 
 
 @dataclass(eq=True, frozen=True)
@@ -330,22 +347,26 @@ class ProfileTransform:
 class Thickness:
     value: float
     expression: str
-    units: str
-    # control: Any = field(hash=False)
+    unitType: str
 
 
 @dataclass(eq=True, frozen=True)
 class Width:
     value: float
     expression: str
-    units: str
-    # control: Any = field(hash=False)
+    unitType: str
 
 
 @dataclass(eq=True, frozen=True)
-class PanelProfile:
+class LengthWidthProfile:
     length: Length
     width: Width
+
+
+class PanelProfile(LengthWidthProfile): pass
+class TopBottomFaceProfile(LengthWidthProfile): pass
+class FrontBackFaceProfile(LengthWidthProfile): pass
+class LeftRightFaceProfile(LengthWidthProfile): pass
 
 
 @dataclass
@@ -358,7 +379,7 @@ class Panel:
     height: Height
     kerf: Kerf
     length: Length
-    offset: Offset
+    offset: PanelOffset
     override: Override
     profile: PanelProfile
     thickness: Thickness
@@ -382,4 +403,225 @@ class AxisDirection:
 class Parameter:
     name: str
     value: float
-    units: str
+    unitType: str
+
+
+class PanelDefinition(NamedTuple):
+    panel_type: PanelType
+    name: Inputs
+    enable: Inputs
+    override: Inputs
+    thickness: Inputs
+    length: Inputs
+    width: Inputs
+    height: Inputs
+    kerf: Inputs
+    finger_width: Inputs
+    finger_types: Dict[FingerType, List[AxisFlag]]
+    reference_point: Tuple[Inputs, Inputs, Inputs]
+    max_reference: Inputs
+    orientation: AxisFlag
+
+
+@dataclass
+class PanelDimensions:
+    length: Length
+    width: Width
+    height: Height
+    orientation: AxisFlag
+
+
+@dataclass
+class FaceDimensions:
+    length: Length
+    width: Width
+    height: Height
+    orientation: AxisFlag
+
+
+@dataclass
+class ControlInput:
+    control: Any
+
+class ThicknessInput(ControlInput): ...
+class LengthInput(ControlInput): ...
+class WidthInput(ControlInput): ...
+class HeightInput(ControlInput): ...
+class KerfInput(ControlInput): ...
+class FingerWidthInput(ControlInput): ...
+
+
+@dataclass
+class BooleanInput:
+    control: Any = field(hash=False)
+
+
+class EnableInput(BooleanInput): ...
+class OverrideInput(BooleanInput): ...
+
+
+@dataclass
+class EnableThicknessPair:
+    enabled: EnableInput
+    thickness: ThicknessInput
+
+
+@dataclass(eq=True, frozen=True)
+class PanelOrientation:
+    axis: AxisFlag
+
+
+class LengthOrientation: ...
+class WidthOrientation: ...
+class HeightOrientation: ...
+
+
+@dataclass(eq=True, frozen=True)
+class ParentOrientation:
+    value: AxisFlag
+
+
+@dataclass(eq=True, frozen=True)
+class AxisFingerType:
+    finger_type: FingerType
+
+
+class LengthAxisFingerType(AxisFingerType): ...
+class WidthAxisFingerType(AxisFingerType): ...
+class HeightAxisFingerType(AxisFingerType): ...
+
+
+@dataclass(eq=True, frozen=True)
+class JointAxis:
+    orientation: AxisFlag
+
+
+@dataclass(eq=True, frozen=True)
+class ModelOrientation:
+    value: int
+
+
+@dataclass
+class Renderable: ...
+
+
+@dataclass(eq=True, frozen=True)
+class RootComponent:
+    value: Any
+
+
+@dataclass
+class PanelGroup:
+    name: str
+    end: Tuple
+    transform: Callable
+    selector: Any
+
+
+@dataclass(eq=True, frozen=True)
+class GroupOrientation:
+    value: AxisFlag
+
+
+@dataclass(eq=True, frozen=True)
+class GroupProfile:
+    length: str
+    width: str
+
+
+@dataclass(eq=True, frozen=True)
+class FingerTypes:
+    values: List[AxisFingerType]
+
+
+@dataclass(eq=True, frozen=True)
+class GroupName:
+    value: str
+
+
+@dataclass(eq=True, frozen=True)
+class GroupTransform:
+    call: Callable
+
+
+@dataclass(eq=True, frozen=True)
+class GroupPlaneSelector:
+    call: Callable
+
+
+@dataclass(eq=True, frozen=True)
+class PanelEndReferencePoint:
+    length: Length
+    width: Width
+    height: Height
+
+
+@dataclass(eq=True, frozen=True)
+class PanelStartReferencePoint:
+    length: Length
+    width: Width
+    height: Height
+
+
+@dataclass(eq=True, frozen=True)
+class ReferencePointInput:
+    length: Any
+    width: Any
+    height: Any
+
+
+@dataclass(eq=True, frozen=True)
+class MaxOffset:
+    value: float
+    expression: str
+    unitType: str
+
+
+@dataclass(eq=True, frozen=True)
+class StartPanelOffset:
+    value: float
+    expression: str
+    unitType: str
+
+
+@dataclass(eq=True, frozen=True)
+class MaxOffsetInput:
+    control: Any
+
+
+@dataclass(eq=True, frozen=True)
+class ExtrusionDistance:
+    value: float
+    expression: str
+    unitType: str
+
+
+@dataclass(eq=True, frozen=True)
+class ExtrusionOffset:
+    value: float
+    expression: str
+    unitType: str
+
+
+@dataclass(eq=True, frozen=True)
+class GroupPanel:
+    name: str
+    value: float
+    expression: str
+    unitType: str
+
+
+@dataclass(eq=True, frozen=True)
+class GroupPanels:
+    thickness: Thickness
+    panels: List[GroupPanel]
+
+
+@dataclass(eq=True, frozen=True)
+class PanelSubGroups:
+    groups: List[GroupPanels]
+
+
+@dataclass(eq=True, frozen=True)
+class ParentPanel:
+    id: int
