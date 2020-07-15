@@ -2,7 +2,7 @@ import logging
 
 from .common import Fusion360Command
 from .generatebox.dialog import CreateDialog
-from .generatebox.core import Core
+from .generatebox.process import Core
 
 # noinspection SpellCheckingInspection
 
@@ -17,21 +17,23 @@ class GenerateBoxCommand(Fusion360Command):
     _dialog = CreateDialog()
     _core = Core(_dialog)
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.root = self._app.activeProduct.rootComponent
+        self.preferences = self._app.preferences.generalPreferences
+        self.orientation = self.preferences.defaultModelingOrientation
+
     def on_destroy(self, args):
         """ Clear the entities and the input dialog after each run of the command.
         """
         self._dialog.clear()
         self._core.clear()
 
-    def _on_create(self, command):
+    def on_create(self, command):
         logger.debug('Creating "Create Box" dialog.')
-        root = self._app.activeProduct.rootComponent
-        preferences = self._app.preferences.generalPreferences
-        orientation = preferences.defaultModelingOrientation
-
         self._configure_dialog(command)
-        self._dialog.create(command.commandInputs, self._units_type < 3, root, orientation)
-
+        self._dialog.create(command.commandInputs, self._units_type < 3, self.root, self.orientation)
         logger.debug('Dialog creation completed.')
 
     @staticmethod
@@ -43,23 +45,23 @@ class GenerateBoxCommand(Fusion360Command):
         command.isRepeatable = False
         command.okButtonText = 'Create'
 
-    def on_change(self, cmd_input):
-        self._dialog.update(cmd_input)
+    def on_change(self, args):
+        cmd_input = args.input
+        logger.debug(f'On Change Notification for {cmd_input.id}')
+
+        return self._dialog.update(cmd_input)
 
     def on_execute(self, inputs):
-        root = self._app.activeProduct.rootComponent
-        preferences = self._app.preferences.generalPreferences
-        orientation = preferences.defaultModelingOrientation
+        self._core.execute(orientation=self.orientation, component=self.root)
 
-        self._core.execute(panels=self._dialog.panels, orientation=orientation, component=root)
+    def on_preview(self, args):
+        if not self._dialog.preview:
+            return
 
-    def on_preview(self, inputs):
-        root = self._app.activeProduct.rootComponent
-        preferences = self._app.preferences.generalPreferences
-        orientation = preferences.defaultModelingOrientation
-
-        self._core.preview(panels=self._dialog.panels, orientation=orientation, component=root)
+        self._core.preview(orientation=self.orientation, component=self.root)
 
     def on_validate(self, inputs):
-        result = self._dialog.validate()
-        return result
+        return self._dialog.validate()
+
+    def post_validate_valid(self, inputs):
+        self._core.update(orientation=self.orientation)

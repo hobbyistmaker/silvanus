@@ -7,30 +7,30 @@ import adsk.fusion
 
 from .entities import AxisFlag
 
+# noinspection SpellCheckingInspection
+logger = logging.getLogger('silvanus.lib.generatebox.fusion')
+
 yup = adsk.core.DefaultModelingOrientations.YUpModelingOrientation
 zup = adsk.core.DefaultModelingOrientations.ZUpModelingOrientation
 
 axes_selector = {
     yup: {
-        (AxisFlag.Height, AxisFlag.Length): lambda r: (r.yConstructionAxis, r.xConstructionAxis),
-        (AxisFlag.Height, AxisFlag.Width):  lambda r: (r.yConstructionAxis, r.zConstructionAxis),
-        (AxisFlag.Width, AxisFlag.Height):  lambda r: (r.zConstructionAxis, r.yConstructionAxis),
-        (AxisFlag.Length, AxisFlag.Height): lambda r: (r.xConstructionAxis, r.yConstructionAxis),
-        (AxisFlag.Width, AxisFlag.Length):  lambda r: (r.zConstructionAxis, r.xConstructionAxis),
-        (AxisFlag.Length, AxisFlag.Width):  lambda r: (r.xConstructionAxis, r.zConstructionAxis)
+        (AxisFlag.Height, AxisFlag.Width):  lambda r: (r.xConstructionAxis, r.yConstructionAxis),
+        (AxisFlag.Height, AxisFlag.Length): lambda r: (r.zConstructionAxis, r.yConstructionAxis),
+        (AxisFlag.Width, AxisFlag.Height):  lambda r: (r.xConstructionAxis, r.yConstructionAxis),
+        (AxisFlag.Length, AxisFlag.Height): lambda r: (r.zConstructionAxis, r.yConstructionAxis),
+        (AxisFlag.Width, AxisFlag.Length):  lambda r: (r.yConstructionAxis, r.zConstructionAxis),
+        (AxisFlag.Length, AxisFlag.Width):  lambda r: (r.yConstructionAxis, r.zConstructionAxis)
     },
     zup: {
-        (AxisFlag.Height, AxisFlag.Length): lambda r: (r.zConstructionAxis, r.xConstructionAxis),
-        (AxisFlag.Height, AxisFlag.Width):  lambda r: (r.zConstructionAxis, r.yConstructionAxis),
-        (AxisFlag.Width, AxisFlag.Height):  lambda r: (r.yConstructionAxis, r.zConstructionAxis),
-        (AxisFlag.Length, AxisFlag.Height): lambda r: (r.xConstructionAxis, r.zConstructionAxis),
-        (AxisFlag.Width, AxisFlag.Length):  lambda r: (r.yConstructionAxis, r.xConstructionAxis),
-        (AxisFlag.Length, AxisFlag.Width):  lambda r: (r.xConstructionAxis, r.yConstructionAxis)
+        (AxisFlag.Height, AxisFlag.Width):  lambda r: (r.xConstructionAxis, r.zConstructionAxis),
+        (AxisFlag.Height, AxisFlag.Length): lambda r: (r.yConstructionAxis, r.zConstructionAxis),
+        (AxisFlag.Width, AxisFlag.Height):  lambda r: (r.xConstructionAxis, r.zConstructionAxis),
+        (AxisFlag.Length, AxisFlag.Height): lambda r: (r.yConstructionAxis, r.zConstructionAxis),
+        (AxisFlag.Width, AxisFlag.Length):  lambda r: (r.zConstructionAxis, r.yConstructionAxis),
+        (AxisFlag.Length, AxisFlag.Width):  lambda r: (r.zConstructionAxis, r.yConstructionAxis)
     }
 }
-
-# noinspection SpellCheckingInspection
-logger = logging.getLogger('silvanus.lib.generatebox.fusion')
 
 _plane_types = {
     adsk.fusion.BRepFace:          lambda b: b.body.parentComponent.sketches,
@@ -163,7 +163,6 @@ class Sketch:
     def extrude(
             self, offset, distance, direction=1
     ):
-        real_offset = offset.value - distance.value
         return extrude_offset(
                 self, offset.value, adsk.fusion.ExtentDirections.PositiveExtentDirection, direction, distance.value
         )
@@ -248,8 +247,9 @@ def cut_offset(sketch, offset, direction, distance, body):
     )
     input_.participantBodies = [body]
 
-    return sketch.features.add(input_)
+    feature = sketch.features.add(input_)
 
+    return feature
 
 sketch_extrusion_selector = {
     True:  lambda s, o, d: partial(extrude_simple, s, d),
@@ -296,18 +296,16 @@ class PanelProfileSketch(Sketch):
 
 class PanelFingerSketch(Sketch):
 
-    def __init__(self, *, extrusion, selector, start, end, transform, orientation, name=''):
+    def __init__(self, *, extrusion, selector, start, end, name=''):
         self._extrusion = extrusion
         self._selector = selector
 
-        super().__init__(self.face, name=f'{name} Finger Sketch', construction=True)
+        super().__init__(self.face, name=name, construction=True)
 
         self._start = start
         self._end = end
         self._name = name
         self.base_name = name
-        self._transform = transform
-        self._orientation = orientation
 
     def __enter__(self):
         super().__enter__()
@@ -372,6 +370,10 @@ class FingerCutsPattern:
         """
         if count.value <= 1:
             return
+
+        for cut in cuts:
+            if not cut.isValid:
+                return
 
         axis_edges = axes_selector[self._orientation][axes]
 

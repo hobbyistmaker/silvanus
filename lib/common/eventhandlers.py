@@ -18,7 +18,7 @@ class CommandDestroyHandler(adsk.core.CommandEventHandler):
 
     def notify(self, args):
         with uicontext(self.app):
-            self.command.on_destroy(args)
+            self.command.destroy(args)
 
 
 class CommandExecuteHandler(adsk.core.CommandEventHandler):
@@ -33,7 +33,7 @@ class CommandExecuteHandler(adsk.core.CommandEventHandler):
             command = args.firingEvent.sender
             inputs = command.commandInputs
 
-            self.command.on_execute(inputs)
+            self.command.execute(inputs)
 
 
 class InputChangedHandler(adsk.core.InputChangedEventHandler):
@@ -45,9 +45,7 @@ class InputChangedHandler(adsk.core.InputChangedEventHandler):
 
     def notify(self, args):
         with uicontext(self.app):
-            cmd_input = args.input
-
-            self.command.on_change(cmd_input)
+            self.command.change(args)
 
 
 class ExecutePreviewHandler(adsk.core.CommandEventHandler):
@@ -60,10 +58,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
 
     def notify(self, args):
         with uicontext(self.app):
-            command = args.firingEvent.sender
-            inputs = command.commandInputs
-
-            self.command.on_preview(inputs)
+            self.command.preview(args)
 
 
 class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
@@ -78,7 +73,7 @@ class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):
             command = args.firingEvent.sender
             inputs = command.commandInputs
 
-            args.areInputsValid = self.command.on_validate(inputs)
+            args.areInputsValid = self.command.validate(inputs)
 
 
 class CreatedEventHandler(adsk.core.CommandCreatedEventHandler):
@@ -115,4 +110,4 @@ class CreatedEventHandler(adsk.core.CommandCreatedEventHandler):
             command.destroy.add(on_destroy)
             handlers.append(on_destroy)
 
-            self.command.on_create(command)
+            self.command.create(command)

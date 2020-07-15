@@ -3,11 +3,11 @@ from dataclasses import dataclass
 from dataclasses import field
 from enum import Enum
 from typing import Any
+from typing import Callable
 from typing import Dict
 from typing import List
 from typing import NamedTuple
 from typing import Tuple
-from typing import Callable
 
 
 class AxisFlag(Enum):
@@ -61,10 +61,11 @@ class ConfigItem(Enum):
     Profile = 81
     ProfileName = 82
     ProfileTransform = 83
-    Thickness = 84
-    ThicknessGroups = 85
-    Tooltips = 86
-    Width = 87
+    SimpleDividers = 84
+    Thickness = 85
+    ThicknessGroups = 86
+    Tooltips = 87
+    Width = 88
 
 
 class FaceItem(Enum):
@@ -84,6 +85,8 @@ class JointItem(Enum):
     Type = 5
     FaceDistance = 6
     ParentPanels = 7
+    FingerConfig = 8
+    ParentPanel = 9
 
 
 class GroupItem(Enum):
@@ -93,6 +96,8 @@ class GroupItem(Enum):
     Transform = 4
     PlaneSelector = 5
     Offsets = 6
+    Panels = 7
+    Joints = 8
 
 
 class InputProperty(Enum):
@@ -165,6 +170,14 @@ class Inputs(Enum):
     OverrideTitle = 72
     ThicknessTitle = 73
 
+    SimpleDividerGroup = 80
+    LengthDivider = 81
+    LengthDividerTitle = 82
+    WidthDivider = 83
+    WidthDividerTitle = 84
+    HeightDivider = 85
+    HeightDividerTitle = 86
+
     ErrorMessage = 255
 
 
@@ -180,13 +193,18 @@ class JointFace(Enum):
     Front_Back = 12
 
 
-class PanelType(Enum):
+class PanelInstance(Enum):
     Top = 1
     Bottom = 2
     Left = 3
     Right = 4
     Front = 5
     Back = 6
+
+
+class PanelType(Enum):
+    Inside = 1
+    Outside = 2
 
 
 class PlaneFlag(Enum):
@@ -230,12 +248,14 @@ class EstimatedFingers:
 class ActualFingerWidth:
     value: float
     expression: str
+    unitType: str
 
 
 @dataclass(eq=True, frozen=True)
 class FingerOffset:
     value: float
     expression: str
+    unitType: str
 
 
 @dataclass(eq=True, frozen=True)
@@ -248,6 +268,7 @@ class ActualFingerCount:
 class FingerPatternDistance:
     value: float
     expression: str
+    unitType: str
 
 
 @dataclass(eq=True, frozen=True)
@@ -302,11 +323,6 @@ class Orientation:
     value: int
 
 
-@dataclass
-class OutsidePanel:
-    id: OutsideType
-
-
 @dataclass(eq=True, frozen=True)
 class Override:
     value: bool
@@ -330,12 +346,6 @@ class PanelsList:
 @dataclass
 class PlaneSelector:
     plane: Any
-
-
-@dataclass(eq=True, frozen=True)
-class ProfileGroup:
-    length: str
-    width: str
 
 
 @dataclass
@@ -364,9 +374,27 @@ class LengthWidthProfile:
 
 
 class PanelProfile(LengthWidthProfile): pass
+
+
 class TopBottomFaceProfile(LengthWidthProfile): pass
+
+
 class FrontBackFaceProfile(LengthWidthProfile): pass
+
+
 class LeftRightFaceProfile(LengthWidthProfile): pass
+
+
+class KerfJoint: pass
+
+
+class PanelJoint: pass
+
+
+class OutsidePanel: pass
+
+
+class InsidePanel: pass
 
 
 @dataclass
@@ -443,11 +471,22 @@ class FaceDimensions:
 class ControlInput:
     control: Any
 
+
 class ThicknessInput(ControlInput): ...
+
+
 class LengthInput(ControlInput): ...
+
+
 class WidthInput(ControlInput): ...
+
+
 class HeightInput(ControlInput): ...
+
+
 class KerfInput(ControlInput): ...
+
+
 class FingerWidthInput(ControlInput): ...
 
 
@@ -457,6 +496,8 @@ class BooleanInput:
 
 
 class EnableInput(BooleanInput): ...
+
+
 class OverrideInput(BooleanInput): ...
 
 
@@ -472,7 +513,11 @@ class PanelOrientation:
 
 
 class LengthOrientation: ...
+
+
 class WidthOrientation: ...
+
+
 class HeightOrientation: ...
 
 
@@ -482,40 +527,42 @@ class ParentOrientation:
 
 
 @dataclass(eq=True, frozen=True)
-class AxisFingerType:
+class FingerPatternType:
     finger_type: FingerType
 
 
-class LengthAxisFingerType(AxisFingerType): ...
-class WidthAxisFingerType(AxisFingerType): ...
-class HeightAxisFingerType(AxisFingerType): ...
+class LengthFingerPatternType(FingerPatternType): ...
+
+
+class WidthFingerPatternType(FingerPatternType): ...
+
+
+class HeightFingerPatternType(FingerPatternType): ...
+
+
+class InverseFingerPattern: ...
+
+
+class NormalFingerPattern: ...
 
 
 @dataclass(eq=True, frozen=True)
-class JointAxis:
-    orientation: AxisFlag
+class FingerOrientation:
+    axis: AxisFlag
 
 
 @dataclass(eq=True, frozen=True)
 class ModelOrientation:
-    value: int
+    axis: int
 
 
-@dataclass
+@dataclass(eq=True, frozen=True)
 class Renderable: ...
 
 
 @dataclass(eq=True, frozen=True)
 class RootComponent:
     value: Any
-
-
-@dataclass
-class PanelGroup:
-    name: str
-    end: Tuple
-    transform: Callable
-    selector: Any
 
 
 @dataclass(eq=True, frozen=True)
@@ -531,7 +578,7 @@ class GroupProfile:
 
 @dataclass(eq=True, frozen=True)
 class FingerTypes:
-    values: List[AxisFingerType]
+    values: List[FingerPatternType]
 
 
 @dataclass(eq=True, frozen=True)
@@ -625,3 +672,77 @@ class PanelSubGroups:
 @dataclass(eq=True, frozen=True)
 class ParentPanel:
     id: int
+
+
+@dataclass(eq=True, frozen=True)
+class JointName:
+    value: str
+
+
+@dataclass(eq=True, frozen=True)
+class JointThickness:
+    value: float
+    expression: str
+    unitType: str
+
+
+@dataclass(eq=True, frozen=True)
+class JointPanelOffset:
+    value: float
+    expression: str
+    unitType: str
+
+
+@dataclass(eq=True, frozen=True)
+class JointPatternDistance:
+    value: float
+    expression: str
+    unitType: str
+
+
+@dataclass(eq=True, frozen=True)
+class JointProfile:
+    profile: Any
+
+
+class JointGroup:
+
+    def __init__(self):
+        self.names = set()
+        self.joint = None
+        self.joint_extrusions = set()
+
+
+class JointOrientationGroup:
+
+    def __init__(self):
+        self.joint_profiles = defaultdict(lambda: JointGroup())
+
+
+class JointTypeGroup:
+
+    def __init__(self):
+        self.joint_orientations = defaultdict(lambda: JointOrientationGroup())
+
+
+class PanelGroup:
+
+    def __init__(self):
+        self.joint_types = defaultdict(lambda: JointTypeGroup())
+        self.extrusions = set()
+        self.panel = None
+
+
+class ProfileGroup:
+
+    def __init__(self):
+        self.names = set()
+        self.transform = None
+        self.plane_selector = None
+        self.panels = defaultdict(lambda: PanelGroup())
+
+
+class AxisGroup:
+
+    def __init__(self):
+        self.profiles = defaultdict(lambda: ProfileGroup())

@@ -5,37 +5,37 @@ from dataclasses import field
 from typing import Any
 from typing import Dict
 
-import adsk.core
-
 from .config import config
-from .core import Repository
-from .entities import AxisFingerType
+from .ecs import Repository
 from .entities import AxisFlag
 from .entities import ConfigItem
 from .entities import EnableInput
 from .entities import EnableThicknessPair
-from .entities import JointAxis
-from .entities import FingerTypes
+from .entities import FingerOrientation
+from .entities import FingerPatternType
 from .entities import FingerWidthInput
 from .entities import HeightInput
 from .entities import InputProperty
 from .entities import Inputs
+from .entities import InsidePanel
 from .entities import KerfInput
 from .entities import LengthInput
 from .entities import MaxOffsetInput
 from .entities import ModelOrientation
+from .entities import OutsidePanel
 from .entities import OverrideInput
 from .entities import PanelName
 from .entities import PanelOrientation
-from .entities import ParentOrientation
 from .entities import ParentPanel
 from .entities import ReferencePointInput
-from .entities import Renderable
 from .entities import RootComponent
 from .entities import StartPanelOffset
 from .entities import ThicknessInput
 from .entities import WidthInput
 
+import adsk.core
+
+# noinspection SpellCheckingInspection
 logger = logging.getLogger('silvanus.lib.generatebox.dialog')
 
 yup = adsk.core.DefaultModelingOrientations.YUpModelingOrientation
@@ -47,11 +47,9 @@ class Config:
     dimensions = config[ConfigItem.DimensionsGroup]
     inputs = config[ConfigItem.Inputs]
     panels = config[ConfigItem.Panels]
-    planes = config[ConfigItem.Planes]
     parameters = config[ConfigItem.Parameters]
     overrides = config[ConfigItem.Overrides]
     enabled = config[ConfigItem.Enabled]
-    face_selectors = config[ConfigItem.FaceSelectors]
     input_panels = { }
 
     axis_list = defaultdict(list)
@@ -151,6 +149,7 @@ class CreateDialog:
         self._validators = { }
         self._message = { True: 'True', False: 'False' }
         self.valid = [True]
+        self.preview = False
 
         self._error = None
 
@@ -170,6 +169,7 @@ class CreateDialog:
 
     def create(self, inputs, is_metric, root, orientation):
         self._create_dimension_group(inputs, is_metric)
+        self._create_divider_group(inputs, is_metric)
         self._create_panel_table(inputs, is_metric, root, orientation)
 
         self._add_minimum_axis_dimensions()
@@ -201,6 +201,9 @@ class CreateDialog:
             self._add_update_validator(spinner)
 
             self.config.controls[item] = spinner
+
+    def _create_divider_group(self, inputs, is_metric):
+        pass
 
     def _create_panel_table(self, inputs, is_metric, root, orientation):
         """ Creates the input table for the default outside panels that can be enabled by the user.
@@ -262,6 +265,7 @@ class CreateDialog:
 
             panel_entity = self.repository.create(
                     enable_component,
+                    OutsidePanel(),
                     PanelName(label),
                     OverrideInput(self.config.controls[panel.override]),
                     ThicknessInput(panel.thickness),
@@ -271,7 +275,6 @@ class CreateDialog:
                     KerfInput(panel.kerf),
                     FingerWidthInput(panel.finger_width),
                     PanelOrientation(panel.orientation),
-                    Renderable(),
                     ModelOrientation(orientation),
                     RootComponent(root),
                     ReferencePointInput(*panel.reference_point),
@@ -283,11 +286,9 @@ class CreateDialog:
                 for axis in axes:
                     self.repository.create(
                             enable_component,
-                            JointAxis(axis),
-                            AxisFingerType(finger_type),
-                            ParentPanel(panel_entity.id),
-                            ParentOrientation(panel.orientation),
-                            PanelName(label)
+                            FingerOrientation(axis),
+                            FingerPatternType(finger_type),
+                            ParentPanel(panel_entity.id)
                     )
 
             table.addCommandInput(label_control, row_num, 0, 0, 0)
@@ -305,31 +306,45 @@ class CreateDialog:
             self._add_follow_handler(default_thickness_control, thickness_control, enabled_control)
             self._add_follow_handler(default_thickness_control, thickness_control, override_control)
             self._add_disable_handler(enabled_control, thickness_control)
-            self._add_update_validator(thickness_control)
             self._add_update_thickness(thickness_control)
 
     def update(self, cmd_input):
         """ For each change handler registered for an input, execute the handler.
         """
-        self.valid = [True]
+        if self._error and (cmd_input.id == self._error.id):
+            return False
+
+        self.valid = []
 
         handlers = self._handlers[cmd_input.id]
         for handler in handlers:
             handler()
 
+        return True
+
     def validate(self):
         """ Execute all registered validation handlers and return the combined "truthiness" result.
         """
+        self.preview = False
+
         for validator in self._validators.values():
             validator()
 
         result = all(self.valid)
 
-        self._error.formattedText = self._message[False]
-        self._error.isVisible = not result
-        self.valid = [result]
+        if result:
+            self._error.isVisible = False
+            self.valid = [True]
+            self.preview = True
+            return True
 
-        return result
+        self.preview = False
+        self.valid = [False]
+        self._error.isVisible = True
+
+        self._error.formattedText = self._message[False]
+
+        return False
 
     def _add_update_validator(self, source):
         """ Add a validator to for the specified input that will force it to refresh on update.
@@ -391,7 +406,7 @@ class CreateDialog:
 
         def wrap(d, a):
             def check_minimum():
-                msg = '<b style="color:red">{}</b> should be greater than thickness of all {} panels.'
+                msg = '<span style=" font-weight:600; color:#ff0000;">{}</span> should be greater than thickness of all {} panels.'
                 total = sum([
                     source.value for source, enabled in filter(lambda t: bool(t[1].value), self.config.axis_list[a])
                 ])
@@ -412,7 +427,8 @@ class CreateDialog:
                 filter(lambda p: p.enabled.value, self.config.thicknesses)
             ])
             result = kerf.value < maximum
-            self._message[result] = '<b style="color:red">Kerf</b> should be smaller than the minimum panel thickness.'
+            self._message[
+                result] = '<span style=" font-weight:600; color:#ff0000;">Kerf</span> should be smaller than the minimum panel thickness.'
             self.valid.append(result)
 
         kerf = self.config.controls[Inputs.Kerf]
@@ -427,7 +443,8 @@ class CreateDialog:
                 filter(lambda p: p.enabled.value, self.config.thicknesses)
             ])
             result = finger_width.value > minimum
-            self._message[result] = '<b style="color:red">Finger width</b> should be greater than material thickness.'
+            self._message[
+                result] = '<span style=" font-weight:600; color:#ff0000;">Finger width</span> should be greater than material thickness.'
             self.valid.append(result)
 
         finger_width = self.config.controls[Inputs.FingerWidth]
