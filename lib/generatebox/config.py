@@ -122,14 +122,16 @@ def initialize():
         Inputs.EnabledTitle:    'enabledTitleTextInput',
         Inputs.OverrideTitle:   'overrideTitleTextInput',
         Inputs.ThicknessTitle:  'thicknessTitleTextInput',
-        Inputs.LengthDividerTitle: 'lengthDividerCountInput'
+        Inputs.LengthDividerTitle: 'lengthDividerTitleInput',
+        Inputs.SimpleDividerGroup: 'simpleDividerGroup',
+        Inputs.LengthDivider:   'lengthDividerCountInput'
     }
 
     # Map labels to inputs and inputs to labels
     _INPUT_LABEL_MAP = {
         'Dimensions':      [Inputs.DimensionGroup],
         'Thickness':       [Inputs.Thickness, Inputs.ThicknessTitle],
-        'Length':          [Inputs.Length],
+        'Length':          [Inputs.Length, Inputs.LengthDivider],
         'Width':           [Inputs.Width],
         'Height':          [Inputs.Height],
         'Kerf':            [Inputs.Kerf],
@@ -144,7 +146,7 @@ def initialize():
         'Panel':           [Inputs.PanelTitle],
         'Enabled':         [Inputs.EnabledTitle],
         'Override':        [Inputs.OverrideTitle],
-        'Dividers':        [Inputs.LengthDivider]
+        'Dividers':        [Inputs.SimpleDividerGroup]
     }
     _INPUT_LABELS = { value: key for key, inputs in _INPUT_LABEL_MAP.items() for value in inputs }
 
@@ -329,7 +331,7 @@ def initialize():
             (Inputs.Height, AxisFlag.Height)
         },
         ConfigItem.Panels:          _PANEL_CONFIGS,
-        ConfigItem.SimpleDividers:  _SIMPLE_DIVIDER_INPUTS
+        ConfigItem.SimpleDividerGroup:  _SIMPLE_DIVIDER_INPUTS
     }
 
     logger.debug(f'Config Map: {_CONFIG_MAP}')

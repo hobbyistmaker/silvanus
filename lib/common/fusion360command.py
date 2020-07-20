@@ -63,11 +63,10 @@ class Fusion360Command(ABC):
         self.on_execute(inputs)
 
     def preview(self, args):
-        if self._valid:
+        if self._valid and self._dirty:
             self.post_validate_valid(args)
             self._dirty = False
-
-        self.on_preview(args)
+            self.on_preview(args)
 
     def validate(self, inputs):
         result = self.on_validate(inputs)

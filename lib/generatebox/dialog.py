@@ -50,6 +50,7 @@ class Config:
     parameters = config[ConfigItem.Parameters]
     overrides = config[ConfigItem.Overrides]
     enabled = config[ConfigItem.Enabled]
+    simple_dividers = config[ConfigItem.SimpleDividerGroup]
     input_panels = { }
 
     axis_list = defaultdict(list)
@@ -108,7 +109,7 @@ class ParameterizedControl:
 
     @property
     def unitType(self):
-        return self._control.unitType
+        return getattr(self._control, 'unitType', '')
 
     @property
     def value(self):
@@ -150,6 +151,7 @@ class CreateDialog:
         self._message = { True: 'True', False: 'False' }
         self.valid = [True]
         self.preview = False
+        self._ignore_updates = []
 
         self._error = None
 
@@ -166,11 +168,12 @@ class CreateDialog:
         self._error = None
         self._message = { True: '', False: '' }
         self.valid = [True]
+        self._ignore_updates = []
 
     def create(self, inputs, is_metric, root, orientation):
-        self._create_dimension_group(inputs, is_metric)
-        self._create_divider_group(inputs, is_metric)
-        self._create_panel_table(inputs, is_metric, root, orientation)
+        dimensions = self._create_dimension_group(inputs, is_metric)
+        self._create_panel_table(dimensions.children, is_metric, root, orientation)
+        self._create_divider_group(inputs)
 
         self._add_minimum_axis_dimensions()
         self._add_maximum_kerf()
@@ -178,6 +181,7 @@ class CreateDialog:
 
         self._error = inputs.addTextBoxCommandInput('errorMessageCommandInput', '', '', 2, True)
         self._error.isVisible = False
+        self._ignore_updates.append(self._error.id)
 
     def _create_dimension_group(self, inputs, is_metric):
         """ Create the default group of dimension inputs that define the overall dimensions of the box being
@@ -202,8 +206,26 @@ class CreateDialog:
 
             self.config.controls[item] = spinner
 
-    def _create_divider_group(self, inputs, is_metric):
-        pass
+        self._ignore_updates.append(group.id)
+        return group
+
+    def _create_divider_group(self, inputs):
+        inputs_config = self.config.inputs
+        simple_dividers_group = inputs_config[Inputs.SimpleDividerGroup]
+
+        group = inputs.addGroupCommandInput(*simple_dividers_group[InputProperty.Id])
+        for item in self.config.simple_dividers:
+            input_config = inputs_config[item]
+
+            id_, label = input_config[InputProperty.Id]
+            name = self.config.parameters[item][ConfigItem.Name]
+
+            spinner = ParameterizedControl(name, group.children.addIntegerSpinnerCommandInput(
+                    id_, label,
+                    0, 200, 1, 0
+            ))
+            self.config.controls[item] = spinner
+        self._ignore_updates.append(group.id)
 
     def _create_panel_table(self, inputs, is_metric, root, orientation):
         """ Creates the input table for the default outside panels that can be enabled by the user.
@@ -311,8 +333,9 @@ class CreateDialog:
     def update(self, cmd_input):
         """ For each change handler registered for an input, execute the handler.
         """
-        if self._error and (cmd_input.id == self._error.id):
+        if cmd_input.id in self._ignore_updates:
             return False
+        logger.debug(f'Updating: {cmd_input.id} is not in {self._ignore_updates}')
 
         self.valid = []
 
@@ -422,10 +445,16 @@ class CreateDialog:
 
     def _add_maximum_kerf(self):
         def check_kerf():
-            maximum = min([
+            thicknesses = [
                 self.config.controls[panel.thickness].value for panel in
                 filter(lambda p: p.enabled.value, self.config.thicknesses)
-            ])
+            ]
+            if not len(thicknesses):
+                self.valid.append(False)
+                self._message[False] = 'A minimum of two connecting panels must be enabled.'
+                return
+
+            maximum = min(thicknesses)
             result = kerf.value < maximum
             self._message[
                 result] = '<span style=" font-weight:600; color:#ff0000;">Kerf</span> should be smaller than the minimum panel thickness.'
@@ -438,10 +467,16 @@ class CreateDialog:
 
     def _add_minimum_finger_width(self):
         def check_finger_width():
-            minimum = max([
+            thicknesses = [
                 self.config.controls[panel.thickness].value for panel in
                 filter(lambda p: p.enabled.value, self.config.thicknesses)
-            ])
+            ]
+            if not len(thicknesses):
+                self.valid.append(False)
+                self._message[False] = 'A minimum of two connecting panels must be enabled.'
+                return
+
+            minimum = max(thicknesses)
             result = finger_width.value > minimum
             self._message[
                 result] = '<span style=" font-weight:600; color:#ff0000;">Finger width</span> should be greater than material thickness.'

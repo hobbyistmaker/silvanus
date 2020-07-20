@@ -61,7 +61,7 @@ class ConfigItem(Enum):
     Profile = 81
     ProfileName = 82
     ProfileTransform = 83
-    SimpleDividers = 84
+    SimpleDividerGroup = 84
     Thickness = 85
     ThicknessGroups = 86
     Tooltips = 87
