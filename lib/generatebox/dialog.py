@@ -13,12 +13,14 @@ from .entities import EnableInput
 from .entities import EnableThicknessPair
 from .entities import FingerOrientation
 from .entities import FingerPatternType
+from .entities import FingerType
 from .entities import FingerWidthInput
 from .entities import HeightInput
 from .entities import InputProperty
 from .entities import Inputs
 from .entities import InsidePanel
 from .entities import KerfInput
+from .entities import DividerCountInput
 from .entities import LengthInput
 from .entities import MaxOffsetInput
 from .entities import ModelOrientation
@@ -152,6 +154,7 @@ class CreateDialog:
         self.valid = [True]
         self.preview = False
         self._ignore_updates = []
+        self._run_preview = None
 
         self._error = None
 
@@ -169,11 +172,14 @@ class CreateDialog:
         self._message = { True: '', False: '' }
         self.valid = [True]
         self._ignore_updates = []
+        self.preview = False
+        self._run_preview = None
 
     def create(self, inputs, is_metric, root, orientation):
         dimensions = self._create_dimension_group(inputs, is_metric)
         self._create_panel_table(dimensions.children, is_metric, root, orientation)
-        self._create_divider_group(inputs)
+        self._create_divider_group(inputs, root, orientation)
+        self._create_preview_button(inputs)
 
         self._add_minimum_axis_dimensions()
         self._add_maximum_kerf()
@@ -182,6 +188,15 @@ class CreateDialog:
         self._error = inputs.addTextBoxCommandInput('errorMessageCommandInput', '', '', 2, True)
         self._error.isVisible = False
         self._ignore_updates.append(self._error.id)
+
+    def _create_preview_button(self, inputs):
+        table = inputs.addTableCommandInput('buttonTableInput', 'Buttons', 0, '1:3')
+        self._run_preview = table.commandInputs.addBoolValueInput('previewCommandButton', 'Preview', False, '', False)
+        table.isEnabled = False
+        table.minimumVisibleRows = 1
+        table.maximumVisibleRows = 1
+        table.addCommandInput(self._run_preview, 0, 0, 0, 0)
+        self._add_validity_check(self._run_preview)
 
     def _create_dimension_group(self, inputs, is_metric):
         """ Create the default group of dimension inputs that define the overall dimensions of the box being
@@ -209,7 +224,7 @@ class CreateDialog:
         self._ignore_updates.append(group.id)
         return group
 
-    def _create_divider_group(self, inputs):
+    def _create_divider_group(self, inputs, root, orientation):
         inputs_config = self.config.inputs
         simple_dividers_group = inputs_config[Inputs.SimpleDividerGroup]
 
@@ -225,6 +240,28 @@ class CreateDialog:
                     0, 200, 1, 0
             ))
             self.config.controls[item] = spinner
+
+            panel_entity = self.repository.create(
+                    InsidePanel(),
+                    ThicknessInput(Inputs.Thickness),
+                    LengthInput(Inputs.Thickness),
+                    WidthInput(Inputs.Width),
+                    HeightInput(Inputs.Height),
+                    KerfInput(Inputs.Kerf),
+                    FingerWidthInput(Inputs.FingerWidth),
+                    PanelOrientation(AxisFlag.Length),
+                    MaxOffsetInput(Inputs.Length),
+                    DividerCountInput(Inputs.LengthDivider)
+            )
+
+            for finger_type, axes in { FingerType.Inverse: [AxisFlag.Height, AxisFlag.Width] }.items():
+                for axis in axes:
+                    self.repository.create(
+                            FingerOrientation(axis),
+                            FingerPatternType(finger_type),
+                            ParentPanel(panel_entity.id)
+                    )
+
         self._ignore_updates.append(group.id)
 
     def _create_panel_table(self, inputs, is_metric, root, orientation):
@@ -297,8 +334,6 @@ class CreateDialog:
                     KerfInput(panel.kerf),
                     FingerWidthInput(panel.finger_width),
                     PanelOrientation(panel.orientation),
-                    ModelOrientation(orientation),
-                    RootComponent(root),
                     ReferencePointInput(*panel.reference_point),
                     MaxOffsetInput(panel.max_reference),
                     StartPanelOffset(0, '', ''),
@@ -343,7 +378,7 @@ class CreateDialog:
         for handler in handlers:
             handler()
 
-        return True
+        return True if cmd_input == self._run_preview else False
 
     def validate(self):
         """ Execute all registered validation handlers and return the combined "truthiness" result.
@@ -368,6 +403,12 @@ class CreateDialog:
         self._error.formattedText = self._message[False]
 
         return False
+
+    def _add_validity_check(self, source):
+        def check_validity():
+            source.isEnabled = all(self.valid)
+
+        self._validators[source.id] = check_validity
 
     def _add_update_validator(self, source):
         """ Add a validator to for the specified input that will force it to refresh on update.

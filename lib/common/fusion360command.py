@@ -21,6 +21,8 @@ class Fusion360Command(ABC):
         self._orientation = orientation
         self._valid = True
         self._preview = False
+        self._initialized = False
+        self._first_run = True
 
     def on_change(self, cmd_input):
         pass
@@ -52,6 +54,7 @@ class Fusion360Command(ABC):
 
     def create(self, inputs):
         self.on_create(inputs)
+        self._initialized = True
 
     def destroy(self, inputs):
         self.on_destroy(inputs)
@@ -67,6 +70,10 @@ class Fusion360Command(ABC):
             self.post_validate_valid(args)
             self._dirty = False
             self.on_preview(args)
+            self._first_run = False
+            return True
+
+        return False
 
     def validate(self, inputs):
         result = self.on_validate(inputs)

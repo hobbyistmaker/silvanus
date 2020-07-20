@@ -39,9 +39,10 @@ logger = logging.getLogger('silvanus.lib.generatebox.render')
 
 class RenderSystem(Process):
 
-    def __init__(self, root, orientation):
+    def __init__(self, root, orientation, parametric=False):
         self._root = root
         self._orientation = orientation
+        self._parametric = parametric
 
         self.groups = defaultdict(lambda: AxisGroup())
 
@@ -53,11 +54,12 @@ class RenderSystem(Process):
 
     def _define_group_profiles(self, groups, filter):
         PanelConfig = namedtuple('PanelConfig', [
-            'PanelProfile', 'PanelOrientation', 'PanelName', 'ExtrusionDistance', 'PanelOffset', 'ParentPanel'
+            'PanelProfile', 'PanelOrientation', 'PanelName', 'Thickness', 'PanelOffset', 'ParentPanel'
         ])
         JointConfig = namedtuple('JointConfig', [
-            'JointPatternDistance', 'JointPanelOffset', 'JointThickness', 'FingerOrientation',
-            'FingerOffset', 'ActualFingerWidth', 'FingerPatternDistance', 'ActualFingerCount', 'FingerPatternType',
+            'JointPatternDistance', 'JointPanelOffset', 'JointThickness',
+            'FingerOrientation', 'FingerOffset', 'ActualFingerWidth',
+            'FingerPatternDistance', 'ActualFingerCount', 'FingerPatternType',
             'PanelThickness', 'JointName'
         ])
         components = (
@@ -75,14 +77,14 @@ class RenderSystem(Process):
         logger.debug(f'{len(entities)} group profiles to define')
         for entity in entities:
             panel = PanelConfig(
-                    entity.PanelProfile, entity.PanelOrientation, entity.PanelName, entity.ExtrusionDistance,
+                    entity.PanelProfile, entity.PanelOrientation, entity.PanelName, entity.Thickness,
                     entity.PanelOffset, entity.ParentPanel
             )
             joint = JointConfig(
                     entity.JointPatternDistance, entity.JointPanelOffset, entity.JointThickness,
                     entity.FingerOrientation, entity.FingerOffset, entity.ActualFingerWidth,
                     entity.FingerPatternDistance, entity.ActualFingerCount, entity.FingerPatternType,
-                    entity.Thickness, entity.JointName
+                    entity.ExtrusionDistance, entity.JointName
             )
 
             orientation = groups[entity.PanelOrientation]
@@ -136,7 +138,7 @@ class RenderSystem(Process):
         for axis_group_id, axis_group in groups.items():
             for profile, profile_data in axis_group.profiles.items():
                 end = (profile.length.value, profile.width.value)
-                name = '-'.join(profile_data.names)
+                name = '-'.join(filter(lambda n: 'Divider' not in n, profile_data.names))
                 panel_groups = profile_data.panels
 
                 transform = self._select_group_transform(axis_group_id)
@@ -176,8 +178,13 @@ class RenderSystem(Process):
             current_reference = func(group_name, current_reference, thickness, panel, panel_data)
 
     def _render_single_extrusion(self, group_name, profile, thickness, panel, panel_data):
+        extrude = {
+            True: profile.extrude_parametric,
+            False: profile.extrude_non_parametric
+        }
+
         logger.debug(f'{profile}')
-        extrusion = profile.extrude(panel.PanelOffset, thickness)
+        extrusion = extrude[self._parametric](panel.PanelOffset, thickness)
         extrusion.name = f'{panel.PanelName.value} Panel Extrusion'
         body = extrusion.bodies.item(0)
         body.name = f'{panel.PanelName.value} Panel Body'
@@ -198,7 +205,9 @@ class RenderSystem(Process):
                 features = []
 
                 for joint in joints.joint_extrusions:
-                    feature = sketch.cut(joint.JointPanelOffset.value, joint.JointThickness.value)
+                    logger.debug(f'Adding joint for {joint}')
+                    logger.debug(f'Cutting joint for {joint.JointName.value} of thickness {joint.JointThickness} at {joint.JointPanelOffset.value} on {panel.PanelName.value}')
+                    feature = sketch.cut(joint.JointPanelOffset, joint.JointThickness)
                     feature.name = f'{panel.PanelName.value} {joint.JointName.value} {names[joint_type]} Extrusion'
                     features.append(feature)
 
@@ -206,10 +215,10 @@ class RenderSystem(Process):
                 joint = joints.joint
                 distance = joint.FingerPatternDistance
                 count = joint.ActualFingerCount
-                joint_names = f'{("-").join(joints.names)}'
+                joint_names = ('-').join(filter(lambda n: 'Divider' not in n, joints.names))
                 axes = (panel_data.panel.PanelOrientation.axis, joint.FingerOrientation.axis)
 
-                pattern = replicator.copy(axes=axes, cuts=features, distance=distance, count=count)
+                pattern = replicator.copy_non_parametric(axes=axes, cuts=features, distance=distance, count=count)
                 if pattern:
                     pattern.name = f'{panel.PanelName.value} {joint_names} {names[joint_type]} Pattern'
 
@@ -218,7 +227,7 @@ class RenderSystem(Process):
     @staticmethod
     def _render_copy_extrusion(group_name, reference, thickness, panel, _):
         with FaceProfile(reference, name='') as profile:
-            extrusion = profile.extrude_reverse(panel.PanelOffset, thickness, -1)
+            extrusion = profile.extrude_reverse_non_parametric(panel.PanelOffset, thickness, -1)
             extrusion.name = f'{panel.PanelName.value} Panel Extrusion'
             body = extrusion.bodies.item(0)
             body.name = f'{panel.PanelName.value} Panel Body'
@@ -246,7 +255,7 @@ class RenderSystem(Process):
 
             logger.debug(f'Joint profiles: {pformat(orientation_data.joint_profiles, width=1000)}')
             for profile_group_id, profile_group_data in orientation_data.joint_profiles.items():
-                joint_names = f'{"-".join(profile_group_data.names)}'
+                joint_names = '-'.join(filter(lambda n: 'Divider' not in n, profile_group_data.names))
                 profile_name = f'{group_name} {joint_names} {name} Sketch'
                 finger_offset = profile_group_data.joint.FingerOffset
                 finger_width = profile_group_data.joint.ActualFingerWidth

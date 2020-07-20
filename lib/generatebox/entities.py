@@ -490,6 +490,15 @@ class KerfInput(ControlInput): ...
 class FingerWidthInput(ControlInput): ...
 
 
+class DividerCountInput(ControlInput): ...
+
+
+@dataclass(eq=True, frozen=True)
+class DividerCount:
+    value: int
+    expression: str
+
+
 @dataclass
 class BooleanInput:
     control: Any = field(hash=False)
@@ -723,6 +732,13 @@ class JointTypeGroup:
 
     def __init__(self):
         self.joint_orientations = defaultdict(lambda: JointOrientationGroup())
+
+
+@dataclass(eq=True, frozen=True)
+class JointKerf:
+    value: float
+    expression: str
+    unitType: str
 
 
 class PanelGroup:

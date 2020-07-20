@@ -52,6 +52,7 @@ class GenerateBoxCommand(Fusion360Command):
         return self._dialog.update(cmd_input)
 
     def on_execute(self, inputs):
+        self._core.update(orientation=self.orientation)
         self._core.execute(orientation=self.orientation, component=self.root)
 
     def on_preview(self, args):

@@ -58,7 +58,7 @@ class ExecutePreviewHandler(adsk.core.CommandEventHandler):
 
     def notify(self, args):
         with uicontext(self.app):
-            self.command.preview(args)
+            args.isValidResult = self.command.preview(args)
 
 
 class ValidateInputsHandler(adsk.core.ValidateInputsEventHandler):

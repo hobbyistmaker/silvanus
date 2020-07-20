@@ -89,7 +89,7 @@ class CommandButton:
 
     def preview(self, inputs):
         with uicontext(self.app, level):
-            self.command.preview(inputs)
+            return self.command.preview(inputs)
 
     def destroy(self, args):
         with uicontext(self.app, level):

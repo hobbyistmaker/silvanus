@@ -9,6 +9,8 @@ from .entities import ActualFingerWidth
 from .entities import AxisFlag
 from .entities import ConfigItem
 from .entities import DefaultFingers
+from .entities import DividerCount
+from .entities import DividerCountInput
 from .entities import EnableInput
 from .entities import Enabled
 from .entities import EstimatedFingers
@@ -24,6 +26,7 @@ from .entities import Height
 from .entities import HeightInput
 from .entities import HeightOrientation
 from .entities import Inputs
+from .entities import InsidePanel
 from .entities import InverseFingerPattern
 from .entities import JointItem
 from .entities import JointName
@@ -75,22 +78,26 @@ class ConfigurePanels(Process):
         self._add_length_inputs()
         self._add_width_inputs()
         self._add_height_inputs()
-        self._add_kerf_inputs()
         self._del_unused_kerf()
         self._add_finger_width_inputs()
         self._add_max_offset_inputs()
-        self._add_extrusion_distance()
+        self._add_divider_count_inputs()
 
+        self._add_dividers()
+        self._add_extrusion_distance()
         self._add_reference_points()
 
         self._add_orientations()
         self._add_height_orientation()
         self._add_length_orientation()
         self._add_width_orientation()
+
         self._add_height_panel_start_points()
         self._add_length_panel_start_points()
         self._add_width_panel_start_points()
 
+        self._add_kerf_inputs()
+        self._kerf_adjust_inside_length_panels()
         self._kerf_adjust_profiles()
 
         self._define_finger_joints()
@@ -128,10 +135,14 @@ class ConfigurePanels(Process):
         for key, parameter in filter(lambda o: not o[1].value, enabled.items()):
             self._repository.parameters[key][ConfigItem.Enabled] = False
 
-    def _read_control(self, source, dest):
+    def _read_float_control(self, source, dest):
         """ Read the value from a Fusion360 input control """
         control = self._config.controls[source.control]
         return dest(control.value, control.name, control.unitType)
+
+    def _read_int_control(self, source, dest):
+        control = self._config.controls[source.control]
+        return dest(control.value, control.name)
 
     def _enable_panels(self):
         """ For each entity with an EnableInput control, read the value and create an Enable component if the
@@ -162,29 +173,41 @@ class ConfigurePanels(Process):
             component.
         """
         self._repository.with_components(ThicknessInput).for_each(
-                lambda c: c.add_component(self._read_control(c.ThicknessInput, Thickness))
+                lambda c: c.add_component(self._read_float_control(c.ThicknessInput, Thickness))
         )
 
     def _add_length_inputs(self):
         """ For each entity with a LengthInput control, read the value and create or replace a Length component.
         """
         self._repository.with_components(LengthInput).for_each(
-                lambda c: c.add_component(self._read_control(c.LengthInput, Length))
+                lambda c: c.add_component(self._read_float_control(c.LengthInput, Length))
         )
 
     def _add_width_inputs(self):
         """ For each entity with a WidthInput control, read the value and create or replace a Width component.
         """
         self._repository.with_components(WidthInput).for_each(
-                lambda c: c.add_component(self._read_control(c.WidthInput, Width))
+                lambda c: c.add_component(self._read_float_control(c.WidthInput, Width))
         )
 
     def _add_height_inputs(self):
         """ For each entity with a HeightInput control, read the value and create or replace the Height component.
         """
         self._repository.with_components(HeightInput).for_each(
-                lambda c: c.add_component(self._read_control(c.HeightInput, Height))
+                lambda c: c.add_component(self._read_float_control(c.HeightInput, Height))
         )
+
+    def _add_divider_count_inputs(self):
+        def read_input(entity):
+            control = self._config.controls[entity.DividerCountInput.control]
+            logger.debug(f'Divider Count: {control.value}')
+            return bool(control.value)
+
+        def add_divider_count(entity):
+            logger.debug('Adding Divider Count Entity')
+            entity.add_component(self._read_int_control(entity.DividerCountInput, DividerCount))
+
+        self._repository.with_components(DividerCountInput).with_true(read_input).for_each(add_divider_count)
 
     def _add_extrusion_distance(self):
         """ For each entity with a Thickness component, create a corresponding ExtrusionDistance component. This
@@ -207,7 +230,7 @@ class ConfigurePanels(Process):
             return bool(control.value)
 
         self._repository.with_components(KerfInput).with_true(read_kerf).for_each(
-                lambda c: c.add_component(self._read_control(c.KerfInput, Kerf))
+                lambda c: c.add_component(self._read_float_control(c.KerfInput, Kerf))
         )
 
     def _del_unused_kerf(self):
@@ -228,7 +251,7 @@ class ConfigurePanels(Process):
             component.
         """
         self._repository.with_components(FingerWidthInput).for_each(
-                lambda c: c.add_component(self._read_control(c.FingerWidthInput, FingerWidth))
+                lambda c: c.add_component(self._read_float_control(c.FingerWidthInput, FingerWidth))
         )
 
     def _add_max_offset_inputs(self):
@@ -242,6 +265,49 @@ class ConfigurePanels(Process):
                 entity.add_component(MaxOffset(control.value, control.name, control.unitType))
 
         self._repository.with_components(MaxOffsetInput).with_all(read_max_offset)
+
+    def _add_dividers(self):
+        divider_group = self._repository.with_components(
+                DividerCount, Length, Width, Height, Thickness, FingerWidth, PanelOrientation, MaxOffset, KerfInput
+        ).instances
+
+        logger.debug(f'{len(divider_group)} divider groups.')
+        for dividers in divider_group:
+            divider_count = dividers.DividerCount.value
+            pocket_count = divider_count + 1
+            total_panels = divider_count + 2
+            pocket_offset = (dividers.MaxOffset.value - dividers.Thickness.value * total_panels) / pocket_count
+            thickness = dividers.Thickness.value
+            for panel_num in range(1, pocket_count):
+                panel_entity = self._repository.create(
+                        Enabled(True),
+                        InsidePanel(),
+                        PanelName(f'Length Divider {panel_num}'),
+                        dividers.Thickness,
+                        dividers.Length,
+                        dividers.Width,
+                        dividers.Height,
+                        dividers.FingerWidth,
+                        dividers.PanelOrientation,
+                        dividers.MaxOffset,
+                        dividers.KerfInput,
+                        PanelEndReferencePoint(
+                                Length((pocket_offset * panel_num) + thickness*(1+panel_num), f'{(pocket_offset * panel_num) + thickness*(1+panel_num)}', dividers.Length.unitType),
+                                Width(dividers.Width.value, dividers.Width.expression, dividers.Width.unitType),
+                                Height(dividers.Height.value, dividers.Height.expression, dividers.Height.unitType)
+                        )
+                )
+
+                logger.debug(f'Adding inside panel at {(pocket_offset * panel_num) + thickness} for {panel_entity.id}.')
+
+                for finger_type, axes in { FingerType.Inverse: [AxisFlag.Height, AxisFlag.Width] }.items():
+                    for axis in axes:
+                        self._repository.create(
+                                Enabled(True),
+                                FingerOrientation(axis),
+                                FingerPatternType(finger_type),
+                                ParentPanel(panel_entity.id)
+                        )
 
     def _add_orientations(self):
         """ For each entity with a PanelOrientation component, read the value and create or replace a
@@ -260,7 +326,7 @@ class ConfigurePanels(Process):
         """ For entities with a Height Orientation component, create the PanelProfile component with Length(length),
             and Width(width).
         """
-        self._repository.with_components(Enabled, HeightOrientation, Length, Width, Height, Thickness).for_each(
+        self._repository.with_components(Enabled, HeightOrientation, Length, Width).for_each(
                 lambda c: c.add_components(PanelProfile(c.Length, c.Width))
         )
 
@@ -268,7 +334,7 @@ class ConfigurePanels(Process):
         """ For entities with a LengthOrientation component, create the PanelProfile component with Length(width)
             and Width(height).
         """
-        self._repository.with_components(Enabled, LengthOrientation, Length, Width, Height, Thickness).for_each(
+        self._repository.with_components(Enabled, LengthOrientation, Width, Height).for_each(
                 lambda c: c.add_components(PanelProfile(c.Width, c.Height))
         )
 
@@ -276,7 +342,7 @@ class ConfigurePanels(Process):
         """ For entities with a WidthOrientation component, create the PanelProfile component with Length(length)
             and Height(height).
         """
-        self._repository.with_components(Enabled, WidthOrientation, Length, Width, Height, Thickness).for_each(
+        self._repository.with_components(Enabled, WidthOrientation, Length, Height).for_each(
                 lambda c: c.add_components(PanelProfile(c.Length, c.Height))
         )
 
@@ -313,7 +379,7 @@ class ConfigurePanels(Process):
 
         def add_start_point(entity):
             end = entity.PanelEndReferencePoint
-            thickness = entity.Thickness
+            thickness = entity.ExtrusionDistance
 
             expression = {
                 False: '0',
@@ -331,10 +397,11 @@ class ConfigurePanels(Process):
                             Width(0, '', end.width.unitType),
                             height_value
                     ),
-                    PanelOffset(start_height.value, start_height.expression, start_height.unitType)
+                    PanelOffset(start_height.value, start_height.expression, start_height.unitType),
+                    JointPanelOffset(start_height.value, start_height.expression, start_height.unitType)
             )
 
-        self._repository.with_components(HeightOrientation, PanelEndReferencePoint, Thickness).for_each(add_start_point)
+        self._repository.with_components(HeightOrientation, PanelEndReferencePoint, ExtrusionDistance).for_each(add_start_point)
 
     def _add_length_panel_start_points(self):
         """ For entities with LengthOrientation, PanelEndReferencePoint and Thickness components, create a
@@ -344,7 +411,7 @@ class ConfigurePanels(Process):
 
         def add_start_point(entity):
             end = entity.PanelEndReferencePoint
-            thickness = entity.Thickness
+            thickness = entity.ExtrusionDistance
 
             expression = {
                 False: '0',
@@ -364,10 +431,11 @@ class ConfigurePanels(Process):
                             Width(0, '', end.width.unitType),
                             Height(0, '', end.height.unitType)
                     ),
-                    PanelOffset(start_length.value, start_length.expression, start_length.unitType)
+                    PanelOffset(start_length.value, start_length.expression, start_length.unitType),
+                    JointPanelOffset(start_length.value, start_length.expression, start_length.unitType)
             )
 
-        self._repository.with_components(LengthOrientation, PanelEndReferencePoint, Thickness).for_each(add_start_point)
+        self._repository.with_components(LengthOrientation, PanelEndReferencePoint, ExtrusionDistance).for_each(add_start_point)
 
     def _add_width_panel_start_points(self):
         """ For entities with WidthOrientation, PanelEndReferencePoint and Thickness components, create a
@@ -377,7 +445,7 @@ class ConfigurePanels(Process):
 
         def add_start_point(entity):
             end = entity.PanelEndReferencePoint
-            thickness = entity.Thickness
+            thickness = entity.ExtrusionDistance
 
             expression = {
                 False: '0',
@@ -397,10 +465,33 @@ class ConfigurePanels(Process):
                             start_width,
                             Height(0, '', end.width.unitType)
                     ),
-                    PanelOffset(start_width.value, start_width.expression, start_width.unitType)
+                    PanelOffset(start_width.value, start_width.expression, start_width.unitType),
+                    JointPanelOffset(start_width.value, start_width.expression, start_width.unitType)
             )
 
-        self._repository.with_components(WidthOrientation, PanelEndReferencePoint, Thickness).for_each(add_start_point)
+        self._repository.with_components(WidthOrientation, PanelEndReferencePoint, ExtrusionDistance).for_each(add_start_point)
+
+    def _kerf_adjust_inside_length_panels(self):
+        panels = self._repository.with_components(
+                InsidePanel, LengthOrientation, Thickness, Kerf, JointPanelOffset
+        ).instances
+        for panel in panels:
+            offset = panel.JointPanelOffset
+            thickness = panel.Thickness
+            kerf = panel.Kerf
+
+            panel.add_components(
+                    Thickness(
+                            thickness.value - kerf.value,
+                            f'{thickness.expression} - {kerf.expression}',
+                            thickness.unitType
+                    ),
+                    JointPanelOffset(
+                            offset.value - kerf.value/2,
+                            f'{offset.expression} - {kerf.expression}/2',
+                            offset.unitType
+                    )
+            )
 
     def _kerf_adjust_profiles(self):
         """ For entities with a PanelProfile component, adjust the length and width with the value of kerf, if
@@ -474,7 +565,7 @@ class ConfigurePanels(Process):
             panels[panel.FingerOrientation.axis][JointItem.ParentPanels].append(panel)
 
         joined_panels = self._repository.with_components(
-                Enabled, PanelOrientation, PanelOffset, Length, Width, Height, PanelName, ExtrusionDistance
+                Enabled, PanelOrientation, JointPanelOffset, Length, Width, Height, PanelName, ExtrusionDistance, Thickness
         ).instances
 
         distance_selector = {
@@ -504,7 +595,7 @@ class ConfigurePanels(Process):
             total_distance = distance_selector[(parent_panel.FingerOrientation.axis,
                                                 parent_panel.PanelOrientation.axis)](joined_panel)
             logger.debug(
-                    f'Join {parent_panel.PanelName.value}:{parent_panel.PanelOrientation.axis}:{parent_panel.id} with profile ({(parent_panel.PanelProfile.length, parent_panel.PanelProfile.width)}) with {joined_panel.PanelName.value} along {total_distance.expression} with {parent_panel.FingerPatternType.finger_type} joint of {joined_panel.ExtrusionDistance.expression} and offset of {joined_panel.PanelOffset.expression}.')
+                    f'Join {parent_panel.PanelName.value}:{parent_panel.PanelOrientation.axis}:{parent_panel.id} with profile ({(parent_panel.PanelProfile.length, parent_panel.PanelProfile.width)}) with {joined_panel.PanelName.value} along {total_distance.expression} with {parent_panel.FingerPatternType.finger_type} joint of {joined_panel.ExtrusionDistance.expression} and offset of {joined_panel.JointPanelOffset.expression}.')
             self._repository.create(
                     Renderable(),
                     PanelJoint(),
@@ -519,9 +610,9 @@ class ConfigurePanels(Process):
                     parent_panel.Thickness,
                     ParentPanel(parent_panel.id),
                     JointThickness(
-                            joined_panel.ExtrusionDistance.value,
-                            joined_panel.ExtrusionDistance.expression,
-                            joined_panel.ExtrusionDistance.unitType
+                            joined_panel.Thickness.value,
+                            joined_panel.Thickness.expression,
+                            joined_panel.Thickness.unitType
                     ),
                     JointName(joined_panel.PanelName.value),
                     JointPatternDistance(
@@ -529,11 +620,7 @@ class ConfigurePanels(Process):
                             total_distance.expression,
                             total_distance.unitType
                     ),
-                    JointPanelOffset(
-                            joined_panel.PanelOffset.value,
-                            joined_panel.PanelOffset.expression,
-                            joined_panel.PanelOffset.unitType
-                    )
+                    joined_panel.JointPanelOffset
             )
 
     def _add_kerf_to_joints(self):
@@ -554,6 +641,9 @@ class ConfigurePanels(Process):
 
         for instance in left_join.values():
             parent = instance['parent']
+            if not parent:
+                logger.debug(f'No parent found for {instance}')
+                continue
             for joint in instance['joints']:
                 joint.add_component(parent.Kerf)
 

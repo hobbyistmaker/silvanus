@@ -20,8 +20,8 @@ class Core:
     def execute(self, *, orientation, component):
         logger.debug(f'Running execute processes.')
         self._processes.clear()
-        self._processes.create_process(RenderSystem, component, orientation)
         self._processes.create_process(SaveParameters)
+        self._processes.create_process(RenderSystem, component, orientation, parametric=True)
         self._processes.process()
         self.clear()
 

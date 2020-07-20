@@ -86,12 +86,14 @@ class Repository:
 
     def add_component(self, entity, component):
         component_type = type(component)
+        logger.debug(f'Adding {component_type} to {entity}')
         self._components[component_type][entity] = component
         self._entities[entity].add(component)
 
     def add_components(self, entity, *components):
         for component in components:
             component_type = type(component)
+            logger.debug(f'Adding {component_type} to {entity}')
             self._components[component_type][entity] = component
             self._entities[entity].add(component_type)
 
