@@ -13,10 +13,22 @@ class Fusion360Command(ABC):
     PANEL_LOCATION = 'SolidScriptsAddinsPanel'
     PREVIEW_FLAG = 'previewEnabledId'
 
-    # these should be set by the run() method
-    _units_type = None
-    _orientation = None
-    _app = None
+    _dirty = False
+
+    def __init__(self, app, *, units=None, orientation=None):
+        self._app = app
+        self._units_type = units
+        self._orientation = orientation
+        self._valid = True
+        self._preview = False
+        self._initialized = False
+        self._first_run = True
+
+    def on_change(self, cmd_input):
+        pass
+
+    def on_create(self, inputs):
+        pass
 
     def on_destroy(self, inputs):
         pass
@@ -28,23 +40,42 @@ class Fusion360Command(ABC):
     def on_execute(self, inputs):
         pass
 
-    @abstractmethod
-    def on_change(self, cmd_input):
+    def on_preview(self, args):
         pass
 
-    @abstractmethod
     def on_validate(self, inputs):
         pass
 
-    def on_create(self, inputs):
-        self._units_type = self._app.activeProduct.fusionUnitsManager.distanceDisplayUnits
-        self._orientation = self._app.preferences.generalPreferences.defaultModelingOrientation
-        self._on_create(inputs)
-
-    @abstractmethod
-    def _on_create(self, inputs):
+    def post_validate_valid(self, inputs):
         pass
 
-    @abstractmethod
-    def on_preview(self, inputs):
-        pass
+    def change(self, cmd_input):
+        self._dirty = self.on_change(cmd_input)
+
+    def create(self, inputs):
+        self.on_create(inputs)
+        self._initialized = True
+
+    def destroy(self, inputs):
+        self.on_destroy(inputs)
+
+    def deactivate(self, inputs):
+        self.on_deactivate(inputs)
+
+    def execute(self, inputs):
+        self.on_execute(inputs)
+
+    def preview(self, args):
+        if self._valid and self._dirty:
+            self.post_validate_valid(args)
+            self._dirty = False
+            self.on_preview(args)
+            self._first_run = False
+            return True
+
+        return False
+
+    def validate(self, inputs):
+        result = self.on_validate(inputs)
+        self.valid = result
+        return result

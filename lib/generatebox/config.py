@@ -11,8 +11,8 @@ from .entities import FaceItem
 from .entities import FingerType
 from .entities import InputProperty
 from .entities import Inputs
-from .entities import PanelBody
-from .entities import PanelName
+from .entities import PanelDefinition
+from .entities import PanelInstance
 from .entities import PlaneFlag
 
 # noinspection SpellCheckingInspection
@@ -88,9 +88,6 @@ def initialize():
         Inputs.Kerf:            'kerfDimensionInput',
         Inputs.FingerWidth:     'fingerWidthDimensionInput',
         Inputs.DimensionsTable: 'dimensionsTableInput',
-        Inputs.KerfLength:      'kerfLengthCommandInput',
-        Inputs.KerfWidth:       'kerfWidthCommandInput',
-        Inputs.KerfHeight:      'kerfHeightCommandInput',
         Inputs.TopOffset:       'topOffsetDimensionInput',
         Inputs.BottomOffset:    'bottomOffsetDimensionInput',
         Inputs.FrontOffset:     'frontOffsetDimensionInput',
@@ -124,14 +121,17 @@ def initialize():
         Inputs.PanelTitle:      'panelTitleTextInput',
         Inputs.EnabledTitle:    'enabledTitleTextInput',
         Inputs.OverrideTitle:   'overrideTitleTextInput',
-        Inputs.ThicknessTitle:  'thicknessTitleTextInput'
+        Inputs.ThicknessTitle:  'thicknessTitleTextInput',
+        Inputs.LengthDividerTitle: 'lengthDividerTitleInput',
+        Inputs.SimpleDividerGroup: 'simpleDividerGroup',
+        Inputs.LengthDivider:   'lengthDividerCountInput'
     }
 
-    # Map labels to inputs
+    # Map labels to inputs and inputs to labels
     _INPUT_LABEL_MAP = {
         'Dimensions':      [Inputs.DimensionGroup],
         'Thickness':       [Inputs.Thickness, Inputs.ThicknessTitle],
-        'Length':          [Inputs.Length],
+        'Length':          [Inputs.Length, Inputs.LengthDivider],
         'Width':           [Inputs.Width],
         'Height':          [Inputs.Height],
         'Kerf':            [Inputs.Kerf],
@@ -146,11 +146,11 @@ def initialize():
         'Panel':           [Inputs.PanelTitle],
         'Enabled':         [Inputs.EnabledTitle],
         'Override':        [Inputs.OverrideTitle],
+        'Dividers':        [Inputs.SimpleDividerGroup]
     }
-
-    # Map inputs to labels
     _INPUT_LABELS = { value: key for key, inputs in _INPUT_LABEL_MAP.items() for value in inputs }
 
+    # Select only labels and ID pairs that mutually exist
     ID_LABELS = list(_INPUT_LABELS.keys() & _INPUT_ID_MAP.keys())
 
     # Define some reused tooltip strings
@@ -184,6 +184,7 @@ def initialize():
         Inputs.BackOverride:    _OVERRIDE_TOOLTIP.format('back'),
         Inputs.LeftOverride:    _OVERRIDE_TOOLTIP.format('left'),
         Inputs.RightOverride:   _OVERRIDE_TOOLTIP.format('right'),
+        Inputs.LengthDivider:   'Number of dividers along the length axis.'
     }
 
     # The Fusion360 parameter name that will be used to save the value from the Command Input dialog; if needed.
@@ -199,12 +200,12 @@ def initialize():
         Inputs.LeftThickness:   'left_thickness',
         Inputs.RightThickness:  'right_thickness',
         Inputs.FrontThickness:  'front_thickness',
-        Inputs.BackThickness:   'back_thickness'
+        Inputs.BackThickness:   'back_thickness',
+        Inputs.LengthDivider:   'length_dividers'
     }
 
-    # Determine which checkboxes are unchecked by default -- checkboxes are True by default in the code
-    _UNCHECKED_CHECKBOXES = [
-        Inputs.TopEnabled
+    _SIMPLE_DIVIDER_INPUTS = [
+        Inputs.LengthDivider
     ]
 
     # Define all checkboxes used by the plugin
@@ -213,21 +214,25 @@ def initialize():
         Inputs.RightEnabled, Inputs.FrontEnabled, Inputs.BackEnabled
     ]
 
-    # Determine which controls are disabled by default
+    # Determine which checkboxes are unchecked by default -- checkboxes are True by default in the code
+    _UNCHECKED_CHECKBOXES = [
+        Inputs.TopEnabled
+    ]
+
+    # Determine which controls are disabled by default -- controls are enabled by default in the code
     _DISABLED_CONTROLS = [
         Inputs.TopOverride, Inputs.TopThickness,
         Inputs.BottomThickness, Inputs.LeftThickness, Inputs.RightThickness,
         Inputs.FrontThickness, Inputs.BackThickness
     ]
 
-    # Map thickness controls to associated axes
-    _AXIS_CONTROLS = {
+    # Map thickness controls to associated axes and axes to thickness controls
+    _AXES_TO_CONTROLS = {
         AxisFlag.Length: [Inputs.LeftThickness, Inputs.RightThickness],
         AxisFlag.Width:  [Inputs.FrontThickness, Inputs.BackThickness],
         AxisFlag.Height: [Inputs.BottomThickness, Inputs.TopThickness]
     }
-    # Reverse map axes to associated controls
-    _CONTROLS_TO_AXES = { value: key for key, values in _AXIS_CONTROLS.items() for value in values }
+    _CONTROLS_TO_AXES = { value: key for key, values in _AXES_TO_CONTROLS.items() for value in values }
 
     # Map default configuration items to the 3 main axes by which direction their large faces are oriented along
     # noinspection DuplicatedCode
@@ -258,18 +263,11 @@ def initialize():
         ]
     }
 
-    # Map axes to associated outside panels - Because lists are ordered, this determines the order in which panels
-    # are built, and can break assumptions made in the configuration that define which direction sketches and panels
-    # are extruded, if changed. Panels closest to the profile sketches are drawn and extruded first
-    # (Bottom, Left and Front).
-    #
-    # This is a result of using the first extruded body in a group as the group reference, so that we don't
-    # have to redraw and extrude finger joints in every individual panel; the first panel extruded in a group
-    # is used (after any finger joints are added) as the reference for the rest of the panels in that group.
+    # Map axes to associated outside panels
     _AXIS_TO_PANEL_MAP = {
-        AxisFlag.Height: [Inputs.BottomLabel, Inputs.TopLabel],
-        AxisFlag.Length: [Inputs.LeftLabel, Inputs.RightLabel],
-        AxisFlag.Width:  [Inputs.FrontLabel, Inputs.BackLabel]
+        AxisFlag.Height: [PanelInstance.Bottom, PanelInstance.Top],
+        AxisFlag.Length: [PanelInstance.Left, PanelInstance.Right],
+        AxisFlag.Width:  [PanelInstance.Front, PanelInstance.Back]
     }
 
     # Map panels to axes with default configurations
@@ -281,310 +279,18 @@ def initialize():
         for panel in panels
     }
 
-    # noinspection DuplicatedCode
-    _HEIGHT_PANEL_CONFIG = {
-        # Face Id: ( Face Length (X), Face Width (Y), Depth)
-        FaceItem.Front: {
-            ConfigItem.Axis:       AxisFlag.Width,
-            ConfigItem.Length:     ConfigItem.Length,
-            ConfigItem.Width:      ConfigItem.Thickness,
-            ConfigItem.Depth:      Inputs.FrontThickness,
-            ConfigItem.Enabled:    Inputs.FrontEnabled,
-            ConfigItem.FingerType: FingerType.Normal,
-            ConfigItem.Joint:      Inputs.FrontLabel,
-            ConfigItem.FingerAxis: (AxisFlag.Length, AxisFlag.Width)
-        },
-        FaceItem.Back:  {
-            ConfigItem.Axis:       AxisFlag.Width,
-            ConfigItem.Length:     ConfigItem.Length,
-            ConfigItem.Width:      ConfigItem.Thickness,
-            ConfigItem.Depth:      Inputs.BackThickness,
-            ConfigItem.Enabled:    Inputs.BackEnabled,
-            ConfigItem.FingerType: FingerType.Normal,
-            ConfigItem.Joint:      Inputs.BackLabel,
-            ConfigItem.FingerAxis: (AxisFlag.Length, AxisFlag.Width)
-        },
-        FaceItem.Left:  {
-            ConfigItem.Axis:       AxisFlag.Length,
-            ConfigItem.Length:     ConfigItem.Width,
-            ConfigItem.Width:      ConfigItem.Thickness,
-            ConfigItem.Depth:      Inputs.LeftThickness,
-            ConfigItem.Enabled:    Inputs.LeftEnabled,
-            ConfigItem.FingerType: FingerType.Normal,
-            ConfigItem.Joint:      Inputs.LeftLabel,
-            ConfigItem.FingerAxis: (AxisFlag.Width, AxisFlag.Length)
-        },
-        FaceItem.Right: {
-            ConfigItem.Axis:       AxisFlag.Length,
-            ConfigItem.Length:     ConfigItem.Width,
-            ConfigItem.Width:      ConfigItem.Thickness,
-            ConfigItem.Depth:      Inputs.RightThickness,
-            ConfigItem.Enabled:    Inputs.RightEnabled,
-            ConfigItem.FingerType: FingerType.Normal,
-            ConfigItem.Joint:      Inputs.RightLabel,
-            ConfigItem.FingerAxis: (AxisFlag.Width, AxisFlag.Length)
-        }
+    _AXIS_TO_FACES = {
+        AxisFlag.Width: [FaceItem.Front, FaceItem.Back],
+        AxisFlag.Height: [FaceItem.Top, FaceItem.Bottom],
+        AxisFlag.Length: [FaceItem.Left, FaceItem.Right]
     }
-    # noinspection DuplicatedCode
-    _WIDTH_PANEL_CONFIG = {
-        FaceItem.Top:    {
-            ConfigItem.Axis:       AxisFlag.Height,
-            ConfigItem.Length:     ConfigItem.Length,
-            ConfigItem.Width:      ConfigItem.Thickness,
-            ConfigItem.Depth:      Inputs.TopThickness,
-            ConfigItem.Enabled:    Inputs.TopEnabled,
-            ConfigItem.FingerType: FingerType.Inverse,
-            ConfigItem.Joint:      Inputs.TopLabel,
-            ConfigItem.FingerAxis: (AxisFlag.Length, AxisFlag.Height)
+    _FACES_TO_AXES = {value: key for key, values in _AXIS_TO_FACES.items() for value in values}
 
-        },
-        FaceItem.Bottom: {
-            ConfigItem.Axis:       AxisFlag.Height,
-            ConfigItem.Length:     ConfigItem.Length,
-            ConfigItem.Width:      ConfigItem.Thickness,
-            ConfigItem.Depth:      Inputs.BottomThickness,
-            ConfigItem.Enabled:    Inputs.BottomEnabled,
-            ConfigItem.FingerType: FingerType.Inverse,
-            ConfigItem.Joint:      Inputs.BottomLabel,
-            ConfigItem.FingerAxis: (AxisFlag.Length, AxisFlag.Height)
-
-        },
-        FaceItem.Left:   {
-            ConfigItem.Axis:       AxisFlag.Length,
-            ConfigItem.Length:     ConfigItem.Height,
-            ConfigItem.Width:      ConfigItem.Thickness,
-            ConfigItem.Depth:      Inputs.LeftThickness,
-            ConfigItem.Enabled:    Inputs.LeftEnabled,
-            ConfigItem.FingerType: FingerType.Inverse,
-            ConfigItem.Joint:      Inputs.LeftLabel,
-            ConfigItem.FingerAxis: (AxisFlag.Height, AxisFlag.Length)
-        },
-        FaceItem.Right:  {
-            ConfigItem.Axis:       AxisFlag.Length,
-            ConfigItem.Length:     ConfigItem.Height,
-            ConfigItem.Width:      ConfigItem.Thickness,
-            ConfigItem.Depth:      Inputs.RightThickness,
-            ConfigItem.Enabled:    Inputs.RightEnabled,
-            ConfigItem.FingerType: FingerType.Inverse,
-            ConfigItem.Joint:      Inputs.RightLabel,
-            ConfigItem.FingerAxis: (AxisFlag.Height, AxisFlag.Length)
-        }
+    _AXIS_TO_PROFILE = {
+        AxisFlag.Width: (ConfigItem.Width, ConfigItem.Height),
+        AxisFlag.Height: (ConfigItem.Length, ConfigItem.Width),
+        AxisFlag.Length: (ConfigItem.Length, ConfigItem.Height)
     }
-    # noinspection DuplicatedCode
-    _LENGTH_PANEL_CONFIG = {
-        FaceItem.Top:    {
-            ConfigItem.Axis:       AxisFlag.Height,
-            ConfigItem.Length:     ConfigItem.Width,
-            ConfigItem.Width:      ConfigItem.Thickness,
-            ConfigItem.Depth:      Inputs.TopThickness,
-            ConfigItem.Enabled:    Inputs.TopEnabled,
-            ConfigItem.FingerType: FingerType.Inverse,
-            ConfigItem.Joint:      Inputs.TopLabel,
-            ConfigItem.FingerAxis: (AxisFlag.Width, AxisFlag.Height)
-        },
-        FaceItem.Bottom: {
-            ConfigItem.Axis:       AxisFlag.Height,
-            ConfigItem.Length:     ConfigItem.Width,
-            ConfigItem.Width:      ConfigItem.Thickness,
-            ConfigItem.Depth:      Inputs.BottomThickness,
-            ConfigItem.Enabled:    Inputs.BottomEnabled,
-            ConfigItem.FingerType: FingerType.Inverse,
-            ConfigItem.Joint:      Inputs.BottomLabel,
-            ConfigItem.FingerAxis: (AxisFlag.Width, AxisFlag.Height)
-        },
-        FaceItem.Front:  {
-            ConfigItem.Axis:       AxisFlag.Width,
-            ConfigItem.Length:     ConfigItem.Height,
-            ConfigItem.Width:      ConfigItem.Thickness,
-            ConfigItem.Depth:      Inputs.FrontThickness,
-            ConfigItem.Enabled:    Inputs.FrontEnabled,
-            ConfigItem.FingerType: FingerType.Normal,
-            ConfigItem.Joint:      Inputs.FrontLabel,
-            ConfigItem.FingerAxis: (AxisFlag.Height, AxisFlag.Width)
-        },
-        FaceItem.Back:   {
-            ConfigItem.Axis:       AxisFlag.Width,
-            ConfigItem.Length:     ConfigItem.Height,
-            ConfigItem.Width:      ConfigItem.Thickness,
-            ConfigItem.Depth:      Inputs.BackThickness,
-            ConfigItem.Enabled:    Inputs.BackEnabled,
-            ConfigItem.FingerType: FingerType.Normal,
-            ConfigItem.Joint:      Inputs.BackLabel,
-            ConfigItem.FingerAxis: (AxisFlag.Height, AxisFlag.Width)
-        }
-    }
-
-    yup = adsk.core.DefaultModelingOrientations.YUpModelingOrientation
-    zup = adsk.core.DefaultModelingOrientations.ZUpModelingOrientation
-
-    # noinspection DuplicatedCode
-    _FACE_SELECTOR = {
-        yup: {
-            FaceItem.Top:    lambda body: sorted(body.faces, key=lambda f: f.centroid.y, reverse=True)[0],
-            FaceItem.Bottom: lambda body: sorted(body.faces, key=lambda f: f.centroid.y)[0],
-            FaceItem.Front:  lambda body: sorted(body.faces, key=lambda f: f.centroid.z, reverse=True)[0],
-            FaceItem.Back:   lambda body: sorted(body.faces, key=lambda f: f.centroid.z)[0],
-            FaceItem.Left:   lambda body: sorted(body.faces, key=lambda f: f.centroid.x)[0],
-            FaceItem.Right:  lambda body: sorted(body.faces, key=lambda f: f.centroid.x, reverse=True)[0]
-        },
-        zup: {
-            FaceItem.Top:    lambda body: sorted(body.faces, key=lambda f: f.centroid.z, reverse=True)[0],
-            FaceItem.Bottom: lambda body: sorted(body.faces, key=lambda f: f.centroid.z)[0],
-            FaceItem.Front:  lambda body: sorted(body.faces, key=lambda f: f.centroid.y)[0],
-            FaceItem.Back:   lambda body: sorted(body.faces, key=lambda f: f.centroid.y, reverse=True)[0],
-            FaceItem.Left:   lambda body: sorted(body.faces, key=lambda f: f.centroid.x)[0],
-            FaceItem.Right:  lambda body: sorted(body.faces, key=lambda f: f.centroid.x, reverse=True)[0]
-        }
-    }
-
-    # Add per-panel configuration items
-    # noinspection DuplicatedCode
-    _PANEL_CONFIGS[Inputs.TopLabel].update({
-        ConfigItem.Name:          PanelName(_INPUT_LABELS[Inputs.TopLabel]),
-        ConfigItem.Label:         Inputs.TopLabel,
-        ConfigItem.Height:        Inputs.TopThickness,
-        ConfigItem.Thickness:     Inputs.TopThickness,
-        ConfigItem.Offset:        {
-            yup: Inputs.Height,
-            zup: Inputs.Height
-        },
-        ConfigItem.Enabled:       Inputs.TopEnabled,
-        ConfigItem.Override:      Inputs.TopOverride,
-        ConfigItem.Faces:         _HEIGHT_PANEL_CONFIG,
-        ConfigItem.FaceSelectors: _FACE_SELECTOR
-    })
-    # noinspection DuplicatedCode
-    _PANEL_CONFIGS[Inputs.BottomLabel].update({
-        ConfigItem.Name:          PanelName(_INPUT_LABELS[Inputs.BottomLabel]),
-        ConfigItem.Label:         Inputs.BottomLabel,
-        ConfigItem.Height:        Inputs.BottomThickness,
-        ConfigItem.Thickness:     Inputs.BottomThickness,
-        ConfigItem.Offset:        {
-            yup: Inputs.BottomThickness,
-            zup: Inputs.BottomThickness
-        },
-        ConfigItem.Enabled:       Inputs.BottomEnabled,
-        ConfigItem.Override:      Inputs.BottomOverride,
-        ConfigItem.Faces:         _HEIGHT_PANEL_CONFIG,
-        ConfigItem.FaceSelectors: _FACE_SELECTOR
-    })
-    # noinspection DuplicatedCode
-    _PANEL_CONFIGS[Inputs.LeftLabel].update({
-        ConfigItem.Name:          PanelName(_INPUT_LABELS[Inputs.LeftLabel]),
-        ConfigItem.Label:         Inputs.LeftLabel,
-        ConfigItem.Length:        Inputs.LeftThickness,
-        ConfigItem.Thickness:     Inputs.LeftThickness,
-        ConfigItem.Offset:        {
-            yup: Inputs.LeftThickness,
-            zup: Inputs.LeftThickness
-        },
-        ConfigItem.Enabled:       Inputs.LeftEnabled,
-        ConfigItem.Override:      Inputs.LeftOverride,
-        ConfigItem.Faces:         _LENGTH_PANEL_CONFIG,
-        ConfigItem.FaceSelectors: _FACE_SELECTOR
-    })
-    # noinspection DuplicatedCode
-    _PANEL_CONFIGS[Inputs.RightLabel].update({
-        ConfigItem.Name:          PanelName(_INPUT_LABELS[Inputs.RightLabel]),
-        ConfigItem.Label:         Inputs.RightLabel,
-        ConfigItem.Length:        Inputs.RightThickness,
-        ConfigItem.Thickness:     Inputs.RightThickness,
-        ConfigItem.Offset:        {
-            yup: Inputs.Length,
-            zup: Inputs.Length
-        },
-        ConfigItem.Enabled:       Inputs.RightEnabled,
-        ConfigItem.Override:      Inputs.RightOverride,
-        ConfigItem.Faces:         _LENGTH_PANEL_CONFIG,
-        ConfigItem.FaceSelectors: _FACE_SELECTOR
-    })
-    # noinspection DuplicatedCode
-    _PANEL_CONFIGS[Inputs.FrontLabel].update({
-        ConfigItem.Name:          PanelName(_INPUT_LABELS[Inputs.FrontLabel]),
-        ConfigItem.Label:         Inputs.FrontLabel,
-        ConfigItem.Width:         Inputs.FrontThickness,
-        ConfigItem.Thickness:     Inputs.FrontThickness,
-        ConfigItem.Offset:        {
-            zup: Inputs.FrontThickness,
-            yup: Inputs.Width
-        },
-        ConfigItem.Enabled:       Inputs.FrontEnabled,
-        ConfigItem.Override:      Inputs.FrontOverride,
-        ConfigItem.Faces:         _WIDTH_PANEL_CONFIG,
-        ConfigItem.FaceSelectors: _FACE_SELECTOR
-    })
-    # noinspection DuplicatedCode
-    _PANEL_CONFIGS[Inputs.BackLabel].update({
-        ConfigItem.Name:          PanelName(_INPUT_LABELS[Inputs.BackLabel]),
-        ConfigItem.Label:         Inputs.BackLabel,
-        ConfigItem.Width:         Inputs.BackThickness,
-        ConfigItem.Thickness:     Inputs.BackThickness,
-        ConfigItem.Offset:        {
-            zup: Inputs.Width,
-            yup: Inputs.BackThickness
-        },
-        ConfigItem.Enabled:       Inputs.BackEnabled,
-        ConfigItem.Override:      Inputs.BackOverride,
-        ConfigItem.Faces:         _WIDTH_PANEL_CONFIG,
-        ConfigItem.FaceSelectors: _FACE_SELECTOR
-    })
-
-    _PLANE_TO_AXIS_MAP = {
-        PlaneFlag.XY: { yup: AxisFlag.Width, zup: AxisFlag.Height },
-        PlaneFlag.XZ: { yup: AxisFlag.Height, zup: AxisFlag.Width },
-        PlaneFlag.YZ: { yup: AxisFlag.Length, zup: AxisFlag.Length }
-    }
-
-    _PLANE_TO_OBJECT_MAP = {
-        PlaneFlag.XY: lambda root: root.xYConstructionPlane,
-        PlaneFlag.XZ: lambda root: root.xZConstructionPlane,
-        PlaneFlag.YZ: lambda root: root.yZConstructionPlane
-    }
-
-    _DIRECTION_TO_PLANE_MAP = {
-        (
-            adsk.fusion.ExtentDirections.PositiveExtentDirection, 1,
-            adsk.fusion.ExtentDirections.PositiveExtentDirection, -1
-        ): {
-            yup: [AxisFlag.Length, AxisFlag.Height, AxisFlag.Width],
-            zup: [AxisFlag.Length, AxisFlag.Width, AxisFlag.Height]
-        }
-    }
-
-    _PLANE_TO_DIRECTION_MAP = defaultdict(dict)
-
-    for direction, orientations in _DIRECTION_TO_PLANE_MAP.items():
-        for orientation, axes in orientations.items():
-            for axis in axes:
-                _PLANE_TO_DIRECTION_MAP[axis][orientation] = direction
-
-    _PROFILE_TRANSFORM = {
-        AxisFlag.Height: {
-            yup: lambda x, y, z: (x, -y, z),
-            zup: lambda x, y, z: (x, y, z),
-        },
-        AxisFlag.Width:  {
-            yup: lambda x, y, z: (x, y, z),
-            zup: lambda x, y, z: (x, -y, z),
-        },
-        AxisFlag.Length: {
-            yup: lambda x, y, z: (-x, y, z),
-            zup: lambda x, y, z: (-y, x, z),
-        }
-    }
-
-    _PLANE_CONFIG = defaultdict(dict)
-
-    for plane_flag, axes in _PLANE_TO_AXIS_MAP.items():
-        for orientation, axis in axes.items():
-            _PLANE_CONFIG[axis][orientation] = {
-                ConfigItem.Plane:            plane_flag,
-                ConfigItem.PlaneSelector:    _PLANE_TO_OBJECT_MAP[plane_flag],
-                ConfigItem.ProfileTransform: _PROFILE_TRANSFORM[axis][orientation],
-                ConfigItem.ExtentDirection:  _PLANE_TO_DIRECTION_MAP[axis][orientation]
-            }
-
-    logger.debug(f'PLANE CONFIG: {_PLANE_CONFIG}')
 
     _COMMAND_OVERRIDES = {
         Inputs.TopThickness:    Inputs.TopOverride,
@@ -625,7 +331,7 @@ def initialize():
             (Inputs.Height, AxisFlag.Height)
         },
         ConfigItem.Panels:          _PANEL_CONFIGS,
-        ConfigItem.Planes:          _PLANE_CONFIG,
+        ConfigItem.SimpleDividerGroup:  _SIMPLE_DIVIDER_INPUTS
     }
 
     logger.debug(f'Config Map: {_CONFIG_MAP}')
@@ -649,12 +355,42 @@ def initialize():
             (Inputs.ThicknessTitle, 7, 0)
         ],
         InputProperty.Rows:     [
-            (Inputs.TopLabel, Inputs.TopEnabled, Inputs.TopOverride, Inputs.TopThickness),
-            (Inputs.BottomLabel, Inputs.BottomEnabled, Inputs.BottomOverride, Inputs.BottomThickness),
-            (Inputs.LeftLabel, Inputs.LeftEnabled, Inputs.LeftOverride, Inputs.LeftThickness),
-            (Inputs.RightLabel, Inputs.RightEnabled, Inputs.RightOverride, Inputs.RightThickness),
-            (Inputs.FrontLabel, Inputs.FrontEnabled, Inputs.FrontOverride, Inputs.FrontThickness),
-            (Inputs.BackLabel, Inputs.BackEnabled, Inputs.BackOverride, Inputs.BackThickness)
+            PanelDefinition(
+                    PanelInstance.Top, Inputs.TopLabel, Inputs.TopEnabled, Inputs.TopOverride, Inputs.TopThickness,
+                    Inputs.Length, Inputs.Width, Inputs.TopThickness, Inputs.Kerf, Inputs.FingerWidth,
+                    {FingerType.Normal: [AxisFlag.Length, AxisFlag.Width]},
+                    (Inputs.Length, Inputs.Width, Inputs.Height), Inputs.Height, AxisFlag.Height
+            ),
+            PanelDefinition(
+                    PanelInstance.Bottom, Inputs.BottomLabel, Inputs.BottomEnabled, Inputs.BottomOverride,
+                    Inputs.BottomThickness, Inputs.Length, Inputs.Width, Inputs.BottomThickness, Inputs.Kerf,
+                    Inputs.FingerWidth, {FingerType.Normal: [AxisFlag.Length, AxisFlag.Width]},
+                    (Inputs.Length, Inputs.Width, Inputs.BottomThickness), Inputs.Height, AxisFlag.Height
+            ),
+            PanelDefinition(
+                    PanelInstance.Left, Inputs.LeftLabel, Inputs.LeftEnabled, Inputs.LeftOverride, Inputs.LeftThickness,
+                    Inputs.LeftThickness, Inputs.Width, Inputs.Height, Inputs.Kerf,
+                    Inputs.FingerWidth, {FingerType.Inverse: [AxisFlag.Width, AxisFlag.Height]},
+                    (Inputs.LeftThickness, Inputs.Width, Inputs.Height), Inputs.Length, AxisFlag.Length
+            ),
+            PanelDefinition(
+                    PanelInstance.Right, Inputs.RightLabel, Inputs.RightEnabled, Inputs.RightOverride,
+                    Inputs.RightThickness, Inputs.RightThickness, Inputs.Width, Inputs.Height, Inputs.Kerf,
+                    Inputs.FingerWidth, {FingerType.Inverse: [AxisFlag.Width, AxisFlag.Height]},
+                    (Inputs.Length, Inputs.Width, Inputs.Height), Inputs.Length, AxisFlag.Length
+            ),
+            PanelDefinition(
+                    PanelInstance.Front, Inputs.FrontLabel, Inputs.FrontEnabled, Inputs.FrontOverride,
+                    Inputs.FrontThickness, Inputs.Length, Inputs.FrontThickness, Inputs.Height, Inputs.Kerf,
+                    Inputs.FingerWidth, {FingerType.Normal: [AxisFlag.Length], FingerType.Inverse: [AxisFlag.Height]},
+                    (Inputs.Length, Inputs.FrontThickness, Inputs.Height), Inputs.Width, AxisFlag.Width
+            ),
+            PanelDefinition(
+                    PanelInstance.Back, Inputs.BackLabel, Inputs.BackEnabled, Inputs.BackOverride, Inputs.BackThickness,
+                    Inputs.Length, Inputs.BackThickness, Inputs.Height, Inputs.Kerf,
+                    Inputs.FingerWidth, {FingerType.Normal: [AxisFlag.Length], FingerType.Inverse: [AxisFlag.Height]},
+                    (Inputs.Length, Inputs.Width, Inputs.Height), Inputs.Width, AxisFlag.Width
+            )
         ]
     })
 
@@ -681,5 +417,4 @@ def initialize():
     return _CONFIG_MAP
 
 
-# Initialize the configuration dictionary on module load. This dictionary should not be changed by plugin operations.
 config = initialize()

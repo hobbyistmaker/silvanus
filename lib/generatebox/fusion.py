@@ -7,36 +7,41 @@ import adsk.fusion
 
 from .entities import AxisFlag
 
+# noinspection SpellCheckingInspection
+logger = logging.getLogger('silvanus.lib.generatebox.fusion')
+
 yup = adsk.core.DefaultModelingOrientations.YUpModelingOrientation
 zup = adsk.core.DefaultModelingOrientations.ZUpModelingOrientation
 
 axes_selector = {
     yup: {
-        (AxisFlag.Height, AxisFlag.Length): lambda r: (r.yConstructionAxis, r.xConstructionAxis),
-        (AxisFlag.Height, AxisFlag.Width):  lambda r: (r.yConstructionAxis, r.zConstructionAxis),
-        (AxisFlag.Width, AxisFlag.Height):  lambda r: (r.zConstructionAxis, r.yConstructionAxis),
-        (AxisFlag.Length, AxisFlag.Height): lambda r: (r.xConstructionAxis, r.yConstructionAxis),
-        (AxisFlag.Width, AxisFlag.Length):  lambda r: (r.zConstructionAxis, r.xConstructionAxis),
-        (AxisFlag.Length, AxisFlag.Width):  lambda r: (r.xConstructionAxis, r.zConstructionAxis)
+        (AxisFlag.Height, AxisFlag.Width):  lambda r: (r.xConstructionAxis, r.yConstructionAxis),
+        (AxisFlag.Height, AxisFlag.Length): lambda r: (r.zConstructionAxis, r.yConstructionAxis),
+        (AxisFlag.Width, AxisFlag.Height):  lambda r: (r.xConstructionAxis, r.yConstructionAxis),
+        (AxisFlag.Length, AxisFlag.Height): lambda r: (r.zConstructionAxis, r.yConstructionAxis),
+        (AxisFlag.Width, AxisFlag.Length):  lambda r: (r.yConstructionAxis, r.zConstructionAxis),
+        (AxisFlag.Length, AxisFlag.Width):  lambda r: (r.yConstructionAxis, r.zConstructionAxis)
     },
     zup: {
-        (AxisFlag.Height, AxisFlag.Length): lambda r: (r.zConstructionAxis, r.xConstructionAxis),
-        (AxisFlag.Height, AxisFlag.Width):  lambda r: (r.zConstructionAxis, r.yConstructionAxis),
-        (AxisFlag.Width, AxisFlag.Height):  lambda r: (r.yConstructionAxis, r.zConstructionAxis),
-        (AxisFlag.Length, AxisFlag.Height): lambda r: (r.xConstructionAxis, r.zConstructionAxis),
-        (AxisFlag.Width, AxisFlag.Length):  lambda r: (r.yConstructionAxis, r.xConstructionAxis),
-        (AxisFlag.Length, AxisFlag.Width):  lambda r: (r.xConstructionAxis, r.yConstructionAxis)
+        (AxisFlag.Height, AxisFlag.Width):  lambda r: (r.xConstructionAxis, r.zConstructionAxis),
+        (AxisFlag.Height, AxisFlag.Length): lambda r: (r.yConstructionAxis, r.zConstructionAxis),
+        (AxisFlag.Width, AxisFlag.Height):  lambda r: (r.xConstructionAxis, r.zConstructionAxis),
+        (AxisFlag.Length, AxisFlag.Height): lambda r: (r.yConstructionAxis, r.zConstructionAxis),
+        (AxisFlag.Width, AxisFlag.Length):  lambda r: (r.zConstructionAxis, r.yConstructionAxis),
+        (AxisFlag.Length, AxisFlag.Width):  lambda r: (r.zConstructionAxis, r.yConstructionAxis)
     }
 }
-
-# noinspection SpellCheckingInspection
-logger = logging.getLogger('silvanus.lib.generatebox.fusion')
 
 _plane_types = {
     adsk.fusion.BRepFace:          lambda b: b.body.parentComponent.sketches,
     adsk.fusion.ConstructionPlane: lambda p: p.component.sketches
 }
 
+value_converter = {
+    int: adsk.core.ValueInput.createByReal,
+    float: adsk.core.ValueInput.createByReal,
+    str: adsk.core.ValueInput.createByString
+}
 
 def create_sketch(plane):
     """ Given a plane, returns the sketches attribute by selecting it from
@@ -160,12 +165,18 @@ class Sketch:
         """
         return point.x, point.y, point.z
 
-    def extrude(
-            self, offset, distance, direction
+    def extrude_non_parametric(
+            self, offset, distance, direction=1
     ):
-        real_offset = offset.value - distance.value
-        return extrude_offset(
-                self, real_offset, direction.profile_extent_direction, direction.profile_multiplier, distance.value
+        return extrude_non_parametric_offset(
+                self, offset, adsk.fusion.ExtentDirections.PositiveExtentDirection, direction, distance
+        )
+
+    def extrude_parametric(
+            self, offset, distance, direction=1
+    ):
+        return extrude_parametric_offset(
+                self, offset, adsk.fusion.ExtentDirections.PositiveExtentDirection, direction, distance
         )
 
 
@@ -193,26 +204,45 @@ class FaceProfile:
     def profile(self):
         return self._source.startFaces.item(0)
 
-    def extrude(
-            self, offset, distance, direction
+    def extrude_non_parametric(
+            self, offset, distance, direction=1
     ):
-        real_offset = offset.value
-        return extrude_offset(
-                self, real_offset, direction.copy_extent_direction, direction.copy_multiplier, distance.value
+        return extrude_non_parametric_offset(
+                self, offset, adsk.fusion.ExtentDirections.PositiveExtentDirection, direction, distance
+        )
+
+    def extrude_reverse_non_parametric(
+            self, offset, distance, direction=1
+    ):
+        return extrude_non_parametric_offset(
+                self, offset, adsk.fusion.ExtentDirections.NegativeExtentDirection, direction, distance
         )
 
 
 def extrude_simple(sketch, distance):
-    distance = adsk.core.ValueInput.createByReal(distance)
+    distance = value_converter[type(distance)](distance)
     extrusion = sketch.features.addSimple(
             sketch.profile, distance, adsk.fusion.FeatureOperations.NewBodyFeatureOperation
     )
     return extrusion
 
 
-def create_extrusion(sketch, offset, direction, multiplier, distance, operation):
-    distance = adsk.core.ValueInput.createByReal(distance)
-    offset = adsk.core.ValueInput.createByReal(offset * multiplier)
+def create_parametric_extrusion(sketch, offset, direction, multiplier, distance, operation):
+    return create_extrusion(
+            sketch, f'({offset.expression}) * {multiplier}',
+            direction, distance.expression, operation
+    )
+
+
+def create_non_parametric_extrusion(sketch, offset, direction, multiplier, distance, operation):
+    return create_extrusion(
+            sketch, offset.value * multiplier, direction, distance.value, operation
+    )
+
+
+def create_extrusion(sketch, offset, direction, distance, operation):
+    distance = value_converter[type(distance)](distance)
+    offset = value_converter[type(offset)](offset)
 
     extent = adsk.fusion.DistanceExtentDefinition.create(distance)
     start = adsk.fusion.FromEntityStartDefinition.create(sketch.plane, offset)
@@ -223,8 +253,16 @@ def create_extrusion(sketch, offset, direction, multiplier, distance, operation)
     return input_
 
 
-def extrude_offset(sketch, offset, direction, multiplier, distance):
-    input_ = create_extrusion(
+def extrude_non_parametric_offset(sketch, offset, direction, multiplier, distance):
+    input_ = create_non_parametric_extrusion(
+            sketch, offset, direction, multiplier, distance, adsk.fusion.FeatureOperations.NewBodyFeatureOperation
+    )
+
+    return sketch.features.add(input_)
+
+
+def extrude_parametric_offset(sketch, offset, direction, multiplier, distance):
+    input_ = create_parametric_extrusion(
             sketch, offset, direction, multiplier, distance, adsk.fusion.FeatureOperations.NewBodyFeatureOperation
     )
 
@@ -235,18 +273,14 @@ def cut_offset(sketch, offset, direction, distance, body):
     """ Cut an extrusion using the first profile from the given sketch, using the specified offset and
         thickness/distance within the body.
     """
-    input_ = create_extrusion(
+    input_ = create_non_parametric_extrusion(
             sketch, offset, direction, -1, distance, adsk.fusion.FeatureOperations.CutFeatureOperation
     )
     input_.participantBodies = [body]
 
-    return sketch.features.add(input_)
+    feature = sketch.features.add(input_)
 
-
-sketch_extrusion_selector = {
-    True:  lambda s, o, d: partial(extrude_simple, s, d),
-    False: lambda s, o, d: partial(extrude_offset, s, o, d)
-}
+    return feature
 
 
 class PanelProfileSketch(Sketch):
@@ -288,20 +322,16 @@ class PanelProfileSketch(Sketch):
 
 class PanelFingerSketch(Sketch):
 
-    def __init__(self, *, extrusion, selector, start, end, transform, orientation, name=''):
+    def __init__(self, *, extrusion, selector, start, end, name=''):
         self._extrusion = extrusion
         self._selector = selector
 
-        super().__init__(self.face, name=f'{name} Finger Sketch', construction=True)
+        super().__init__(self.face, name=name, construction=True)
 
         self._start = start
         self._end = end
         self._name = name
         self.base_name = name
-        self._transform = transform
-        self._orientation = orientation
-
-        logger.debug(f'start: {self._start}, end: {self._end}')
 
     def __enter__(self):
         super().__enter__()
@@ -361,11 +391,24 @@ class FingerCutsPattern:
         self._component = component
         self._orientation = orientation
 
+    def copy_non_parametric(self, *, axes, cuts, distance, count):
+        if count.value <= 1:
+            return
+
+        self.copy(axes=axes, cuts=cuts, distance=distance.value, count=count.value)
+
+    def copy_parametric(self, *, axes, cuts, distance, count):
+        if count.value <= 1:
+            return
+
+        self.copy(axes=axes, cuts=cuts, distance=distance.expression, count=count.expression)
+
     def copy(self, *, axes, cuts, distance, count):
         """ Copy an extrusion feature along a given distance with a <count> number of instances.
         """
-        if count.value <= 1:
-            return
+        for cut in cuts:
+            if not cut.isValid:
+                return
 
         axis_edges = axes_selector[self._orientation][axes]
 
@@ -379,8 +422,8 @@ class FingerCutsPattern:
 
         pattern_input = patterns.createInput(
                 entities, first_edge,
-                adsk.core.ValueInput.createByReal(count.value),
-                adsk.core.ValueInput.createByReal(distance.value),
+                value_converter[type(count)](count),
+                value_converter[type(distance)](distance),
                 adsk.fusion.PatternDistanceType.ExtentPatternDistanceType
         )
         pattern_input.patternComputeOption = adsk.fusion.PatternComputeOptions.AdjustPatternCompute

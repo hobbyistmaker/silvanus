@@ -37,11 +37,9 @@ command_definitions = [
 def run(context):
     with appcontext() as app:
         for command in command_definitions:
-            cmd = command()
-            # inject important attributes here
-            cmd._units_type = app.activeProduct.fusionUnitsManager
-            cmd._orientation = app.preferences.generalPreferences.defaultModelingOrientation
-            cmd._app = app
+            _units_type = app.activeProduct.fusionUnitsManager.distanceDisplayUnits
+            _orientation = app.preferences.generalPreferences.defaultModelingOrientation
+            cmd = command(app, units=_units_type, orientation=_orientation)
 
             button = CommandButton(app, cmd)
             commands.append(button)

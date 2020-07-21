@@ -71,26 +71,26 @@ class CommandButton:
         if control:
             control.deleteMe()
 
-    def on_execute(self, inputs):
+    def execute(self, inputs):
         with uicontext(self.app, level):
-            self.command.on_execute(inputs)
+            self.command.execute(inputs)
 
-    def on_change(self, inputs):
+    def change(self, inputs):
         with uicontext(self.app, level):
-            self.command.on_change(inputs)
+            self.command.change(inputs)
 
-    def on_validate(self, inputs):
+    def validate(self, inputs):
         with uicontext(self.app, level):
-            return self.command.on_validate(inputs)
+            return self.command.validate(inputs)
 
-    def on_create(self, inputs):
+    def create(self, inputs):
         with uicontext(self.app, level):
-            self.command.on_create(inputs)
+            self.command.create(inputs)
 
-    def on_preview(self, inputs):
+    def preview(self, inputs):
         with uicontext(self.app, level):
-            self.command.on_preview(inputs)
+            return self.command.preview(inputs)
 
-    def on_destroy(self, args):
+    def destroy(self, args):
         with uicontext(self.app, level):
-            self.command.on_destroy(args)
+            self.command.destroy(args)
