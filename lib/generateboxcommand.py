@@ -20,9 +20,9 @@ class GenerateBoxCommand(Fusion360Command):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.root = self._app.activeProduct.rootComponent
-        self.preferences = self._app.preferences.generalPreferences
-        self.orientation = self.preferences.defaultModelingOrientation
+        self.root = None
+        self.preferences = None
+        self.orientation = None
 
     def on_destroy(self, args):
         """ Clear the entities and the input dialog after each run of the command.
@@ -32,6 +32,10 @@ class GenerateBoxCommand(Fusion360Command):
 
     def on_create(self, command):
         logger.debug('Creating "Create Box" dialog.')
+        self.root = self._app.activeProduct.rootComponent
+        self.preferences = self._app.preferences.generalPreferences
+        self.orientation = self.preferences.defaultModelingOrientation
+
         self._configure_dialog(command)
         self._dialog.create(command.commandInputs, self._units_type < 3, self.root, self.orientation)
         logger.debug('Dialog creation completed.')
