@@ -1,5 +1,9 @@
 from .ecs import ProcessManager
 from .ecs import logger
+from .entities import Enabled
+from .entities import InsideFingers
+from .entities import InsidePanel
+from .entities import JointPanelOffset
 from .entities import KerfJoint
 from .entities import Renderable
 from .panels import ConfigurePanels
@@ -55,5 +59,21 @@ class Core:
         panel_joints = self._repository.with_components(KerfJoint).instances
         for joint in panel_joints:
             self._repository.remove_entity(joint.id)
+
+        inside_panels = self._repository.with_components(Enabled, InsidePanel).instances
+        for panel in inside_panels:
+            self._repository.remove_entity(panel.id)
+
+        inside_fingers = self._repository.with_components(Enabled, InsideFingers).instances
+        for joint in inside_fingers:
+            self._repository.remove_entity(joint.id)
+
+        inside_fingers = self._repository.with_components(Enabled, JointPanelOffset).instances
+        for joint in inside_fingers:
+            self._repository.remove_entity(joint.id)
+
+        enabled = self._repository.with_components(Enabled).instances
+        for enable in enabled:
+            self._repository.remove_component(enable.id, enable.Enabled)
 
         self._repository.flush()

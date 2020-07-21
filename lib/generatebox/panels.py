@@ -26,6 +26,7 @@ from .entities import Height
 from .entities import HeightInput
 from .entities import HeightOrientation
 from .entities import Inputs
+from .entities import InsideFingers
 from .entities import InsidePanel
 from .entities import InverseFingerPattern
 from .entities import JointItem
@@ -303,6 +304,7 @@ class ConfigurePanels(Process):
                 for finger_type, axes in { FingerType.Inverse: [AxisFlag.Height, AxisFlag.Width] }.items():
                     for axis in axes:
                         self._repository.create(
+                                InsideFingers(),
                                 Enabled(True),
                                 FingerOrientation(axis),
                                 FingerPatternType(finger_type),

@@ -762,3 +762,8 @@ class AxisGroup:
 
     def __init__(self):
         self.profiles = defaultdict(lambda: ProfileGroup())
+
+
+class InsideInputs: pass
+
+class InsideFingers: pass

@@ -18,19 +18,17 @@ from .entities import FingerWidthInput
 from .entities import HeightInput
 from .entities import InputProperty
 from .entities import Inputs
-from .entities import InsidePanel
+from .entities import InsideInputs
 from .entities import KerfInput
 from .entities import DividerCountInput
 from .entities import LengthInput
 from .entities import MaxOffsetInput
-from .entities import ModelOrientation
 from .entities import OutsidePanel
 from .entities import OverrideInput
 from .entities import PanelName
 from .entities import PanelOrientation
 from .entities import ParentPanel
 from .entities import ReferencePointInput
-from .entities import RootComponent
 from .entities import StartPanelOffset
 from .entities import ThicknessInput
 from .entities import WidthInput
@@ -242,7 +240,7 @@ class CreateDialog:
             self.config.controls[item] = spinner
 
             panel_entity = self.repository.create(
-                    InsidePanel(),
+                    InsideInputs(),
                     ThicknessInput(Inputs.Thickness),
                     LengthInput(Inputs.Thickness),
                     WidthInput(Inputs.Width),
@@ -253,14 +251,6 @@ class CreateDialog:
                     MaxOffsetInput(Inputs.Length),
                     DividerCountInput(Inputs.LengthDivider)
             )
-
-            for finger_type, axes in { FingerType.Inverse: [AxisFlag.Height, AxisFlag.Width] }.items():
-                for axis in axes:
-                    self.repository.create(
-                            FingerOrientation(axis),
-                            FingerPatternType(finger_type),
-                            ParentPanel(panel_entity.id)
-                    )
 
         self._ignore_updates.append(group.id)
 
