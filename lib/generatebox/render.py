@@ -111,8 +111,8 @@ class RenderSystem(Process):
             },
             1: {
                 AxisFlag.Height: lambda x, y, z: (x, y, z),
-                AxisFlag.Length: lambda x, y, z: (x, y, z),
-                AxisFlag.Width:  lambda x, y, z: (x, y, z)
+                AxisFlag.Length: lambda x, y, z: (-y, x, z),
+                AxisFlag.Width:  lambda x, y, z: (x, -y, z)
             }
         }
 
