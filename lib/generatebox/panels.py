@@ -280,35 +280,31 @@ class ConfigurePanels(Process):
             pocket_offset = (dividers.MaxOffset.value - dividers.Thickness.value * total_panels) / pocket_count
             thickness = dividers.Thickness.value
             for panel_num in range(1, pocket_count):
-                panel_entity = self._repository.create(
-                        Enabled(True),
-                        InsidePanel(),
-                        PanelName(f'Length Divider {panel_num}'),
-                        dividers.Thickness,
-                        dividers.Length,
-                        dividers.Width,
-                        dividers.Height,
-                        dividers.FingerWidth,
-                        dividers.PanelOrientation,
-                        dividers.MaxOffset,
-                        dividers.KerfInput,
-                        PanelEndReferencePoint(
-                                Length((pocket_offset * panel_num) + thickness*(1+panel_num), f'{(pocket_offset * panel_num) + thickness*(1+panel_num)}', dividers.Length.unitType),
-                                Width(dividers.Width.value, dividers.Width.expression, dividers.Width.unitType),
-                                Height(dividers.Height.value, dividers.Height.expression, dividers.Height.unitType)
-                        )
-                )
-
-                logger.debug(f'Adding inside panel at {(pocket_offset * panel_num) + thickness} for {panel_entity.id}.')
-
                 for finger_type, axes in { FingerType.Inverse: [AxisFlag.Height, AxisFlag.Width] }.items():
                     for axis in axes:
                         self._repository.create(
                                 InsideFingers(),
                                 Enabled(True),
+                                InsidePanel(),
+                                PanelName(f'Length Divider {panel_num}'),
+                                dividers.Thickness,
+                                dividers.Length,
+                                dividers.Width,
+                                dividers.Height,
+                                dividers.FingerWidth,
+                                dividers.PanelOrientation,
+                                dividers.MaxOffset,
+                                dividers.KerfInput,
+                                PanelEndReferencePoint(
+                                        Length((pocket_offset * panel_num) + thickness * (1 + panel_num),
+                                               f'{(pocket_offset * panel_num) + thickness * (1 + panel_num)}',
+                                               dividers.Length.unitType),
+                                        Width(dividers.Width.value, dividers.Width.expression, dividers.Width.unitType),
+                                        Height(dividers.Height.value, dividers.Height.expression,
+                                               dividers.Height.unitType)
+                                ),
                                 FingerOrientation(axis),
-                                FingerPatternType(finger_type),
-                                ParentPanel(panel_entity.id)
+                                FingerPatternType(finger_type)
                         )
 
     def _add_orientations(self):
