@@ -68,10 +68,6 @@ class Core:
         for joint in inside_fingers:
             self._repository.remove_entity(joint.id)
 
-        inside_fingers = self._repository.with_components(Enabled, JointPanelOffset).instances
-        for joint in inside_fingers:
-            self._repository.remove_entity(joint.id)
-
         enabled = self._repository.with_components(Enabled).instances
         for enable in enabled:
             self._repository.remove_component(enable.id, enable.Enabled)

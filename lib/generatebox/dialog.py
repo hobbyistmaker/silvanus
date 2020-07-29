@@ -312,30 +312,25 @@ class CreateDialog:
             enable_thickness_pair = EnableThicknessPair(enabled_control, panel.thickness)
             enable_component = EnableInput(enabled_control)
 
-            panel_entity = self.repository.create(
-                    enable_component,
-                    OutsidePanel(),
-                    PanelName(label),
-                    OverrideInput(self.config.controls[panel.override]),
-                    ThicknessInput(panel.thickness),
-                    LengthInput(panel.length),
-                    WidthInput(panel.width),
-                    HeightInput(panel.height),
-                    KerfInput(panel.kerf),
-                    FingerWidthInput(panel.finger_width),
-                    PanelOrientation(panel.orientation),
-                    ReferencePointInput(*panel.reference_point),
-                    MaxOffsetInput(panel.max_reference),
-                    StartPanelOffset(0, '', ''),
-            )
-
             for finger_type, axes in panel.finger_types.items():
                 for axis in axes:
                     self.repository.create(
                             enable_component,
+                            OutsidePanel(),
+                            PanelName(label),
+                            OverrideInput(self.config.controls[panel.override]),
+                            ThicknessInput(panel.thickness),
+                            LengthInput(panel.length),
+                            WidthInput(panel.width),
+                            HeightInput(panel.height),
+                            KerfInput(panel.kerf),
+                            FingerWidthInput(panel.finger_width),
+                            PanelOrientation(panel.orientation),
+                            ReferencePointInput(*panel.reference_point),
+                            MaxOffsetInput(panel.max_reference),
+                            StartPanelOffset(0, '', ''),
                             FingerOrientation(axis),
                             FingerPatternType(finger_type),
-                            ParentPanel(panel_entity.id)
                     )
 
             table.addCommandInput(label_control, row_num, 0, 0, 0)

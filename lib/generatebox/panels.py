@@ -518,52 +518,16 @@ class ConfigurePanels(Process):
         self._repository.with_components(PanelProfile, Kerf).for_each(add_kerf)
 
     def _define_finger_joints(self):
-        FingerPanelJoin = namedtuple('FingerPanelJoin', [
-            'id', 'FingerOrientation', 'FingerPatternType', 'PanelName',
-            'PanelOrientation', 'ExtrusionDistance', 'PanelProfile',
-            'PanelOffset', 'FingerWidth', 'Thickness'
-        ])
-
-        # Hash map for joining finger configurations with their parent panels
-        finger_configs = defaultdict(lambda: {
-            JointItem.FingerConfig: [],
-            JointItem.ParentPanel:  None
-        })
-
-        # Retrieve the finger configuration: axis and joint orientation and finger pattern type
-        config_rows = self._repository.with_components(
-                Enabled, FingerOrientation, FingerPatternType, ParentPanel
+        parent_panels = self._repository.with_components(
+            FingerOrientation, FingerPatternType, PanelName, PanelOrientation, ExtrusionDistance,
+            PanelProfile, PanelOffset, FingerWidth, Thickness
         ).instances
-        for instance in config_rows:
-            finger_configs[instance.ParentPanel.id][JointItem.FingerConfig].append(instance)
 
-        # Retrieve the parent panel information
-        panel_rows = self._repository.with_components(
-                Enabled, PanelName, PanelOrientation, PanelProfile, ExtrusionDistance, PanelOffset, FingerWidth,
-                Thickness
-        ).instances
-        for instance in panel_rows:
-            finger_configs[instance.id][JointItem.ParentPanel] = instance
-
-        finger_panel_joins = (
-            FingerPanelJoin(parent.id, finger.FingerOrientation, finger.FingerPatternType,
-                            parent.PanelName, parent.PanelOrientation, parent.ExtrusionDistance,
-                            parent.PanelProfile, parent.PanelOffset, parent.FingerWidth,
-                            parent.Thickness)
-            for parent, fingers in
-            (
-                (record_join[JointItem.ParentPanel], record_join[JointItem.FingerConfig])
-                for record_join in finger_configs.values()
-            )
-            for finger in fingers
-        )
-
-        # Hash map for joining finger configurations with joined panels
         panels = defaultdict(lambda: {
             JointItem.ParentPanels: [],
             JointItem.JointPanels:  []
         })
-        for panel in finger_panel_joins:
+        for panel in parent_panels:
             panels[panel.FingerOrientation.axis][JointItem.ParentPanels].append(panel)
 
         joined_panels = self._repository.with_components(
