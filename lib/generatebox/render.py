@@ -102,6 +102,10 @@ class RenderSystem(Process):
             joint_profile.joint = joint
             joint_profile.joint_extrusions.add(joint)
 
+            logger.debug(f'Group {panel_profile.names} has {len(distance.extrusions)} extrusions.')
+            logger.debug(f'Distance {distance.panel}')
+            logger.debug(f'Panel: {distance.panel.PanelExtrusion.name}')
+
     def _select_group_transform(self, orientation):
         transform = {
             0: {

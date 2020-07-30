@@ -1,3 +1,4 @@
+import functools
 import logging
 import math
 from collections import defaultdict
@@ -63,12 +64,28 @@ from .entities import WidthOrientation
 # noinspection SpellCheckingInspection
 logger = logging.getLogger('silvanus.lib.generatebox.core')
 
+class debuglog(object):
+    def __init__(self):
+        self.logger = logging.getLogger('silvanus.lib.generatebox.core')
+
+    def __call__(self, fn):
+        @functools.wraps(fn)
+        def decorated(*args, **kwargs):
+            try:
+                self.logger.debug(f'{fn.__name__}')
+                return fn(*args, **kwargs)
+            except Exception as ex:
+                self.logger.debug(f'Exception: {ex}')
+                raise ex
+        return decorated
+
 
 class ConfigurePanels(Process):
 
     def __init__(self, orientation):
         self._orientation = orientation
 
+    @debuglog()
     def process(self):
         self._configure_parameters()
 
@@ -111,6 +128,7 @@ class ConfigurePanels(Process):
         self._create_kerf_joints()
         self._add_joint_profile_groups()
 
+    @debuglog()
     def _configure_parameters(self):
         self._repository.parameters = {
             key: {
@@ -136,15 +154,18 @@ class ConfigurePanels(Process):
         for key, parameter in filter(lambda o: not o[1].value, enabled.items()):
             self._repository.parameters[key][ConfigItem.Enabled] = False
 
+    @debuglog()
     def _read_float_control(self, source, dest):
         """ Read the value from a Fusion360 input control """
         control = self._config.controls[source.control]
         return dest(control.value, control.name, control.unitType)
 
+    @debuglog()
     def _read_int_control(self, source, dest):
         control = self._config.controls[source.control]
         return dest(control.value, control.name)
 
+    @debuglog()
     def _enable_panels(self):
         """ For each entity with an EnableInput control, read the value and create an Enable component if the
             EnableInput value is true.
@@ -157,6 +178,7 @@ class ConfigurePanels(Process):
                 lambda c: c.add_component(Enabled(True))
         )
 
+    @debuglog()
     def _disable_panels(self):
         """ For each entity with an EnableInput control and an Enable component, read the value and delete the
             corresponding Enable component, if the EnableInput value is false.
@@ -169,6 +191,7 @@ class ConfigurePanels(Process):
                 lambda c: c.remove_component(Enabled)
         )
 
+    @debuglog()
     def _add_thickness_inputs(self):
         """ For each entity with a ThicknessInput control, read the value and create or replace a Thickness
             component.
@@ -177,6 +200,7 @@ class ConfigurePanels(Process):
                 lambda c: c.add_component(self._read_float_control(c.ThicknessInput, Thickness))
         )
 
+    @debuglog()
     def _add_length_inputs(self):
         """ For each entity with a LengthInput control, read the value and create or replace a Length component.
         """
@@ -184,6 +208,7 @@ class ConfigurePanels(Process):
                 lambda c: c.add_component(self._read_float_control(c.LengthInput, Length))
         )
 
+    @debuglog()
     def _add_width_inputs(self):
         """ For each entity with a WidthInput control, read the value and create or replace a Width component.
         """
@@ -191,6 +216,7 @@ class ConfigurePanels(Process):
                 lambda c: c.add_component(self._read_float_control(c.WidthInput, Width))
         )
 
+    @debuglog()
     def _add_height_inputs(self):
         """ For each entity with a HeightInput control, read the value and create or replace the Height component.
         """
@@ -198,6 +224,7 @@ class ConfigurePanels(Process):
                 lambda c: c.add_component(self._read_float_control(c.HeightInput, Height))
         )
 
+    @debuglog()
     def _add_divider_count_inputs(self):
         def read_input(entity):
             control = self._config.controls[entity.DividerCountInput.control]
@@ -210,6 +237,7 @@ class ConfigurePanels(Process):
 
         self._repository.with_components(DividerCountInput).with_true(read_input).for_each(add_divider_count)
 
+    @debuglog()
     def _add_extrusion_distance(self):
         """ For each entity with a Thickness component, create a corresponding ExtrusionDistance component. This
             will be used in any rendering processes, and may end up being a modified version of the Thickness
@@ -221,6 +249,7 @@ class ConfigurePanels(Process):
                 )
         )
 
+    @debuglog()
     def _add_kerf_inputs(self):
         """ For each entity with a KerfInput component, read the value and create or replace the Kerf component if
             the kerf value is greater than 0.
@@ -234,6 +263,7 @@ class ConfigurePanels(Process):
                 lambda c: c.add_component(self._read_float_control(c.KerfInput, Kerf))
         )
 
+    @debuglog()
     def _del_unused_kerf(self):
         """ For each entity with a KerfInput component, read the value and create or replace the Kerf component if
             the kerf value is greater than 0.
@@ -247,6 +277,7 @@ class ConfigurePanels(Process):
                 lambda c: c.remove_component(Kerf)
         )
 
+    @debuglog()
     def _add_finger_width_inputs(self):
         """ For each entity with a FingerWidth component, read the value and create or replace a FingerWidth
             component.
@@ -255,6 +286,7 @@ class ConfigurePanels(Process):
                 lambda c: c.add_component(self._read_float_control(c.FingerWidthInput, FingerWidth))
         )
 
+    @debuglog()
     def _add_max_offset_inputs(self):
         """ For each entity with a MaxOffsetInput component, read the value and create or replace a MaxOffset
             component.
@@ -267,6 +299,7 @@ class ConfigurePanels(Process):
 
         self._repository.with_components(MaxOffsetInput).with_all(read_max_offset)
 
+    @debuglog()
     def _add_dividers(self):
         divider_group = self._repository.with_components(
                 DividerCount, Length, Width, Height, Thickness, FingerWidth, PanelOrientation, MaxOffset, KerfInput
@@ -307,6 +340,7 @@ class ConfigurePanels(Process):
                                 FingerPatternType(finger_type)
                         )
 
+    @debuglog()
     def _add_orientations(self):
         """ For each entity with a PanelOrientation component, read the value and create or replace a
             corresponding LengthOrientation, WidthOrientation or HeightOrientation component.
@@ -320,6 +354,7 @@ class ConfigurePanels(Process):
                 lambda c: c.add_component(selector[c.PanelOrientation.axis]())
         )
 
+    @debuglog()
     def _add_height_orientation(self):
         """ For entities with a Height Orientation component, create the PanelProfile component with Length(length),
             and Width(width).
@@ -328,6 +363,7 @@ class ConfigurePanels(Process):
                 lambda c: c.add_components(PanelProfile(c.Length, c.Width))
         )
 
+    @debuglog()
     def _add_length_orientation(self):
         """ For entities with a LengthOrientation component, create the PanelProfile component with Length(width)
             and Width(height).
@@ -336,6 +372,7 @@ class ConfigurePanels(Process):
                 lambda c: c.add_components(PanelProfile(c.Width, c.Height))
         )
 
+    @debuglog()
     def _add_width_orientation(self):
         """ For entities with a WidthOrientation component, create the PanelProfile component with Length(length)
             and Height(height).
@@ -344,6 +381,7 @@ class ConfigurePanels(Process):
                 lambda c: c.add_components(PanelProfile(c.Length, c.Height))
         )
 
+    @debuglog()
     def _add_reference_points(self):
         """ For entities with a ReferencePointInput component, create a PanelEndReferencePoint component
             that will populate the length, width, height of the component from the associated Inputs in the dialog.
@@ -369,6 +407,7 @@ class ConfigurePanels(Process):
 
         self._repository.with_components(ReferencePointInput).with_all(add_point)
 
+    @debuglog()
     def _add_height_panel_start_points(self):
         """ For entities with HeightOrientation, PanelEndReferencePoint and Thickness components, create a
             PanelStartReferencePoint component with (l, w, h) == (0, 0, 'height - thickness') from the
@@ -401,6 +440,7 @@ class ConfigurePanels(Process):
 
         self._repository.with_components(HeightOrientation, PanelEndReferencePoint, ExtrusionDistance).for_each(add_start_point)
 
+    @debuglog()
     def _add_length_panel_start_points(self):
         """ For entities with LengthOrientation, PanelEndReferencePoint and Thickness components, create a
             PanelStartReferencePoint component with (l, w, h) == ('length - thickness', 0, 0) from the
@@ -435,6 +475,7 @@ class ConfigurePanels(Process):
 
         self._repository.with_components(LengthOrientation, PanelEndReferencePoint, ExtrusionDistance).for_each(add_start_point)
 
+    @debuglog()
     def _add_width_panel_start_points(self):
         """ For entities with WidthOrientation, PanelEndReferencePoint and Thickness components, create a
             PanelStartReferencePoint component with (l, w, h) == (0, 'width - thickness', 0) from the
@@ -469,6 +510,7 @@ class ConfigurePanels(Process):
 
         self._repository.with_components(WidthOrientation, PanelEndReferencePoint, ExtrusionDistance).for_each(add_start_point)
 
+    @debuglog()
     def _kerf_adjust_inside_length_panels(self):
         panels = self._repository.with_components(
                 InsidePanel, LengthOrientation, Thickness, Kerf, JointPanelOffset
@@ -491,6 +533,7 @@ class ConfigurePanels(Process):
                     )
             )
 
+    @debuglog()
     def _kerf_adjust_profiles(self):
         """ For entities with a PanelProfile component, adjust the length and width with the value of kerf, if
             kerf is set.
@@ -585,6 +628,7 @@ class ConfigurePanels(Process):
                     joined_panel.JointPanelOffset
             )
 
+    @debuglog()
     def _add_kerf_to_joints(self):
         parents = self._repository.with_components(Enabled, PanelName, Kerf).instances
 
@@ -609,6 +653,7 @@ class ConfigurePanels(Process):
             for joint in instance['joints']:
                 joint.add_component(parent.Kerf)
 
+    @debuglog()
     def _add_finger_pattern_component(self):
         selector = {
             FingerType.Normal:  NormalFingerPattern(),
@@ -618,6 +663,7 @@ class ConfigurePanels(Process):
                 lambda entity: entity.add_component(selector[entity.FingerPatternType.finger_type])
         )
 
+    @debuglog()
     def _add_normal_finger_parameters(self):
         joints = self._repository.with_components(
                 NormalFingerPattern, FingerWidth, JointPatternDistance
@@ -669,6 +715,7 @@ class ConfigurePanels(Process):
                     distance
             )
 
+    @debuglog()
     def _add_inverse_finger_parameters(self):
         joints = self._repository.with_components(
                 InverseFingerPattern, FingerWidth, JointPatternDistance
@@ -718,6 +765,7 @@ class ConfigurePanels(Process):
                     distance
             )
 
+    @debuglog()
     def _kerf_adjust_fingers(self):
         joints = self._repository.with_components(
                 ActualFingerWidth, FingerOffset, Kerf, JointPanelOffset
@@ -754,6 +802,7 @@ class ConfigurePanels(Process):
                     joint_panel_offset
             )
 
+    @debuglog()
     def _create_kerf_joints(self):
         joints = self._repository.with_components(
                 PanelName, PanelOrientation, PanelProfile, FingerPatternType, FingerOrientation,
@@ -803,6 +852,7 @@ class ConfigurePanels(Process):
             )
             logger.debug(f'Created kerf entity: {entity}')
 
+    @debuglog()
     def _add_joint_profile_groups(self):
         joints = self._repository.with_components(
                 ActualFingerWidth, ActualFingerCount, FingerPatternDistance, FingerPatternType,
