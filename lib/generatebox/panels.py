@@ -46,6 +46,8 @@ from .entities import MaxOffset
 from .entities import MaxOffsetInput
 from .entities import NormalFingerPattern
 from .entities import PanelEndReferencePoint
+from .entities import PanelExtrusion
+from .entities import PanelExtrusionGroup
 from .entities import PanelJoint
 from .entities import PanelName
 from .entities import PanelOffset
@@ -117,6 +119,9 @@ class ConfigurePanels(Process):
         self._add_kerf_inputs()
         self._kerf_adjust_inside_length_panels()
         self._kerf_adjust_profiles()
+
+        self._add_panel_extrusions()
+        self._add_panel_groups()
 
         self._define_finger_joints()
         self._add_kerf_to_joints()
@@ -556,10 +561,32 @@ class ConfigurePanels(Process):
 
         self._repository.with_components(PanelProfile, Kerf).for_each(add_kerf)
 
+    @debuglog()
+    def _add_panel_groups(self):
+        panels = self._repository.with_components(Enabled, PanelOrientation, PanelProfile, ExtrusionDistance).instances
+
+        for panel in panels:
+            panel.add_components(PanelExtrusionGroup(
+                    panel.PanelOrientation.axis,
+                    panel.PanelProfile,
+                    panel.ExtrusionDistance
+            ))
+
+    @debuglog()
+    def _add_panel_extrusions(self):
+        panels = self._repository.with_components(Enabled, PanelName, PanelOffset, ExtrusionDistance).instances
+
+        for panel in panels:
+            panel.add_components(PanelExtrusion(
+                    panel.ExtrusionDistance,
+                    panel.PanelOffset,
+                    panel.PanelName.value
+            ))
+
+    @debuglog()
     def _define_finger_joints(self):
         parent_panels = self._repository.with_components(
-            FingerOrientation, FingerPatternType, PanelName, PanelOrientation, ExtrusionDistance,
-            PanelProfile, PanelOffset, FingerWidth, Thickness
+            FingerOrientation, FingerPatternType, PanelExtrusionGroup, PanelExtrusion, FingerWidth, Thickness
         ).instances
 
         panels = defaultdict(lambda: {
@@ -570,7 +597,7 @@ class ConfigurePanels(Process):
             panels[panel.FingerOrientation.axis][JointItem.ParentPanels].append(panel)
 
         joined_panels = self._repository.with_components(
-                Enabled, PanelOrientation, JointPanelOffset, Length, Width, Height, PanelName, ExtrusionDistance, Thickness
+                Enabled, PanelExtrusionGroup, JointPanelOffset, Length, Width, Height, PanelName, Thickness
         ).instances
 
         distance_selector = {
@@ -582,7 +609,7 @@ class ConfigurePanels(Process):
             (AxisFlag.Length, AxisFlag.Height): lambda c: c.Width
         }
         for instance in joined_panels:
-            joint = panels[instance.PanelOrientation.axis]
+            joint = panels[instance.PanelExtrusionGroup.orientation]
             joint[JointItem.JointPanels].append(instance)
 
         # Create the joint components for each panel based on the panels that they are joined with
@@ -598,20 +625,17 @@ class ConfigurePanels(Process):
         )
         for parent_panel, joined_panel in panel_joint_joins:
             total_distance = distance_selector[(parent_panel.FingerOrientation.axis,
-                                                parent_panel.PanelOrientation.axis)](joined_panel)
+                                                parent_panel.PanelExtrusionGroup.orientation)](joined_panel)
             logger.debug(
-                    f'Join {parent_panel.PanelName.value}:{parent_panel.PanelOrientation.axis}:{parent_panel.id} with profile ({(parent_panel.PanelProfile.length, parent_panel.PanelProfile.width)}) with {joined_panel.PanelName.value} along {total_distance.expression} with {parent_panel.FingerPatternType.finger_type} joint of {joined_panel.ExtrusionDistance.expression} and offset of {joined_panel.JointPanelOffset.expression}.')
+                    f'Join {parent_panel.PanelExtrusion.name}:{parent_panel.PanelExtrusionGroup.orientation}:{parent_panel.id} with profile ({(parent_panel.PanelExtrusionGroup.profile.length, parent_panel.PanelExtrusionGroup.profile.width)}) with {joined_panel.PanelName.value} along {total_distance.expression} with {parent_panel.FingerPatternType.finger_type} joint of {joined_panel.PanelExtrusionGroup.distance.expression} and offset of {joined_panel.JointPanelOffset.expression}.')
             self._repository.create(
                     Renderable(),
                     PanelJoint(),
-                    parent_panel.PanelName,
-                    parent_panel.PanelOrientation,
-                    parent_panel.PanelProfile,
+                    parent_panel.PanelExtrusion,
+                    parent_panel.PanelExtrusionGroup,
                     parent_panel.FingerPatternType,
                     parent_panel.FingerOrientation,
                     parent_panel.FingerWidth,
-                    parent_panel.PanelOffset,
-                    parent_panel.ExtrusionDistance,
                     parent_panel.Thickness,
                     ParentPanel(parent_panel.id),
                     JointThickness(
@@ -805,8 +829,8 @@ class ConfigurePanels(Process):
     @debuglog()
     def _create_kerf_joints(self):
         joints = self._repository.with_components(
-                PanelName, PanelOrientation, PanelProfile, FingerPatternType, FingerOrientation,
-                FingerWidth, PanelOffset, ExtrusionDistance, Thickness, ParentPanel,
+                PanelExtrusion, PanelExtrusionGroup, FingerPatternType, FingerOrientation,
+                FingerWidth, Thickness, ParentPanel,
                 JointThickness, JointName, JointPatternDistance, JointPanelOffset,
                 Kerf, InverseFingerPattern
         ).instances
@@ -820,11 +844,8 @@ class ConfigurePanels(Process):
             entity = self._repository.create(
                     Renderable(),
                     KerfJoint(),
-                    joint.PanelProfile,
-                    joint.PanelOrientation,
-                    joint.PanelName,
-                    joint.ExtrusionDistance,
-                    joint.PanelOffset,
+                    joint.PanelExtrusionGroup,
+                    joint.PanelExtrusion,
                     joint.JointPatternDistance,
                     joint.JointPanelOffset,
                     joint.JointName,
@@ -856,7 +877,7 @@ class ConfigurePanels(Process):
     def _add_joint_profile_groups(self):
         joints = self._repository.with_components(
                 ActualFingerWidth, ActualFingerCount, FingerPatternDistance, FingerPatternType,
-                FingerOrientation, PanelOrientation, ExtrusionDistance, ParentPanel
+                FingerOrientation, PanelExtrusionGroup, ParentPanel
         ).instances
 
         logger.debug(f'{len(joints)} joint profile groups')
@@ -871,7 +892,8 @@ class ConfigurePanels(Process):
                 (
                     joint.ActualFingerWidth.expression, joint.FingerPatternDistance.expression,
                     joint.ActualFingerCount.expression, joint.FingerPatternType.finger_type,
-                    joint.FingerOrientation.axis, joint.PanelOrientation.axis, joint.ExtrusionDistance.expression
+                    joint.FingerOrientation.axis, joint.PanelExtrusionGroup.orientation,
+                    joint.PanelExtrusionGroup.distance.expression
                 )
                 for joint in parent_data
             ])

@@ -767,3 +767,16 @@ class AxisGroup:
 class InsideInputs: pass
 
 class InsideFingers: pass
+
+@dataclass(eq=True, frozen=True)
+class PanelExtrusionGroup:
+    orientation: AxisFlag
+    profile: PanelProfile
+    distance: ExtrusionDistance
+
+
+@dataclass(eq=True, frozen=True)
+class PanelExtrusion:
+    distance: ExtrusionDistance
+    offset: PanelOffset
+    name: str

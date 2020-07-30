@@ -21,12 +21,15 @@ from .entities import JointPatternDistance
 from .entities import JointProfile
 from .entities import JointThickness
 from .entities import KerfJoint
+from .entities import PanelExtrusion
+from .entities import PanelExtrusionGroup
 from .entities import PanelJoint
 from .entities import PanelName
 from .entities import PanelOffset
 from .entities import PanelOrientation
 from .entities import PanelProfile
 from .entities import ParentPanel
+from .entities import Renderable
 from .entities import Thickness
 from .fusion import FaceProfile
 from .fusion import FingerCutsPattern
@@ -54,7 +57,7 @@ class RenderSystem(Process):
 
     def _define_group_profiles(self, groups, filter):
         PanelConfig = namedtuple('PanelConfig', [
-            'PanelProfile', 'PanelOrientation', 'PanelName', 'Thickness', 'PanelOffset', 'ParentPanel'
+            'PanelExtrusionGroup', 'PanelExtrusion', 'Thickness'
         ])
         JointConfig = namedtuple('JointConfig', [
             'JointPatternDistance', 'JointPanelOffset', 'JointThickness',
@@ -63,10 +66,10 @@ class RenderSystem(Process):
             'PanelThickness', 'JointName'
         ])
         components = (
-            PanelProfile, PanelOrientation, PanelName, ExtrusionDistance, PanelOffset,
+            Renderable, PanelExtrusionGroup, PanelExtrusion,
             JointPatternDistance, JointPanelOffset, JointName, JointThickness, FingerOrientation,
             FingerOffset, ActualFingerWidth, FingerPatternDistance, ActualFingerCount, FingerPatternType,
-            ParentPanel, JointProfile, Thickness, filter
+            JointProfile, Thickness, filter
         )
         entities = self._repository.with_components(*components).instances
 
@@ -77,22 +80,21 @@ class RenderSystem(Process):
         logger.debug(f'{len(entities)} group profiles to define')
         for entity in entities:
             panel = PanelConfig(
-                    entity.PanelProfile, entity.PanelOrientation, entity.PanelName, entity.Thickness,
-                    entity.PanelOffset, entity.ParentPanel
+                    entity.PanelExtrusionGroup, entity.PanelExtrusion, entity.Thickness,
             )
             joint = JointConfig(
                     entity.JointPatternDistance, entity.JointPanelOffset, entity.JointThickness,
                     entity.FingerOrientation, entity.FingerOffset, entity.ActualFingerWidth,
                     entity.FingerPatternDistance, entity.ActualFingerCount, entity.FingerPatternType,
-                    entity.ExtrusionDistance, entity.JointName
+                    entity.PanelExtrusionGroup.distance, entity.JointName
             )
 
-            orientation = groups[entity.PanelOrientation]
+            orientation = groups[entity.PanelExtrusionGroup.orientation]
 
-            panel_profile = orientation.profiles[entity.PanelProfile]
-            panel_profile.names.add(entity.PanelName.value)
+            panel_profile = orientation.profiles[entity.PanelExtrusionGroup.profile]
+            panel_profile.names.add(entity.PanelExtrusion.name)
 
-            distance = panel_profile.panels[entity.ExtrusionDistance]
+            distance = panel_profile.panels[entity.PanelExtrusionGroup.distance]
             distance.panel = panel
             distance.extrusions.add(panel)
 
@@ -120,7 +122,7 @@ class RenderSystem(Process):
             }
         }
 
-        return transform[self._orientation][orientation.axis]
+        return transform[self._orientation][orientation]
 
     def _select_group_plane(self, orientation):
         plane = {
@@ -136,7 +138,7 @@ class RenderSystem(Process):
             }
         }
 
-        return plane[self._orientation][orientation.axis]
+        return plane[self._orientation][orientation]
 
     def _render_profile_groups(self, groups):
         for axis_group_id, axis_group in groups.items():
@@ -176,7 +178,7 @@ class RenderSystem(Process):
         }
         current_reference = profile
 
-        for id_, panel in enumerate(sorted(panel_data.extrusions, key=lambda p: p.PanelOffset.value)):
+        for id_, panel in enumerate(sorted(panel_data.extrusions, key=lambda p: p.PanelExtrusion.offset.value)):
             func = _render_func[bool(id_)]
             # noinspection PyArgumentList
             current_reference = func(group_name, current_reference, thickness, panel, panel_data)
@@ -188,10 +190,10 @@ class RenderSystem(Process):
         }
 
         logger.debug(f'{profile}')
-        extrusion = extrude[self._parametric](panel.PanelOffset, thickness)
-        extrusion.name = f'{panel.PanelName.value} Panel Extrusion'
+        extrusion = extrude[self._parametric](panel.PanelExtrusion.offset, thickness)
+        extrusion.name = f'{panel.PanelExtrusion.name} Panel Extrusion'
         body = extrusion.bodies.item(0)
-        body.name = f'{panel.PanelName.value} Panel Body'
+        body.name = f'{panel.PanelExtrusion.name} Panel Body'
 
         names = {
             KerfJoint:  'Kerf',
@@ -210,9 +212,9 @@ class RenderSystem(Process):
 
                 for joint in joints.joint_extrusions:
                     logger.debug(f'Adding joint for {joint}')
-                    logger.debug(f'Cutting joint for {joint.JointName.value} of thickness {joint.JointThickness} at {joint.JointPanelOffset.value} on {panel.PanelName.value}')
+                    logger.debug(f'Cutting joint for {joint.JointName.value} of thickness {joint.JointThickness} at {joint.JointPanelOffset.value} on {panel.PanelExtrusion.name}')
                     feature = sketch.cut(joint.JointPanelOffset, joint.JointThickness)
-                    feature.name = f'{panel.PanelName.value} {joint.JointName.value} {names[joint_type]} Extrusion'
+                    feature.name = f'{panel.PanelExtrusion.name} {joint.JointName.value} {names[joint_type]} Extrusion'
                     features.append(feature)
 
                 replicator = FingerCutsPattern(self._root, self._orientation)
@@ -220,7 +222,7 @@ class RenderSystem(Process):
                 distance = joint.FingerPatternDistance
                 count = joint.ActualFingerCount
                 joint_names = ('-').join(filter(lambda n: 'Divider' not in n, joints.names))
-                axes = (panel_data.panel.PanelOrientation.axis, joint.FingerOrientation.axis)
+                axes = (panel_data.panel.PanelExtrusionGroup.orientation, joint.FingerOrientation.axis)
 
                 pattern = replicator.copy_non_parametric(axes=axes, cuts=features, distance=distance, count=count)
                 if pattern:
@@ -231,10 +233,10 @@ class RenderSystem(Process):
     @staticmethod
     def _render_copy_extrusion(group_name, reference, thickness, panel, _):
         with FaceProfile(reference, name='') as profile:
-            extrusion = profile.extrude_reverse_non_parametric(panel.PanelOffset, thickness, -1)
-            extrusion.name = f'{panel.PanelName.value} Panel Extrusion'
+            extrusion = profile.extrude_reverse_non_parametric(panel.PanelExtrusion.offset, thickness, -1)
+            extrusion.name = f'{panel.PanelExtrusion.name} Panel Extrusion'
             body = extrusion.bodies.item(0)
-            body.name = f'{panel.PanelName.value} Panel Body'
+            body.name = f'{panel.PanelExtrusion.name} Panel Body'
 
         return reference
 
