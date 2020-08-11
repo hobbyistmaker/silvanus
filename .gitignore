@@ -5,3 +5,4 @@ tests/
 .DS_Store
 *.log
 venv/
+cmake-build*

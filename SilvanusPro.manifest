@@ -1,0 +1,15 @@
+{
+	"autodeskProduct":	"Fusion360",
+	"type":	"addin",
+	"author":	"pahobbyistmaker",
+	"description":	{
+		"":	"Finger-jointed box Generator plugin"
+	},
+	"supportedOS":	"windows|mac",
+	"editEnabled":	false,
+	"id":	"58828a02-3c8c-49c0-aef8-f9848d51eaca",
+	"version":	"0.5.5",
+	"runOnStartup":	false,
+    "sourcewindows":	"SilvanusPro.vcxproj",
+	"sourcemac":	"SilvanusPro.xcodeproj"
+}
