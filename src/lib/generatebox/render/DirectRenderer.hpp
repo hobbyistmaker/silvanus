@@ -206,7 +206,7 @@ namespace silvanus::generatebox::render {
                 {entities::AxisFlag::Width, [](double l, double w, double h, double o){ return adsk::core::Point3D::create( l, w, h+o ); } }
             };
             centerAxisMap zup_centers = {
-                {entities::AxisFlag::Height, [](double l, double w, double h, double o){ return adsk::core::Point3D::create( l, h+o, w ); } },
+                {entities::AxisFlag::Height, [](double l, double w, double h, double o){ return adsk::core::Point3D::create( l, h, w+o ); } },
                 {entities::AxisFlag::Length, [](double l, double w, double h, double o){ return adsk::core::Point3D::create( l+o, h, w ); } },
                 {entities::AxisFlag::Width, [](double l, double w, double h, double o){ return adsk::core::Point3D::create( l, h+o, w ); } }
             };
