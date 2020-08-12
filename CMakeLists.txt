@@ -1,6 +1,6 @@
 cmake_policy(SET CMP0048 NEW)
 cmake_minimum_required(VERSION 3.17)
-project (SilvanusPro VERSION 0.1.0.0)
+project (SilvanusPro VERSION 0.5.5.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -49,7 +49,7 @@ ENDIF()
 
 link_directories("${F360_LIBS}")
 
-add_library(SilvanusPro SHARED ${SOURCE_FILES} src/lib/generatebox/entities/PanelPosition.hpp)
+add_library(SilvanusPro SHARED ${SOURCE_FILES})
 set_target_properties(SilvanusPro PROPERTIES PREFIX "")
 set_target_properties(
         SilvanusPro PROPERTIES
