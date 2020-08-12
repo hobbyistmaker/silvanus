@@ -41,29 +41,29 @@ void DirectRenderer::execute(DefaultModelingOrientations model_orientation, cons
 
     auto      view = m_registry.view<Enabled, OutsidePanel, PanelGroup, JointGroup, PanelExtrusion, JointOrientation, JoinedPanels>();
     for (auto entity : view) {
-        auto &panel_group        = view.get<PanelGroup>(entity);
-        auto &panel_extrusion    = view.get<PanelExtrusion>(entity);
-        auto &joint_orientation  = view.get<JointOrientation>(entity);
-        auto &joined_panels      = view.get<JoinedPanels>(entity);
-        auto &joint_group = view.get<JointGroup>(entity);
+        auto& panel_group        = view.get<PanelGroup>(entity);
+        auto& panel_extrusion    = view.get<PanelExtrusion>(entity);
+        auto& joint_orientation  = view.get<JointOrientation>(entity);
+        auto& joined_panels      = view.get<JoinedPanels>(entity);
+        auto& joint_group = view.get<JointGroup>(entity);
 
-        auto &group = panel_groups[panel_group.orientation][panel_group.profile][panel_group.position];
+        auto& group = panel_groups[panel_group.orientation][panel_group.profile][panel_group.position];
 
         group.names.insert(panel_extrusion.name);
         group.panels[panel_group.distance].insert(panel_extrusion);
 
         if (joint_group.profile.finger_type != FingerMode::None) {
-            for (auto &joined_panel: joined_panels.panels) {
+            for (auto& joined_panel: joined_panels.panels) {
                 if (joint_group.profile.joint_type == JointType::Inverse) {
-                    auto &joined_panel_group = group.joints.inverse[joint_orientation.axis].outside[joint_group.profile];
+                    auto& joined_panel_group = group.joints.inverse[joint_orientation.axis].outside[joint_group.profile];
                     joined_panel_group.names.insert(joined_panel.extrusion.name);
                     joined_panel_group.extrusions.insert(joined_panel.extrusion);
                 } else if (joint_group.profile.joint_type == JointType::Corner) {
-                    auto &joined_panel_group = group.joints.corner[joint_orientation.axis].outside[joint_group.profile];
+                    auto& joined_panel_group = group.joints.corner[joint_orientation.axis].outside[joint_group.profile];
                     joined_panel_group.names.insert(joined_panel.extrusion.name);
                     joined_panel_group.extrusions.insert(joined_panel.extrusion);
                 } else {
-                    auto &joined_panel_group = group.joints.normal[joint_orientation.axis].outside[joint_group.profile];
+                    auto& joined_panel_group = group.joints.normal[joint_orientation.axis].outside[joint_group.profile];
                     joined_panel_group.names.insert(joined_panel.extrusion.name);
                     joined_panel_group.extrusions.insert(joined_panel.extrusion);
                 }
@@ -73,29 +73,29 @@ void DirectRenderer::execute(DefaultModelingOrientations model_orientation, cons
 
     auto      inside_view = m_registry.view<Enabled, InsidePanel, PanelGroup, JointGroup, PanelExtrusion, JointOrientation, JoinedPanels>();
     for (auto entity : inside_view) {
-        auto &panel_group        = inside_view.get<PanelGroup>(entity);
-        auto &panel_extrusion    = inside_view.get<PanelExtrusion>(entity);
-        auto &joint_orientation  = inside_view.get<JointOrientation>(entity);
-        auto &joined_panels      = inside_view.get<JoinedPanels>(entity);
-        auto &joint_group        = inside_view.get<JointGroup>(entity);
+        auto& panel_group        = inside_view.get<PanelGroup>(entity);
+        auto& panel_extrusion    = inside_view.get<PanelExtrusion>(entity);
+        auto& joint_orientation  = inside_view.get<JointOrientation>(entity);
+        auto& joined_panels      = inside_view.get<JoinedPanels>(entity);
+        auto& joint_group        = inside_view.get<JointGroup>(entity);
 
-        auto &group = panel_groups[panel_group.orientation][panel_group.profile][panel_group.position];
+        auto& group = panel_groups[panel_group.orientation][panel_group.profile][panel_group.position];
 
         group.names.insert(panel_extrusion.name);
         group.panels[panel_group.distance].insert(panel_extrusion);
 
         if (joint_group.profile.finger_type != FingerMode::None) {
-            for (auto &joined_panel: joined_panels.panels) {
+            for (auto& joined_panel: joined_panels.panels) {
                 if (joint_group.profile.joint_type == JointType::Inverse) {
-                    auto &joined_panel_group = group.joints.inverse[joint_orientation.axis].inside[joint_group.profile];
+                    auto& joined_panel_group = group.joints.inverse[joint_orientation.axis].inside[joint_group.profile];
                     joined_panel_group.names.insert(joined_panel.extrusion.name);
                     joined_panel_group.extrusions.insert(joined_panel.extrusion);
                 } else if (joint_group.profile.joint_type == JointType::Corner) {
-                    auto &joined_panel_group = group.joints.corner[joint_orientation.axis].inside[joint_group.profile];
+                    auto& joined_panel_group = group.joints.corner[joint_orientation.axis].inside[joint_group.profile];
                     joined_panel_group.names.insert(joined_panel.extrusion.name);
                     joined_panel_group.extrusions.insert(joined_panel.extrusion);
                 } else {
-                    auto &joined_panel_group = group.joints.normal[joint_orientation.axis].inside[joint_group.profile];
+                    auto& joined_panel_group = group.joints.normal[joint_orientation.axis].inside[joint_group.profile];
                     joined_panel_group.names.insert(joined_panel.extrusion.name);
                     joined_panel_group.extrusions.insert(joined_panel.extrusion);
                 }
@@ -123,8 +123,8 @@ void DirectRenderer::execute(DefaultModelingOrientations model_orientation, cons
                     auto width_center     = profile.width.value / 2;
                     auto thickness_center = panel.distance.value / 2;
 
-                    auto const &vectors          = orientation_selector[model_orientation][axis];
-                    auto const &transform_vector = transform_selector[model_orientation][axis](
+                    auto const& vectors          = orientation_selector[model_orientation][axis];
+                    auto const& transform_vector = transform_selector[model_orientation][axis](
                         length_center, width_center, thickness_center
                     );
                     auto       length_dir        = vectors[0];
@@ -151,7 +151,7 @@ void DirectRenderer::execute(DefaultModelingOrientations model_orientation, cons
                     auto body = m_bodies->add(box);
                     body->name(panel.name + " Panel Body");
 
-                    for (auto const &copy_panel: std::vector<PanelExtrusion>{panels.begin() + 1, panels.end()}) {
+                    for (auto const& copy_panel: std::vector<PanelExtrusion>{panels.begin() + 1, panels.end()}) {
                         auto offset   = copy_panel.offset.value;
                         auto copy_box = m_temp_mgr->copy(box);
 
@@ -187,8 +187,13 @@ void DirectRenderer::renderNormalJoints(
 }
 
 void DirectRenderer::renderNormalJoint(
-    const DefaultModelingOrientations &model_orientation, const AxisFlag &axis, const PanelExtrusion &panel, const Ptr<BRepBody> &box,
-    const AxisFlag &joint_orientation, const JointProfile &joint_profile, const JointRenderGroup &joint_profile_data
+    const DefaultModelingOrientations &model_orientation,
+    const AxisFlag &axis,
+    const PanelExtrusion &panel,
+    const Ptr<BRepBody> &box,
+    const AxisFlag &joint_orientation,
+    const JointProfile &joint_profile,
+    const JointRenderGroup &joint_profile_data
 ) {
     auto finger_count      = joint_profile.finger_count;
     auto finger_width      = joint_profile.finger_width;
@@ -247,8 +252,13 @@ void DirectRenderer::renderCornerJoints(
 }
 
 void DirectRenderer::renderCornerJoint(
-    const DefaultModelingOrientations &model_orientation, const AxisFlag &axis, const PanelExtrusion &panel, const Ptr<BRepBody> &box,
-    const AxisFlag &joint_orientation, const JointProfile &joint_profile, const JointRenderGroup &joint_profile_data
+    const DefaultModelingOrientations &model_orientation,
+    const AxisFlag &axis,
+    const PanelExtrusion &panel,
+    const Ptr<BRepBody> &box,
+    const AxisFlag &joint_orientation,
+    const JointProfile &joint_profile,
+    const JointRenderGroup &joint_profile_data
 ) {
     auto finger_count      = joint_profile.finger_count;
     auto finger_width      = joint_profile.finger_width;

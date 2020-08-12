@@ -109,11 +109,11 @@ namespace silvanus::generatebox::render {
             entt::registry m_renders;
 
             auto renderSinglePanel(
-                const std::string &names,
-                const fusion::PanelProfileSketch &sketch,
-                const entities::PanelExtrusion &extrusion,
-                adsk::core::DefaultModelingOrientations orientation,
-                JointRenderData &joints
+                const std::string& names,
+                const fusion::PanelProfileSketch& sketch,
+                const entities::PanelExtrusion& extrusion,
+                const adsk::core::DefaultModelingOrientations& orientation,
+                const JointRenderData& joints
             ) -> adsk::core::Ptr<adsk::fusion::ExtrudeFeature>;
 
             static void renderPanelCopies(
@@ -124,11 +124,11 @@ namespace silvanus::generatebox::render {
 
             void renderJointSketches(
                 std::vector<std::vector<CutProfile>>& cuts,
-                std::string panel_name,
-                entities::ExtrusionDistance panel_thickness,
-                adsk::core::DefaultModelingOrientations orientation,
-                const adsk::core::Ptr<adsk::fusion::ExtrudeFeature> &extrusion,
-                JointRenderData &joints
+                const std::string& panel_name,
+                const entities::ExtrusionDistance& panel_thickness,
+                const adsk::core::DefaultModelingOrientations& orientation,
+                const adsk::core::Ptr<adsk::fusion::ExtrudeFeature>& extrusion,
+                const JointRenderData& joints
             );
 
         public:
@@ -140,9 +140,14 @@ namespace silvanus::generatebox::render {
             ) override;
 
             void renderJointSketch(
-                std::vector<std::vector<CutProfile>> &cuts, std::string panel_name, const entities::ExtrusionDistance &panel_thickness,
-                const adsk::core::DefaultModelingOrientations &model_orientation, const adsk::core::Ptr<adsk::fusion::ExtrudeFeature> &extrusion,
-                std::string sketch_prefix, const entities::AxisFlag &joint_orientation, const JointRenderProfileGroup &joint_groups
+                std::vector<std::vector<CutProfile>>& cuts,
+                const std::string& panel_name,
+                const entities::ExtrusionDistance& panel_thickness,
+                const adsk::core::DefaultModelingOrientations& model_orientation,
+                const adsk::core::Ptr<adsk::fusion::ExtrudeFeature>& extrusion,
+                const std::string& sketch_prefix,
+                const entities::AxisFlag& joint_orientation,
+                const JointRenderProfileGroup& joint_groups
             ) ;
     };
 }
