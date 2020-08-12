@@ -20,8 +20,8 @@ using namespace silvanus::generatebox::fusion;
 
 adsk::core::Ptr<adsk::fusion::RectangularPatternFeature> FingerCutsPattern::copy(
     const DefaultModelingOrientations model_orientation,
-    std::vector<adsk::core::Ptr<adsk::fusion::ExtrudeFeature>>& features,
-    JointProfile& profile
+    const std::vector<adsk::core::Ptr<adsk::fusion::ExtrudeFeature>>& features,
+    const JointProfile& profile
 ) {
     Ptr<ObjectCollection> entities = adsk::core::ObjectCollection::create();
 

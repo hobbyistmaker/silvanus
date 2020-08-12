@@ -65,9 +65,9 @@ namespace silvanus::generatebox::fusion {
         FingerCutsPattern(const adsk::core::Ptr<adsk::core::Application>& app, const adsk::core::Ptr<adsk::fusion::Component>& component)
             : m_component{component}, m_app{app} {};
         [[nodiscard]] adsk::core::Ptr<adsk::fusion::RectangularPatternFeature> copy(
-            adsk::core::DefaultModelingOrientations model_orientation,
-            std::vector<adsk::core::Ptr<adsk::fusion::ExtrudeFeature>>& features,
-            entities::JointProfile& profile
+            const adsk::core::DefaultModelingOrientations model_orientation,
+            const std::vector<adsk::core::Ptr<adsk::fusion::ExtrudeFeature>>& features,
+            const entities::JointProfile& profile
         );
     };
 
