@@ -17,7 +17,7 @@ namespace silvanus::generatebox::entities
         TopOverride, BottomOverride, LeftOverride, RightOverride, FrontOverride, BackOverride,
         Length, Width, Height, Kerf, FingerWidth, Thickness, FullPreview, FastPreview, ModelSelection,
         FullPreviewLabel, FastPreviewLabel, LengthDividerCount, WidthDividerCount, HeightDividerCount,
-        FingerMode
+        FingerMode, DividerLapInput, LengthDividerJointInput, WidthDividerJointInput
     };
 
 }

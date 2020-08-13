@@ -7,7 +7,21 @@
 
 #include "generateboxcommand.hpp"
 
+#include "entities/Dimensions.hpp"
+#include "entities/EndReferencePoint.hpp"
 #include "entities/FingerPatternType.hpp"
+#include "entities/FingerWidth.hpp"
+#include "entities/FingerWidthInput.hpp"
+#include "entities/InsidePanel.hpp"
+#include "entities/JointThickness.hpp"
+#include "entities/MaxOffset.hpp"
+#include "entities/MaxOffsetInput.hpp"
+#include "entities/OutsidePanel.hpp"
+#include "entities/PanelPosition.hpp"
+#include "entities/PanelProfile.hpp"
+#include "entities/Position.hpp"
+#include "entities/StartReferencePoint.hpp"
+#include "entities/ToggleableThicknessInput.hpp"
 
 #include <Core/CoreAll.h>
 #include <Fusion/FusionAll.h>
@@ -82,7 +96,6 @@ void GenerateBoxCommand::onExecute(const adsk::core::Ptr<CommandEventArgs>& args
 
 void GenerateBoxCommand::onPreview(const adsk::core::Ptr<CommandEventArgs>& args) {
     if (!command_dialog.full_preview() && !command_dialog.fast_preview()) return;
-
 
     auto preferences = adsk::core::Ptr<Preferences>{m_app->preferences()};
     auto product = adsk::core::Ptr<Product>{m_app->activeProduct()};

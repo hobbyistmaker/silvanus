@@ -11,9 +11,6 @@
 namespace silvanus::generatebox::entities {
 
     struct DimensionsInputs {
-        DialogInputs length_reference;
-        DialogInputs width_reference;
-        DialogInputs height_reference;
         adsk::core::Ptr<adsk::core::FloatSpinnerCommandInput> length_control;
         adsk::core::Ptr<adsk::core::FloatSpinnerCommandInput> width_control;
         adsk::core::Ptr<adsk::core::FloatSpinnerCommandInput> height_control;

@@ -17,6 +17,7 @@
 #include "entities/JointGroup.hpp"
 #include "entities/JointOrientation.hpp"
 #include "entities/JointPatternDistance.hpp"
+#include "entities/JointPatternPosition.hpp"
 #include "entities/JointPatternTags.hpp"
 #include "entities/JointPatternType.hpp"
 #include "entities/JointPatternValue.hpp"
@@ -60,60 +61,60 @@ void ConfigureJoints::updateJointPatternDistances() {
 void ConfigureJoints::addFingerParameters() {
     auto normal_automatic_view = m_registry.view<NormalJointPattern, FingerWidth, JointPatternDistance, AutomaticFingerPatternType>();
     normal_automatic_view.each([this](
-                  auto entity, auto const& pattern, auto const& finger_width, auto const& pattern_distance, auto const& pattern_type
-              ){
-                  auto length = pattern_distance.value;
-                  auto width = finger_width.value;
+        auto entity, auto const& pattern, auto const& finger_width, auto const& pattern_distance, auto const& pattern_type
+    ){
+        auto length = pattern_distance.value;
+        auto width = finger_width.value;
 
-                  auto default_fingers = ceil(length / width);
-                  auto estimated_fingers = max(3.0, (floor(default_fingers / 2) * 2) - 1);
-                  auto actual_finger_width = length / estimated_fingers;
-                  auto pattern_offset = actual_finger_width;
-                  auto actual_number_fingers = floor(estimated_fingers / 2);
-                  auto distance = (estimated_fingers - 3) * actual_finger_width;
+        auto default_fingers = ceil(length / width);
+        auto estimated_fingers = max(3.0, (floor(default_fingers / 2) * 2) - 1);
+        auto actual_finger_width = length / estimated_fingers;
+        auto pattern_offset = actual_finger_width;
+        auto actual_number_fingers = floor(estimated_fingers / 2);
+        auto distance = (estimated_fingers - 3) * actual_finger_width;
 
-                  this->m_registry.emplace_or_replace<JointPatternValues>(
-                      entity, (int)actual_number_fingers, actual_finger_width, actual_finger_width, distance, pattern_offset
-                  );
-              });
+        this->m_registry.emplace_or_replace<JointPatternValues>(
+            entity, (int)actual_number_fingers, actual_finger_width, actual_finger_width, distance, pattern_offset
+        );
+    });
 
     auto inverse_automatic_view = m_registry.view<InverseJointPattern, FingerWidth, JointPatternDistance, AutomaticFingerPatternType>();
     inverse_automatic_view.each([this](
-                  auto entity, auto const& pattern, auto const& finger_width, auto const& pattern_distance, auto const& pattern_type
-              ){
-                  auto length = pattern_distance.value;
-                  auto width = finger_width.value;
+        auto entity, auto const& pattern, auto const& finger_width, auto const& pattern_distance, auto const& pattern_type
+    ){
+        auto length = pattern_distance.value;
+        auto width = finger_width.value;
 
-                  auto default_fingers = ceil(length / width);
-                  auto estimated_fingers = max(3.0, (floor(default_fingers / 2) * 2) - 1);
-                  auto actual_finger_width = length / estimated_fingers;
-                  auto pattern_offset = actual_finger_width * 2;
-                  auto actual_number_fingers = (ceil(estimated_fingers / 2) - 2);
-                  auto distance = (actual_number_fingers - 1) * 2 * actual_finger_width;
+        auto default_fingers = ceil(length / width);
+        auto estimated_fingers = max(3.0, (floor(default_fingers / 2) * 2) - 1);
+        auto actual_finger_width = length / estimated_fingers;
+        auto pattern_offset = actual_finger_width * 2;
+        auto actual_number_fingers = (ceil(estimated_fingers / 2) - 2);
+        auto distance = (actual_number_fingers - 1) * 2 * actual_finger_width;
 
-                  this->m_registry.emplace_or_replace<JointPatternValues>(
-                      entity, (int)actual_number_fingers, actual_finger_width, actual_finger_width, distance, pattern_offset
-                  );
-              });
+        this->m_registry.emplace_or_replace<JointPatternValues>(
+            entity, (int)actual_number_fingers, actual_finger_width, actual_finger_width, distance, pattern_offset
+        );
+    });
 
     auto corner_automatic_view = m_registry.view<CornerJointPattern, FingerWidth, JointPatternDistance, AutomaticFingerPatternType>();
     corner_automatic_view.each([this](
-                  auto entity, auto const& pattern, auto const& finger_width, auto const& pattern_distance, auto const& pattern_type
-              ){
-                  auto pattern_length = pattern_distance.value;
-                  auto user_finger_width = finger_width.value;
+        auto entity, auto const& pattern, auto const& finger_width, auto const& pattern_distance, auto const& pattern_type
+    ){
+        auto pattern_length = pattern_distance.value;
+        auto user_finger_width = finger_width.value;
 
-                  auto default_fingers = ceil(pattern_length / user_finger_width);
-                  auto estimated_fingers = max(3.0, (floor(default_fingers / 2) * 2) - 1);
-                  auto actual_finger_width = pattern_length / estimated_fingers;
-                  auto pattern_offset = 0.0;
-                  auto actual_number_fingers = 2;
-                  auto distance = pattern_length - actual_finger_width;
+        auto default_fingers = ceil(pattern_length / user_finger_width);
+        auto estimated_fingers = max(3.0, (floor(default_fingers / 2) * 2) - 1);
+        auto actual_finger_width = pattern_length / estimated_fingers;
+        auto pattern_offset = 0.0;
+        auto actual_number_fingers = 2;
+        auto distance = pattern_length - actual_finger_width;
 
-                  this->m_registry.emplace_or_replace<JointPatternValues>(
-                      entity, (int)actual_number_fingers, actual_finger_width, actual_finger_width, distance, pattern_offset
-                  );
-              });
+        this->m_registry.emplace_or_replace<JointPatternValues>(
+            entity, (int)actual_number_fingers, actual_finger_width, actual_finger_width, distance, pattern_offset
+        );
+    });
 
     auto normal_constant_view = m_registry.view<FingerWidth, JointPatternDistance, ConstantFingerPatternType>();
     normal_constant_view.each([this](
@@ -165,6 +166,41 @@ void ConfigureJoints::addFingerParameters() {
         values.pattern_offset = 0;
     });
 
+
+    auto toplap_automatic_view = m_registry.view<TopLapJointPattern, FingerWidth, JointPatternDistance>();
+    toplap_automatic_view.each([this](
+        auto entity, auto const& pattern, auto const& finger_width, auto const& pattern_distance
+    ){
+        auto pattern_length = pattern_distance.value;
+
+        auto estimated_fingers = 2;
+        auto actual_finger_width = pattern_length / estimated_fingers;
+        auto pattern_offset = 0.0;
+        auto actual_number_fingers = 1;
+        auto distance = pattern_length - actual_finger_width;
+
+        this->m_registry.emplace_or_replace<JointPatternValues>(
+            entity, (int)actual_number_fingers, actual_finger_width, actual_finger_width, distance, pattern_offset
+        );
+    });
+
+    auto bottomlap_automatic_view = m_registry.view<BottomLapJointPattern, FingerWidth, JointPatternDistance>();
+    bottomlap_automatic_view.each([this](
+        auto entity, auto const& pattern, auto const& finger_width, auto const& pattern_distance
+    ){
+        auto pattern_length = pattern_distance.value;
+
+        auto estimated_fingers = 2;
+        auto actual_finger_width = pattern_length / estimated_fingers;
+        auto pattern_offset = 0.0 + actual_finger_width;
+        auto actual_number_fingers = 1;
+        auto distance = pattern_length - actual_finger_width;
+
+        this->m_registry.emplace_or_replace<JointPatternValues>(
+            entity, (int)actual_number_fingers, actual_finger_width, actual_finger_width, distance, pattern_offset
+        );
+    });
+
     auto kerf_view = m_registry.view<JointPatternValues, Kerf>();
     kerf_view.each([](
         auto& values, auto const& kerf
@@ -197,13 +233,27 @@ void ConfigureJoints::updateJointProfiles() {
         group.finger_offset = values.finger_offset;
     });
 
-    auto kerf_view = m_registry.view<JointProfile, CornerJointPattern, Kerf, OutsidePanel>();
-    kerf_view.each([](
-        auto& group, auto const& pattern, auto const& kerf, auto const& panel
+    auto corner_kerf_view = m_registry.view<JointProfile, CornerJointPattern, Kerf>();
+    corner_kerf_view.each([](
+        auto& group, auto const& pattern, auto const& kerf
     ){
         group.pattern_distance += kerf.value;
         group.pattern_offset -= kerf.value;
         group.finger_width += kerf.value;
+    });
+
+    auto toplap_kerf_view = m_registry.view<JointProfile, TopLapJointPattern, Kerf>();
+    toplap_kerf_view.each([](
+        auto& group, auto const& pattern, auto const& kerf
+    ){
+        group.finger_width += kerf.value * 1.5;
+    });
+
+    auto bottomlap_kerf_view = m_registry.view<JointProfile, BottomLapJointPattern, Kerf>();
+    bottomlap_kerf_view.each([](
+        auto& group, auto const& pattern, auto const& kerf
+    ){
+        group.finger_width += kerf.value * 1.5;
     });
 }
 
@@ -221,14 +271,16 @@ void ConfigureJoints::addJoints() {
     std::map<Position, std::map<Position, std::map<AxisFlag, std::map<AxisFlag, std::vector<JointPanel>>>> > source_panels;
 
     m_registry.view<Enabled, JointPatternPosition, JointExtrusion, JointGroup>().each([&](
-        auto& enabled, auto const& pattern, auto const& extrusion, auto const& group
+        auto& e, auto const& p, auto const& extrusion, auto const& group
     ){
-        source_panels[pattern.panel_position][pattern.joint_position][pattern.panel_orientation][pattern.joint_orientation].emplace_back(JointPanel{group, extrusion});
+        source_panels[p.panel_position][p.joint_position][p.panel_orientation][p.joint_orientation].emplace_back(JointPanel{group, extrusion});
     });
 
     m_registry.view<Enabled, JointPatternPosition>().each([&, this](
         auto entity, auto& enabled, auto const& pattern
     ){
-        this->m_registry.emplace_or_replace<JoinedPanels>(entity, source_panels[pattern.joint_position][pattern.panel_position][pattern.joint_orientation][pattern.panel_orientation]);
+        this->m_registry.emplace_or_replace<JoinedPanels>(
+            entity, source_panels[pattern.joint_position][pattern.panel_position][pattern.joint_orientation][pattern.panel_orientation]
+        );
     });
 }

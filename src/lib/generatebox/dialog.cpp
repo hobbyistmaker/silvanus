@@ -23,6 +23,7 @@
 #include "entities/MaxOffsetInput.hpp"
 #include "entities/OutsidePanel.hpp"
 #include "entities/OverrideInput.hpp"
+#include "entities/PanelId.hpp"
 #include "entities/PanelName.hpp"
 #include "entities/PanelOrientation.hpp"
 #include "entities/Position.hpp"
@@ -68,6 +69,8 @@ void CreateDialog::clear() {
     m_parameters.clear();
     m_thicknesses.clear();
     m_ignore_updates.clear();
+    m_panels.clear();
+    m_configuration.clear();
 }
 
 void CreateDialog::create(const adsk::core::Ptr<Application> &app, const adsk::core::Ptr<CommandInputs> &inputs, const adsk::core::Ptr<Component> &root,
@@ -133,43 +136,86 @@ void CreateDialog::createFingerModeSelectionDropDown(const Ptr<CommandInputs>& i
 }
 
 void CreateDialog::createDividerInputs(const Ptr<CommandInputs>& inputs) {
+    m_divider_joint = inputs->addDropDownCommandInput("dividerLapCommandInput", "Top Joint", TextListDropDownStyle);
+    auto const& joint_items = m_divider_joint->listItems();
+    joint_items->add("Length Dividers", false);
+    joint_items->add("Width Dividers", true);
+    m_divider_joint->maxVisibleItems(2);
+    addInputControl(DialogInputs::DividerLapInput, m_divider_joint, [this](){
+        this->update(m_controls[DialogInputs::LengthDividerCount]);
+        this->update(m_controls[DialogInputs::WidthDividerCount]);
+    });
+
+//    m_length_divider_outside_joint = inputs->addDropDownCommandInput("lengthDividerOutsideJointInput", "Length Divider Joint", TextListDropDownStyle);
+//    auto const& length_items = m_length_divider_outside_joint->listItems();
+//    length_items->add("Rigid", true);
+//    length_items->add("Half Lap", false);
+//    m_length_divider_outside_joint->maxVisibleItems(2);
+//    addInputControl(DialogInputs::LengthDividerJointInput, m_length_divider_outside_joint, [this](){
+//        this->update(m_controls[DialogInputs::LengthDividerCount]);
+//        this->update(m_controls[DialogInputs::WidthDividerCount]);
+//    });
+//
     auto length = adsk::core::Ptr<IntegerSpinnerCommandInput>{inputs->addIntegerSpinnerCommandInput(
         "lengthDividerCommandInput", "(#) Length Dividers", 0, 25, 1, 0
     )};
     addInputControl(DialogInputs::LengthDividerCount, length, [this](){
 
-        auto old_view = this->m_registry.view<InsidePanel, LengthOrientation>();
-        this->m_registry.destroy(old_view.begin(), old_view.end());
+        auto old_view = this->m_panel_registry.view<InsidePanel, LengthOrientation>();
+        this->m_panel_registry.destroy(old_view.begin(), old_view.end());
 
-        auto dividers = Dividers<LengthOrientation>(this->m_registry, this->m_app, this->m_controls);
-        dividers.initialize("Length", DialogInputs::LengthDividerCount, DialogInputs::Length, AxisFlag::Length);
-
+//        auto const joint_type = this->m_length_divider_outside_joint->selectedItem()->index();
+        auto const joint_type = 0;
+        if (this->m_divider_joint->selectedItem()->index() == 0) {
+            auto dividers = Dividers<LengthOrientation, JointType::TopLap>(this->m_panel_registry, this->m_app, this->m_controls, joint_type);
+            dividers.initialize("Length", DialogInputs::LengthDividerCount, DialogInputs::Length, AxisFlag::Length);
+        } else {
+            auto dividers = Dividers<LengthOrientation, JointType::BottomLap>(this->m_panel_registry, this->m_app, this->m_controls, joint_type);
+            dividers.initialize("Length", DialogInputs::LengthDividerCount, DialogInputs::Length, AxisFlag::Length);
+        }
     });
 
+//    m_width_divider_outside_joint = inputs->addDropDownCommandInput("widthDividerOutsideJointInput", "Width Divider Joint", TextListDropDownStyle);
+//    auto const& width_items = m_width_divider_outside_joint->listItems();
+//    width_items->add("Rigid", true);
+//    width_items->add("Half Lap", false);
+//    m_width_divider_outside_joint->maxVisibleItems(2);
+//    addInputControl(DialogInputs::WidthDividerJointInput, m_width_divider_outside_joint, [this](){
+//        this->update(m_controls[DialogInputs::WidthDividerCount]);
+//        this->update(m_controls[DialogInputs::LengthDividerCount]);
+//    });
+//
     auto width = adsk::core::Ptr<IntegerSpinnerCommandInput>{inputs->addIntegerSpinnerCommandInput(
         "widthDividerCommandInput", "(#) Width Dividers", 0, 25, 1, 0
     )};
     addInputControl(DialogInputs::WidthDividerCount, width, [this](){
 
-        auto old_view = this->m_registry.view<InsidePanel, WidthOrientation>();
-        this->m_registry.destroy(old_view.begin(), old_view.end());
+        auto old_view = this->m_panel_registry.view<InsidePanel, WidthOrientation>();
+        this->m_panel_registry.destroy(old_view.begin(), old_view.end());
 
-        auto dividers = Dividers<WidthOrientation>(this->m_registry, this->m_app, this->m_controls);
-        dividers.initialize("Width", DialogInputs::WidthDividerCount, DialogInputs::Width, AxisFlag::Width);
+//        auto const joint_type = this->m_width_divider_outside_joint->selectedItem()->index();
+        auto const joint_type = 0;
+        if (this->m_divider_joint->selectedItem()->index() == 0) {
+            auto dividers = Dividers<WidthOrientation, JointType::BottomLap>(this->m_panel_registry, this->m_app, this->m_controls, joint_type);
+            dividers.initialize("Width", DialogInputs::WidthDividerCount, DialogInputs::Width, AxisFlag::Width);
+        } else {
+            auto dividers = Dividers<WidthOrientation, JointType::TopLap>(this->m_panel_registry, this->m_app, this->m_controls, joint_type);
+            dividers.initialize("Width", DialogInputs::WidthDividerCount, DialogInputs::Width, AxisFlag::Width);
+        };
 
     });
-
-    auto height = adsk::core::Ptr<IntegerSpinnerCommandInput>{inputs->addIntegerSpinnerCommandInput(
-        "heightDividerCommandInput", "(#) Height Dividers", 0, 25, 1, 0
-    )};
-    addInputControl(DialogInputs::HeightDividerCount, height, [this](){
-
-        auto old_view = this->m_registry.view<InsidePanel, HeightOrientation>();
-        this->m_registry.destroy(old_view.begin(), old_view.end());
-
-        auto dividers = Dividers<HeightOrientation>(this->m_registry, this->m_app, this->m_controls);
-        dividers.initialize("Height", DialogInputs::HeightDividerCount, DialogInputs::Height, AxisFlag::Height);
-    });
+//
+//    auto height = adsk::core::Ptr<IntegerSpinnerCommandInput>{inputs->addIntegerSpinnerCommandInput(
+//        "heightDividerCommandInput", "(#) Height Dividers", 0, 25, 1, 0
+//    )};
+//    addInputControl(DialogInputs::HeightDividerCount, height, [this](){
+//
+//        auto old_view = this->m_panel_registry.view<InsidePanel, HeightOrientation>();
+//        this->m_panel_registry.destroy(old_view.begin(), old_view.end());
+//
+//        auto dividers = Dividers<HeightOrientation>(this->m_panel_registry, this->m_app, this->m_controls);
+//        dividers.initialize("Height", DialogInputs::HeightDividerCount, DialogInputs::Height, AxisFlag::Height);
+//    });
 }
 
 void CreateDialog::createPreviewTable(const adsk::core::Ptr<CommandInputs>& inputs) {
@@ -217,7 +263,10 @@ void CreateDialog::addInputControl(const DialogInputs reference, const adsk::cor
     m_handlers[reference].emplace_back(handler);
 }
 
-void CreateDialog::addInputControl(const DialogInputs reference, const adsk::core::Ptr<CommandInput>& input, const std::vector<std::function<void()>>& handlers) {
+void CreateDialog::addInputControl(
+    const DialogInputs reference, const adsk::core::Ptr<CommandInput>& input,
+    const std::vector<std::function<void()>>& handlers
+) {
     addInputControl(reference, input);
     for (auto const& handler: handlers) {
         m_handlers[reference].emplace_back(handler);
@@ -274,7 +323,7 @@ bool CreateDialog::validate(const adsk::core::Ptr<CommandInputs>& inputs) {
 void CreateDialog::createPanelTable(
         const adsk::core::Ptr<CommandInputs>& inputs,
         const adsk::core::Ptr<Component>& root,
-        const DefaultModelingOrientations orientation,
+        const DefaultModelingOrientations model_orientation,
         bool is_metric
 ) {
     adsk::core::Ptr<TableCommandInput> table = initializePanelTable(inputs);
@@ -343,133 +392,69 @@ void CreateDialog::createPanelTable(
         addInputControl(row.thickness.lookup, thickness_control);
         addInputHandler(DialogInputs::Thickness, follow_thickness);
 
+        auto const& references = row.reference.at(model_orientation);
+
         for (auto const& [joint_position, joint_types]: row.fingers) {
             for (auto const& joint_type_map: joint_types) {
                 auto joint_pos = joint_position;
                 auto joint_type = std::get<JointType>(joint_type_map);
                 auto finger_orientations = std::get<std::vector<AxisFlag>>(joint_type_map);
 
-                auto const& references = row.reference.at(orientation);
                 for (auto finger_orientation: finger_orientations) {
-                    auto entity = m_registry.create();
+                    auto entity = m_panel_registry.create();
 
-                    m_registry.emplace<OutsidePanel>(entity);
-                    this->m_registry.emplace<PanelPosition>(entity, Position::Outside);
+                    m_panel_registry.emplace<EnableInput>(entity, enable_control);
 
-                    m_registry.emplace<PanelName>(entity, row.label.name);
-                    m_registry.emplace<JointName>(entity, row.label.name);
+                    m_panel_registry.emplace<DimensionsInputs>(
+                        entity, m_controls[references.length], m_controls[references.width], m_controls[references.height]
+                    );
+                    m_panel_registry.emplace<Dimensions>(entity);
 
-                    m_registry.emplace<EnableInput>(entity, enable_control);
-                    m_registry.emplace<OverrideInput>(entity, override_control);
+                    m_panel_registry.emplace<EndReferencePoint>(entity);
+                    m_panel_registry.emplace<ExtrusionDistance>(entity);
 
-                    m_registry.emplace<ToggleableThicknessInput>(
+                    m_panel_registry.emplace<FingerPatternInput>(entity, m_controls[DialogInputs::FingerMode]);
+                    m_panel_registry.emplace<FingerPatternType>(entity, FingerMode::Automatic);
+                    m_panel_registry.emplace<FingerWidth>(entity);
+                    m_panel_registry.emplace<FingerWidthInput>(entity, m_controls[DialogInputs::FingerWidth]);
+
+                    m_panel_registry.emplace<JointName>(entity, row.label.name);
+                    m_panel_registry.emplace<JointOrientation>(entity, finger_orientation);
+                    m_panel_registry.emplace<JointPanelOffset>(entity);
+                    m_panel_registry.emplace<JointPatternDistance>(entity);
+                    m_panel_registry.emplace<JointPatternPosition>(entity, Position::Outside, row.orientation, joint_type, finger_orientation, joint_position);
+                    m_panel_registry.emplace<JointProfile>(
+                        entity, joint_type, joint_position, FingerMode::Automatic, finger_orientation, row.orientation
+                    );
+                    m_panel_registry.emplace<JointThickness>(entity);
+
+                    m_panel_registry.emplace<KerfInput>(entity, m_controls[DialogInputs::Kerf]);
+
+                    m_panel_registry.emplace<MaxOffset>(entity);
+                    m_panel_registry.emplace<MaxOffsetInput>(entity, references.max, m_controls[references.max]);
+
+                    m_panel_registry.emplace<OrientationGroup>(entity, row.orientation, finger_orientation);
+                    m_panel_registry.emplace<OutsidePanel>(entity);
+                    m_panel_registry.emplace<OverrideInput>(entity, override_control);
+
+                    m_panel_registry.emplace<PanelId>(entity, row.id);
+                    m_panel_registry.emplace<PanelName>(entity, row.label.name);
+                    m_panel_registry.emplace<PanelOffset>(entity);
+                    m_panel_registry.emplace<PanelOrientation>(entity, row.orientation);
+                    m_panel_registry.emplace<PanelPosition>(entity, Position::Outside);
+                    m_panel_registry.emplace<PanelProfile>(entity);
+
+                    m_panel_registry.emplace<StartReferencePoint>(entity);
+
+                    m_panel_registry.emplace<ToggleableThicknessInput>(
                             entity, override_control, references.thickness,
                             thickness_control, DialogInputs::Thickness, default_thickness
                     );
-                    m_registry.emplace<ExtrusionDistance>(entity);
-                    m_registry.emplace<JointThickness>(entity);
 
-                    m_registry.emplace<DimensionsInputs>(
-                        entity,
-                        references.length, references.width, references.height,
-                        m_controls[references.length], m_controls[references.width], m_controls[references.height]
-                    );
-                    m_registry.emplace<Dimensions>(entity);
-
-                    m_registry.emplace<KerfInput>(entity, m_controls[DialogInputs::Kerf]);
-
-                    m_registry.emplace<FingerPatternInput>(entity, m_controls[DialogInputs::FingerMode]);
-                    m_registry.emplace<FingerPatternType>(entity, FingerMode::Automatic);
-                    m_registry.emplace<FingerWidthInput>(entity, m_controls[DialogInputs::FingerWidth]);
-                    m_registry.emplace<FingerWidth>(entity);
-
-                    std::unordered_map<AxisFlag, std::function<void(entt::entity)>> panel_orientation_selector = {
-                        { AxisFlag::Length, [this](auto entity){
-                            this->m_registry.emplace<LengthOrientation>(entity);
-                        }},
-                        { AxisFlag::Width, [this](auto entity) {
-                            this->m_registry.emplace<WidthOrientation>(entity);
-                        }},
-                        { AxisFlag::Height, [this](auto entity) {
-                            this->m_registry.emplace<HeightOrientation>(entity);
-                        }}
-                    };
-                    m_registry.emplace<PanelOrientation>(entity, row.orientation);
                     panel_orientation_selector[row.orientation](entity);
-
-                    m_registry.emplace<MaxOffsetInput>(entity, references.max, m_controls[references.max]);
-                    m_registry.emplace<MaxOffset>(entity);
-
-                    m_registry.emplace<PanelOffset>(entity);
-                    m_registry.emplace<JointPanelOffset>(entity);
-
-                    m_registry.emplace<EndReferencePoint>(entity);
-                    m_registry.emplace<StartReferencePoint>(entity);
-
-                    m_registry.emplace<PanelProfile>(entity);
-
-                    m_registry.emplace<JointOrientation>(entity, finger_orientation);
-                    std::unordered_map<AxisFlag, std::function<void(entt::entity)>> finger_orientation_selector = {
-                        {
-                            AxisFlag::Length, [this](auto entity) {
-                            this->m_registry.emplace<JointLengthOrientation>(entity);
-                        }},
-                        {
-                            AxisFlag::Width,  [this](auto entity) {
-                            this->m_registry.emplace<JointWidthOrientation>(entity);
-                        }},
-                        {
-                            AxisFlag::Height, [this](auto entity) {
-                            this->m_registry.emplace<JointHeightOrientation>(entity);
-                        }}
-                    };
                     finger_orientation_selector[finger_orientation](entity);
-
-                    auto joint_type_selector = std::unordered_map<JointType, std::function<void(entt::entity)>>{
-                        {
-                            JointType::Normal,
-                            [joint_pos, this](entt::entity entity) {
-                                this->m_registry.emplace<NormalJointPattern>(entity, joint_pos);
-                            }
-                        },
-                        {
-                            JointType::Inverse,
-                            [joint_pos, this](entt::entity entity) {
-                                this->m_registry.emplace<InverseJointPattern>(entity, joint_pos);
-                            }
-                        },
-                        {
-                            JointType::Corner,
-                            [joint_pos, this](entt::entity entity) {
-                                this->m_registry.emplace<CornerJointPattern>(entity, joint_pos);
-                            }
-                        }
-                    };
-                    joint_type_selector[joint_type](entity);
-
-                    auto joint_pos_selector = std::unordered_map<Position, std::function<void(entt::entity)>>{
-                        {
-                            Position::Inside,
-                            [joint_type, this](entt::entity entity) {
-                                this->m_registry.emplace<InsideJointPattern>(entity, joint_type);
-                            }
-                        },
-                        {
-                            Position::Outside,
-                            [joint_type, this](entt::entity entity) {
-                                this->m_registry.emplace<OutsideJointPattern>(entity, joint_type);
-                            }
-                        }
-                    };
-                    joint_pos_selector[joint_position](entity);
-
-                    m_registry.emplace<JointPatternPosition>(entity, Position::Outside, row.orientation, joint_type, finger_orientation, joint_position);
-                    m_registry.emplace<OrientationGroup>(entity, row.orientation, finger_orientation);
-                    m_registry.emplace<JointPatternDistance>(entity);
-
-                    m_registry.emplace<JointProfile>(
-                        entity, joint_type, joint_position, FingerMode::Automatic, finger_orientation, row.orientation
-                    );
+                    joint_type_selector[joint_type](joint_pos, entity);
+                    joint_pos_selector[joint_position](joint_type, entity);
                 }
             }
         }

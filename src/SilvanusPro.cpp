@@ -37,11 +37,9 @@ extern "C" XI_EXPORT bool run(const char* context)
     if (!ui)
         return false;
 
-    ui->messageBox("Silvanus Pro Addin starting.");
-
     auto active_product = Ptr<Product>{app->activeProduct()};
 
-    buttons.push_back(
+    buttons.emplace_back(
         make_unique<common::CommandButton>(
                 app, make_shared<GenerateBoxCommand>(app)
         )

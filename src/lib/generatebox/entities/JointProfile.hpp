@@ -13,7 +13,7 @@
 
 namespace silvanus::generatebox::entities {
     struct JointProfile {
-        PanelType  panel_type       = PanelType::Outside;
+        Position   panel_position   = Position::Outside;
         JointType  joint_type       = JointType::Normal;
         Position   joint_position   = Position::Outside;
         int        finger_count     = 0;
@@ -31,11 +31,11 @@ namespace silvanus::generatebox::entities {
         JointProfile(JointType j_type, Position j_position, FingerMode f_mode, AxisFlag p_orientation, AxisFlag j_orientation) :
             joint_type{j_type}, joint_position{j_position}, finger_type{f_mode}, panel_orientation{p_orientation}, joint_orientation{j_orientation} {};
 
-        JointProfile(PanelType p_type, JointType j_type, FingerMode f_mode, AxisFlag p_orientation, AxisFlag j_orientation) :
-            panel_type{p_type}, joint_type{j_type}, finger_type{f_mode}, panel_orientation{p_orientation}, joint_orientation{j_orientation} {};
+        JointProfile(Position p_type, JointType j_type, FingerMode f_mode, AxisFlag p_orientation, AxisFlag j_orientation) :
+            panel_position{p_type}, joint_type{j_type}, finger_type{f_mode}, panel_orientation{p_orientation}, joint_orientation{j_orientation} {};
 
-        JointProfile(PanelType p_type, JointType j_type, Position j_position, FingerMode f_mode, AxisFlag p_orientation, AxisFlag j_orientation) :
-            panel_type{p_type}, joint_type{j_type}, joint_position{j_position},
+        JointProfile(Position p_type, JointType j_type, Position j_position, FingerMode f_mode, AxisFlag p_orientation, AxisFlag j_orientation) :
+            panel_position{p_type}, joint_type{j_type}, joint_position{j_position},
             finger_type{f_mode}, panel_orientation{p_orientation}, joint_orientation{j_orientation} {};
     };
 

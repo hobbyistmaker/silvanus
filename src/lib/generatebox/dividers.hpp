@@ -1,5 +1,5 @@
 //
-// Created by James Bearce on 8/11/20.
+// Created by Hobbyist Maker on 8/11/20.
 //
 
 #ifndef SILVANUSPRO_DIVIDERS_HPP
@@ -15,7 +15,9 @@
 #include "entities/FingerWidth.hpp"
 #include "entities/FingerWidthInput.hpp"
 #include "entities/JointName.hpp"
+#include "entities/JointOrientation.hpp"
 #include "entities/JointPatternDistance.hpp"
+#include "entities/JointPatternPosition.hpp"
 #include "entities/JointPatternTags.hpp"
 #include "entities/JointPatternType.hpp"
 #include "entities/JointProfile.hpp"
@@ -46,16 +48,38 @@ namespace silvanus::generatebox {
 
     using controlsDef = std::unordered_map<entities::DialogInputs, adsk::core::Ptr<adsk::core::CommandInput> >;
 
-    template <class T>
+    template <class T, entities::JointType J>
     class Dividers {
 
             adsk::core::Ptr<adsk::core::Application> m_app;
             entt::registry &m_registry;
             controlsDef m_controls;
+            int m_outside;
+
+            std::map<entities::AxisFlag, std::vector<entities::AxisFlag>> finger_orientations_map = {
+                {
+                    entities::AxisFlag::Length,
+                    {
+                        entities::AxisFlag::Height, entities::AxisFlag::Width
+                    }
+                },
+                {
+                    entities::AxisFlag::Width,
+                    {
+                        entities::AxisFlag::Height, entities::AxisFlag::Length
+                    }
+                },
+                {
+                    entities::AxisFlag::Height,
+                    {
+                        entities::AxisFlag::Length, entities::AxisFlag::Width
+                    }
+                }
+            };
 
         public:
-            Dividers(entt::registry& registry, adsk::core::Ptr<adsk::core::Application>& app, controlsDef& controls) :
-                m_registry{registry}, m_app{app}, m_controls{controls} {};
+            Dividers(entt::registry& registry, adsk::core::Ptr<adsk::core::Application>& app, controlsDef& controls, int outside) :
+                m_registry{registry}, m_app{app}, m_controls{controls}, m_outside{outside} {};
 
             void initialize(
                 const std::string& name,
@@ -80,40 +104,51 @@ namespace silvanus::generatebox {
                 auto total_panels = divider_count + 2;
                 auto pocket_offset = (max_offset - divider_thickness * total_panels) / pocket_count;
 
-                auto finger_orientations_map = std::map<entities::AxisFlag, std::vector<entities::AxisFlag>>{
+                auto joint_selector = std::map<entities::AxisFlag, std::map<int, std::map<entities::JointType, std::vector<entities::Position>>>>{
+                    {entities::AxisFlag::Length, {{
+                        0, {
+                            {entities::JointType::Inverse, {entities::Position::Outside}},
+                            {entities::JointType::Corner, {entities::Position::Outside}},
+                            {J, {entities::Position::Inside}}
+                    }},
                     {
-                        entities::AxisFlag::Length, {
-                            entities::AxisFlag::Height, entities::AxisFlag::Width
-                        }
-                    },
+                        1, {
+                            {entities::JointType::TopLap, {entities::Position::Outside}},
+                            {J, {entities::Position::Inside}}
+                    }}}},
+                    {entities::AxisFlag::Width, {{
+                        0, {
+                            {entities::JointType::Inverse, {entities::Position::Outside}},
+                            {entities::JointType::Corner, {entities::Position::Outside}},
+                            {J, {entities::Position::Inside}}
+                    }},
                     {
-                        entities::AxisFlag::Width, {
-                            entities::AxisFlag::Height, entities::AxisFlag::Length
+                        1, {
+                            {entities::JointType::TopLap, {entities::Position::Outside}},
+                            {J, {entities::Position::Inside}}
+                     }}}},
+                    {entities::AxisFlag::Height,
+                     {{
+                         0, {
+                               {entities::JointType::Inverse, {entities::Position::Outside}},
+                               {entities::JointType::Corner, {entities::Position::Outside}},
+                               {J, {entities::Position::Inside}}
+                    }}, {
+                        1, {
+                               {entities::JointType::Inverse, {entities::Position::Outside}},
+                               {entities::JointType::Corner, {entities::Position::Outside}},
+                               {J, {entities::Position::Inside}}
                         }
-                    },
-                    {
-                        entities::AxisFlag::Height, {
-                            entities::AxisFlag::Length, entities::AxisFlag::Width
-                        }
-                    }
+                    }}}
                 };
 
                 for (auto divider_num = 1; divider_num < pocket_count; divider_num++) {
                     auto divider_pos = pocket_offset * divider_num + divider_thickness * (divider_num + 1);
 
-                    for (auto const& joint_type: {entities::JointType::Inverse, entities::JointType::Corner}) {
-                        for (auto const& joint_position: {entities::Position::Inside, entities::Position::Outside}) {
-                            for (auto const& finger_orientation: finger_orientations_map[t_panel_orientation]) {
-                                auto entity =m_registry.create();
-
-                                m_registry.emplace<entities::InsidePanel>(entity);
-                                m_registry.emplace<entities::PanelPosition>(entity, entities::Position::Inside);
-                                m_registry.emplace<entities::Enabled>(entity);
-                                m_registry.emplace<entities::PanelName>(entity, name + " Divider");
-                                m_registry.emplace<entities::JointName>(entity, name + " Divider");
-                                m_registry.emplace<entities::ThicknessInput>(entity,m_controls[entities::DialogInputs::Thickness]);
-                                m_registry.emplace<entities::ExtrusionDistance>(entity);
-                                m_registry.emplace<entities::JointThickness>(entity);
+                    for (auto const& finger_orientation: finger_orientations_map[t_panel_orientation]) {
+                        for (auto const& [joint_type, joint_positions]: joint_selector[finger_orientation][m_outside]) {
+                            for (auto const& joint_position: joint_positions) {
+                                auto entity = m_registry.create();
 
                                 auto inputs = std::map<entities::AxisFlag, std::vector<double>>{
                                     {
@@ -140,41 +175,60 @@ namespace silvanus::generatebox {
                                 auto divider_width = input_values[1];
                                 auto divider_height = input_values[2];
 
+                                m_registry.emplace<T>(entity);
+
                                 m_registry.emplace<entities::Dimensions>(entity, divider_length, divider_width, divider_height, divider_thickness);
-                                m_registry.emplace<entities::KerfInput>(entity,m_controls[entities::DialogInputs::Kerf]);
+
+                                m_registry.emplace<entities::Enabled>(entity);
+                                m_registry.emplace<entities::EndReferencePoint>(entity);
+                                m_registry.emplace<entities::ExtrusionDistance>(entity);
+
                                 m_registry.emplace<entities::FingerPatternInput>(entity,m_controls[entities::DialogInputs::FingerMode]);
                                 m_registry.emplace<entities::FingerPatternType>(entity, entities::FingerMode::Automatic);
-                                m_registry.emplace<entities::FingerWidthInput>(entity,m_controls[entities::DialogInputs::FingerWidth]);
                                 m_registry.emplace<entities::FingerWidth>(entity);
-                                m_registry.emplace<entities::PanelOrientation>(entity, t_panel_orientation);
-                                m_registry.emplace<T>(entity);
-                                m_registry.emplace<entities::MaxOffsetInput>(entity, t_max_offset,m_controls[t_max_offset]);
-                                m_registry.emplace<entities::MaxOffset>(entity);
-                                m_registry.emplace<entities::PanelOffset>(entity, divider_pos);
-                                m_registry.emplace<entities::JointPanelOffset>(entity);
-                                m_registry.emplace<entities::EndReferencePoint>(entity);
-                                m_registry.emplace<entities::StartReferencePoint>(entity);
-                                m_registry.emplace<entities::PanelProfile>(entity);
+                                m_registry.emplace<entities::FingerWidthInput>(entity,m_controls[entities::DialogInputs::FingerWidth]);
+
+                                m_registry.emplace<entities::InsidePanel>(entity);
+
+                                m_registry.emplace<entities::JointName>(entity, name + " Divider");
                                 m_registry.emplace<entities::JointOrientation>(entity, finger_orientation);
-                                m_registry.emplace<entities::JointPatternPosition>(
-                                   entity,
-                                   entities::Position::Inside,
-                                   t_panel_orientation,
-                                   joint_type,
-                                   finger_orientation,
-                                   joint_position
-                                );
-                                m_registry.emplace<entities::OrientationGroup>(entity, t_panel_orientation, finger_orientation);
+                                m_registry.emplace<entities::JointPanelOffset>(entity);
                                 m_registry.emplace<entities::JointPatternDistance>(entity);
+                                m_registry.emplace<entities::JointPatternPosition>(
+                                    entity,
+                                    entities::Position::Inside,
+                                    t_panel_orientation,
+                                    joint_type,
+                                    finger_orientation,
+                                    joint_position
+                                );
                                 m_registry.emplace<entities::JointProfile>(
                                     entity,
-                                    entities::PanelType::Inside,
+                                    entities::Position::Inside,
                                     joint_type,
                                     joint_position,
                                     entities::FingerMode::Automatic,
                                     finger_orientation,
                                     t_panel_orientation
                                 );
+                                m_registry.emplace<entities::JointThickness>(entity);
+
+                                m_registry.emplace<entities::KerfInput>(entity,m_controls[entities::DialogInputs::Kerf]);
+
+                                m_registry.emplace<entities::MaxOffset>(entity);
+                                m_registry.emplace<entities::MaxOffsetInput>(entity, t_max_offset,m_controls[t_max_offset]);
+
+                                m_registry.emplace<entities::OrientationGroup>(entity, t_panel_orientation, finger_orientation);
+
+                                m_registry.emplace<entities::PanelName>(entity, name + " Divider");
+                                m_registry.emplace<entities::PanelOffset>(entity, divider_pos);
+                                m_registry.emplace<entities::PanelOrientation>(entity, t_panel_orientation);
+                                m_registry.emplace<entities::PanelPosition>(entity, entities::Position::Inside);
+                                m_registry.emplace<entities::PanelProfile>(entity);
+
+                                m_registry.emplace<entities::StartReferencePoint>(entity);
+
+                                m_registry.emplace<entities::ThicknessInput>(entity,m_controls[entities::DialogInputs::Thickness]);
 
                                 std::unordered_map<entities::AxisFlag, std::function<void(entt::entity)>> finger_orientation_selector = {
                                     {
@@ -204,25 +258,37 @@ namespace silvanus::generatebox {
                                         [this](entt::entity entity) {
                                            m_registry.emplace<entities::CornerJointPattern>(entity);
                                         }
+                                    },
+                                    {
+                                        entities::JointType::BottomLap,
+                                            [this](entt::entity entity) {
+                                                m_registry.emplace<entities::BottomLapJointPattern>(entity);
+                                            }
+                                    },
+                                    {
+                                        entities::JointType::TopLap,
+                                            [this](entt::entity entity) {
+                                                m_registry.emplace<entities::TopLapJointPattern>(entity);
+                                            }
                                     }
                                 };
                                 joint_type_selector[joint_type](entity);
 
-                                auto joint_pos_selector = std::unordered_map<entities::Position, std::function<void(entt::entity)>>{
+                                auto joint_pos_selector = std::unordered_map<entities::Position, std::function<void(entities::JointType, entt::entity)>>{
                                     {
                                         entities::Position::Inside,
-                                        [joint_type, this](entt::entity entity) {
+                                        [this](entities::JointType joint_type, entt::entity entity) {
                                            m_registry.emplace<entities::InsideJointPattern>(entity, joint_type);
                                         }
                                     },
                                     {
                                         entities::Position::Outside,
-                                        [joint_type, this](entt::entity entity) {
+                                        [this](entities::JointType joint_type, entt::entity entity) {
                                            m_registry.emplace<entities::OutsideJointPattern>(entity, joint_type);
                                         }
                                     }
                                 };
-                                joint_pos_selector[joint_position](entity);
+                                joint_pos_selector[joint_position](joint_type, entity);
                             }
                         }
                     }

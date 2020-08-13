@@ -5,8 +5,13 @@
 #ifndef SILVANUSPRO_ORIENTATIONTAGS_HPP
 #define SILVANUSPRO_ORIENTATIONTAGS_HPP
 
+#include "AxisFlag.hpp"
+#include "PanelOrientation.hpp"
+
 namespace silvanus::generatebox::entities {
-    struct OrientationTag { bool value = true; };
+    struct OrientationTag {
+        bool value = true;
+    };
     struct JointLengthOrientation : public OrientationTag {};
     struct JointWidthOrientation : public OrientationTag {};
     struct JointHeightOrientation : public OrientationTag {};

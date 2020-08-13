@@ -8,15 +8,17 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum Fusion 360 support
 set(CMAKE_OSX_SYSROOT "/Library/Developer/CommandLineTools/SDKs/MacOSX10.13.sdk")
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-configure_file(src/SilvanusPro.h.in src/SilvanusPro.h)
+configure_file(src/${PROJECT_NAME}.h.in src/${PROJECT_NAME}.h)
 
-IF(APPLE)
+if(APPLE)
     set(AUTODESK_API_FOLDER "$ENV{HOME}/Library/Application\ Support/Autodesk/Autodesk\ Fusion\ 360/API")
+    set(SILVANUS_LIB "${PROJECT_NAME}.dylib")
     set(LOCAL_INCLUDES "/usr/local/include")
-ELSEIF(WIN32)
+elseif(WIN32)
     set(AUTODESK_HASH d2d901e2ef5ae5c384b4ac001a48c4e37589dc43) # Pulled from the Autodesk folder name under your APPDATA folder
     set(AUTODESK_API_FOLDER "$ENV{APPDATA}/Autodesk/Autodesk Fusion 360/API")
-ENDIF(APPLE)
+    set(SILVANUS_LIB "${PROJECT_NAME}.dll")
+endif(APPLE)
 
 set(AUTODESK_ADDINS_FOLDER "${AUTODESK_API_FOLDER}/Addins")
 set(AUTODESK_FOLDER "${AUTODESK_API_FOLDER}/CPP")
@@ -37,30 +39,35 @@ file(GLOB_RECURSE SOURCE_FILES
         src/lib/*.hpp
         src/lib/*.h
         )
-
+message( STATUS "Project name: ${PROJECT_NAME}" )
 message( STATUS "Users home folder: $ENV{HOME}" )
 message( STATUS "Autodesk Fusion 360 Includes folder: ${F360_INCLUDES}" )
 message( STATUS "Target file destination: ${CMAKE_CURRENT_SOURCE_DIR}" )
 message( STATUS "Binary dir: ${CMAKE_BINARY_DIR}" )
 message( STATUS "Source dir: ${CMAKE_SOURCE_DIR}" )
 message( STATUS "Found sources: ${SOURCE_FILES}" )
-IF(WIN32)
+if(WIN32)
     message( STATUS "App data: $ENV{LOCALAPPDATA}")
-ENDIF()
+endif()
 
 link_directories("${F360_LIBS}")
 
-add_library(SilvanusPro SHARED ${SOURCE_FILES})
-set_target_properties(SilvanusPro PROPERTIES PREFIX "")
+add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
+set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 set_target_properties(
-        SilvanusPro PROPERTIES
+        ${PROJECT_NAME} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}"
         RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}"
 )
-target_sources(SilvanusPro
+target_sources(${PROJECT_NAME}
         PRIVATE ${SOURCE_FILES}
-        PUBLIC src/SilvanusPro.cpp
+        PUBLIC src/${PROJECT_NAME}.cpp
         )
+
+install(TARGETS ${PROJECT_NAME} DESTINATION ${AUTODESK_ADDINS_FOLDER}/${PROJECT_NAME})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${SILVANUS_LIB} DESTINATION ${AUTODESK_ADDINS_FOLDER}/${PROJECT_NAME})
+install(FILES ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}.manifest DESTINATION ${AUTODESK_ADDINS_FOLDER}/${PROJECT_NAME})
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/resources DESTINATION ${AUTODESK_ADDINS_FOLDER}/${PROJECT_NAME})
 
 include_directories(${CMAKE_SOURCE_DIR}/src)
 include_directories(${CMAKE_SOURCE_DIR}/src/lib)
@@ -72,39 +79,30 @@ include_directories(${CMAKE_SOURCE_DIR}/src/lib/generatebox/systems)
 include_directories(${CMAKE_SOURCE_DIR}/src/lib/generatebox/render)
 include_directories(${F360_INCLUDES})
 
-target_include_directories(SilvanusPro PRIVATE "${F360_INCLUDES}")
-target_include_directories(SilvanusPro PRIVATE "${F360_INCLUDES}/Core")
-target_include_directories(SilvanusPro PRIVATE "${F360_INCLUDES}/Core/UserInterface")
+target_include_directories(${PROJECT_NAME} PRIVATE "${F360_INCLUDES}")
+target_include_directories(${PROJECT_NAME} PRIVATE "${F360_INCLUDES}/Core")
+target_include_directories(${PROJECT_NAME} PRIVATE "${F360_INCLUDES}/Core/UserInterface")
 
-IF(APPLE)
-    target_include_directories(SilvanusPro PRIVATE "${LOCAL_INCLUDES}")
-    target_include_directories(SilvanusPro PRIVATE "${LOCAL_INCLUDES}/entt")
+if(APPLE)
+    target_include_directories(${PROJECT_NAME} PRIVATE "${LOCAL_INCLUDES}")
+    target_include_directories(${PROJECT_NAME} PRIVATE "${LOCAL_INCLUDES}/entt")
     find_library(ADSK_CORE core.dylib PATHS "${F360_LIBS}/")
     find_library(ADSK_FUSION fusion.dylib PATHS "${F360_LIBS}/")
     find_library(ADSK_CAM cam.dylib PATHS "${F360_LIBS}/")
-ELSEIF(WIN32)
+elseif(WIN32)
     find_package(EnTT CONFIG REQUIRED) # Assumes EnTT installed through vcpkg with Visual Studio
-    target_link_libraries(SilvanusPro PRIVATE EnTT::EnTT)
+    target_link_libraries(${PROJECT_NAME} PRIVATE EnTT::EnTT)
     find_library(ADSK_CORE core.lib PATHS "${F360_LIBS}/")
     find_library(ADSK_FUSION fusion.lib PATHS "${F360_LIBS}/")
     find_library(ADSK_CAM cam.lib PATHS "${F360_LIBS}/")
-ENDIF()
+endif()
 
-target_link_libraries(SilvanusPro PUBLIC ${ADSK_CORE} ${ADSK_FUSION} ${ADSK_CAM})
+target_link_libraries(${PROJECT_NAME} PUBLIC ${ADSK_CORE} ${ADSK_FUSION} ${ADSK_CAM})
 
 if(CMAKE_GENERATOR STREQUAL Xcode)
     configure_file(
             WorkspaceSettings.xcsettings
-            ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.xcodeproj/project.xcworkspace/xcuserdata/$ENV{USER}.xcuserdatad/WorkspaceSettings.xcsettings
+            ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.xcodeproj/project.xcworkspace/xcuserdata/$ENV{USER}.xcuserdata/WorkspaceSettings.xcsettings
             COPYONLY
     )
 endif()
-
-IF(APPLE)
-    file(REMOVE ${AUTODESK_ADDINS_FOLDER}/SilvanusPro/resources)
-    file(REMOVE ${AUTODESK_ADDINS_FOLDER}/SilvanusPro/SilvanusPro.manifest)
-    file(REMOVE ${AUTODESK_ADDINS_FOLDER}/SilvanusPro/SilvanusPro.dylib)
-    file(COPY ${CMAKE_SOURCE_DIR}/resources DESTINATION ${AUTODESK_ADDINS_FOLDER}/SilvanusPro)
-    file(COPY ${CMAKE_SOURCE_DIR}/SilvanusPro.manifest DESTINATION ${AUTODESK_ADDINS_FOLDER}/SilvanusPro)
-    file(COPY ${CMAKE_BINARY_DIR}/SilvanusPro.dylib DESTINATION ${AUTODESK_ADDINS_FOLDER}/SilvanusPro)
-ENDIF()

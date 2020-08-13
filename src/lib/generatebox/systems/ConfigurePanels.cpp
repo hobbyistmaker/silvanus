@@ -6,27 +6,33 @@
 //
 
 #include "ConfigurePanels.hpp"
-#include "entities/PanelName.hpp"
-#include "entities/PanelOrientation.hpp"
-#include "entities/OrientationTags.hpp"
+#include "entities/AxisProfile.hpp"
+#include "entities/Dimensions.hpp"
 #include "entities/EndReferencePoint.hpp"
 #include "entities/InsidePanel.hpp"
+#include "entities/JointExtrusion.hpp"
 #include "entities/Kerf.hpp"
+#include "entities/OrientationTags.hpp"
 #include "entities/OutsidePanel.hpp"
 #include "entities/PanelExtrusion.hpp"
-#include "entities/JointExtrusion.hpp"
-#include "entities/Dimensions.hpp"
-#include "entities/PanelProfile.hpp"
 #include "entities/PanelGroup.hpp"
-#include "entities/StartReferencePoint.hpp"
+#include "entities/PanelName.hpp"
+#include "entities/PanelOrientation.hpp"
 #include "entities/PanelPosition.hpp"
+#include "entities/PanelProfile.hpp"
+#include "entities/Point.hpp"
+#include "entities/StartReferencePoint.hpp"
+
+#include <map>
+#include <vector>
 
 using namespace adsk::core;
 using namespace adsk::fusion;
-using namespace silvanus::generatebox::systems;
 using namespace silvanus::generatebox::entities;
+using namespace silvanus::generatebox::systems;
 
 void ConfigurePanels::execute() {
+//    findJoints();
     updateExtrusionDistances();
     updateEndReferencePoints();
     updatePanelProfiles();
@@ -37,6 +43,48 @@ void ConfigurePanels::execute() {
     addPanelExtrusions();
     addJointExtrusions();
 }
+
+//void ConfigurePanels::findJoints() {
+//
+//    auto width_view = m_registry.view<PanelOrientation, PanelName, Dimensions>();
+//    for (auto const& entity: width_view) {
+//        auto dimensions = width_view.get<Dimensions>(entity);
+//        auto name = width_view.get<PanelName>(entity).value;
+//        auto orientation = width_view.get<PanelOrientation>(entity).axis;
+//
+//        auto [first_length, first_width, first_height] = dimensions_selector[orientation](dimensions);
+//
+//        findWidthJoints(entity, name, first_length, first_width, first_height);
+//    }
+//}
+//
+//void ConfigurePanels::findWidthJoints(
+//    entt::entity first_panel, std::string first, AxisProfile first_length, AxisProfile first_width, AxisProfile first_height
+//) {
+//    auto width_view = m_registry.view<PanelOrientation, PanelName, Dimensions>();
+//
+//    for (auto const& second_panel: width_view) {
+//        auto dimensions = width_view.get<Dimensions>(second_panel);
+//        auto second = width_view.get<PanelName>(second_panel).value;
+//        auto orientation = width_view.get<PanelOrientation>(second_panel).axis;
+//
+//        auto [second_length, second_width, second_height] = dimensions_selector[orientation](dimensions);
+//
+//        auto length_overlaps = (first_length.start.x <= second_length.end.x) && (first_length.end.x >= second_length.start.x)
+//            && (first_length.end.y >= second_length.start.y) && (first_length.start.y <= second_length.end.y);
+//
+//        auto width_overlaps = (first_width.start.x <= second_width.end.x) && (first_width.end.x >= second_width.start.x)
+//            && (first_width.end.y >= second_width.start.y) && (first_width.start.y <= second_width.end.y);
+//
+//        auto height_overlaps = (first_height.start.x <= second_height.end.x) && (first_height.end.x >= second_height.start.x)
+//            && (first_height.end.y >= second_height.start.y) && (first_height.start.y <= second_height.end.y);
+//
+//
+//        if (length_overlaps && width_overlaps && height_overlaps) {
+//            auto overlap_msg = first + "(" + std::to_string(first_length.start.x) + "," + std::to_string(first_length.start.y) + ") panel overlaps with " + second + "(" + std::to_string(second_length.start.x) + "," + std::to_string(second_length.start.y) + ") panel.";
+//        }
+//    }
+//}
 
 void ConfigurePanels::updateExtrusionDistances() {
     auto view = m_registry.view<ExtrusionDistance, Dimensions>();
