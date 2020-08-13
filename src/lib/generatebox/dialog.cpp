@@ -349,7 +349,7 @@ void CreateDialog::createPanelTable(
                 auto joint_type = std::get<JointType>(joint_type_map);
                 auto finger_orientations = std::get<std::vector<AxisFlag>>(joint_type_map);
 
-                auto references = row.reference.at(orientation);
+                auto const& references = row.reference.at(orientation);
                 for (auto finger_orientation: finger_orientations) {
                     auto entity = m_registry.create();
 
