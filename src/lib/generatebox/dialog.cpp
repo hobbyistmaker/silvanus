@@ -7,6 +7,8 @@
 
 #include "dialog.hpp"
 
+#include "dividers.hpp"
+
 #include "entities/AxisFlag.hpp"
 #include "entities/FingerMode.hpp"
 #include "entities/JointType.hpp"
@@ -128,7 +130,6 @@ void CreateDialog::createFingerModeSelectionDropDown(const Ptr<CommandInputs>& i
     m_finger_mode->maxVisibleItems(3);
 
     addInputControl(DialogInputs::FingerMode, m_finger_mode);
-//    m_controls[DialogInputs::FingerMode] = m_finger_mode;
 }
 
 void CreateDialog::createDividerInputs(const Ptr<CommandInputs>& inputs) {
@@ -140,105 +141,9 @@ void CreateDialog::createDividerInputs(const Ptr<CommandInputs>& inputs) {
         auto old_view = this->m_registry.view<InsidePanel, LengthOrientation>();
         this->m_registry.destroy(old_view.begin(), old_view.end());
 
-        auto divider_count = Ptr<IntegerSpinnerCommandInput>{this->m_controls[DialogInputs::LengthDividerCount]}->value();
+        auto dividers = Dividers<LengthOrientation>(this->m_registry, this->m_app, this->m_controls);
+        dividers.initialize("Length", DialogInputs::LengthDividerCount, DialogInputs::Length, AxisFlag::Length);
 
-        if (divider_count <= 0) return;
-
-        auto divider_width = Ptr<FloatSpinnerCommandInput>{this->m_controls[DialogInputs::Width]}->value();
-        auto divider_height = Ptr<FloatSpinnerCommandInput>{this->m_controls[DialogInputs::Height]}->value();
-        auto max_offset = Ptr<FloatSpinnerCommandInput>{this->m_controls[DialogInputs::Length]}->value();
-        auto divider_thickness = Ptr<FloatSpinnerCommandInput>{this->m_controls[DialogInputs::Thickness]}->value();
-        auto pocket_count = divider_count + 1;
-        auto total_panels = divider_count + 2;
-        auto pocket_offset = (max_offset - divider_thickness * total_panels) / pocket_count;
-
-        for (auto divider_num = 1; divider_num < pocket_count; divider_num++) {
-            auto divider_pos = pocket_offset * divider_num + divider_thickness * (divider_num + 1);
-
-            for (auto joint_type: {JointType::Inverse, JointType::Corner}) {
-                for (auto joint_position: {Position::Inside, Position::Outside}) {
-                    for (auto finger_orientation: {AxisFlag::Height, AxisFlag::Width}) {
-                        auto entity = this->m_registry.create();
-
-                        this->m_registry.emplace<InsidePanel>(entity);
-                        this->m_registry.emplace<PanelPosition>(entity, Position::Inside);
-                        this->m_registry.emplace<Enabled>(entity);
-                        this->m_registry.emplace<PanelName>(entity, "Length Divider");
-                        this->m_registry.emplace<JointName>(entity, "Length Divider");
-                        this->m_registry.emplace<ThicknessInput>(entity, this->m_controls[DialogInputs::Thickness]);
-                        this->m_registry.emplace<ExtrusionDistance>(entity);
-                        this->m_registry.emplace<JointThickness>(entity);
-                        this->m_registry.emplace<Dimensions>(entity, divider_pos, divider_width, divider_height, divider_thickness);
-                        this->m_registry.emplace<KerfInput>(entity, this->m_controls[DialogInputs::Kerf]);
-                        this->m_registry.emplace<FingerPatternInput>(entity, this->m_controls[DialogInputs::FingerMode]);
-                        this->m_registry.emplace<FingerPatternType>(entity, FingerMode::Automatic);
-                        this->m_registry.emplace<FingerWidthInput>(entity, this->m_controls[DialogInputs::FingerWidth]);
-                        this->m_registry.emplace<FingerWidth>(entity);
-                        this->m_registry.emplace<PanelOrientation>(entity, AxisFlag::Length);
-                        this->m_registry.emplace<LengthOrientation>(entity);
-                        this->m_registry.emplace<MaxOffsetInput>(entity, DialogInputs::Length, this->m_controls[DialogInputs::Length]);
-                        this->m_registry.emplace<MaxOffset>(entity);
-                        this->m_registry.emplace<PanelOffset>(entity, divider_pos);
-                        this->m_registry.emplace<JointPanelOffset>(entity);
-                        this->m_registry.emplace<EndReferencePoint>(entity);
-                        this->m_registry.emplace<StartReferencePoint>(entity);
-                        this->m_registry.emplace<PanelProfile>(entity);
-                        this->m_registry.emplace<JointOrientation>(entity, finger_orientation);
-                        m_registry
-                            .emplace<JointPatternPosition>(entity, Position::Inside, AxisFlag::Length, joint_type, finger_orientation, joint_position);
-                        this->m_registry.emplace<OrientationGroup>(entity, AxisFlag::Length, finger_orientation);
-                        this->m_registry.emplace<JointPatternDistance>(entity);
-                        this->m_registry.emplace<JointProfile>(
-                            entity, PanelType::Inside, joint_type, joint_position, FingerMode::Automatic, finger_orientation, AxisFlag::Length
-                        );
-
-                        std::unordered_map<AxisFlag, std::function<void(entt::entity)>> finger_orientation_selector = {
-                            {
-                                AxisFlag::Width,  [this](auto entity) {
-                                this->m_registry.emplace<JointWidthOrientation>(entity);
-                            }},
-                            {
-                                AxisFlag::Height, [this](auto entity) {
-                                this->m_registry.emplace<JointHeightOrientation>(entity);
-                            }}
-                        };
-                        finger_orientation_selector[finger_orientation](entity);
-
-                        auto joint_type_selector = std::unordered_map<JointType, std::function<void(entt::entity)>>{
-                            {
-                                JointType::Inverse,
-                                [this](entt::entity entity) {
-                                    this->m_registry.emplace<InverseJointPattern>(entity);
-                                }
-                            },
-                            {
-                                JointType::Corner,
-                                [this](entt::entity entity) {
-                                    this->m_registry.emplace<CornerJointPattern>(entity);
-                                }
-                            }
-                        };
-                        joint_type_selector[joint_type](entity);
-
-                        auto joint_pos_selector = std::unordered_map<Position, std::function<void(entt::entity)>>{
-                            {
-                                Position::Inside,
-                                [joint_type, this](entt::entity entity) {
-                                    this->m_registry.emplace<InsideJointPattern>(entity, joint_type);
-                                }
-                            },
-                            {
-                                Position::Outside,
-                                [joint_type, this](entt::entity entity) {
-                                    this->m_registry.emplace<OutsideJointPattern>(entity, joint_type);
-                                }
-                            }
-                        };
-                        joint_pos_selector[joint_position](entity);
-                    }
-                }
-            }
-        }
     });
 
     auto width = adsk::core::Ptr<IntegerSpinnerCommandInput>{inputs->addIntegerSpinnerCommandInput(
@@ -249,216 +154,22 @@ void CreateDialog::createDividerInputs(const Ptr<CommandInputs>& inputs) {
         auto old_view = this->m_registry.view<InsidePanel, WidthOrientation>();
         this->m_registry.destroy(old_view.begin(), old_view.end());
 
-        auto divider_count = Ptr<IntegerSpinnerCommandInput>{this->m_controls[DialogInputs::WidthDividerCount]}->value();
+        auto dividers = Dividers<WidthOrientation>(this->m_registry, this->m_app, this->m_controls);
+        dividers.initialize("Width", DialogInputs::WidthDividerCount, DialogInputs::Width, AxisFlag::Width);
 
-        if (divider_count <= 0) return;
-
-        auto divider_length = Ptr<FloatSpinnerCommandInput>{this->m_controls[DialogInputs::Length]}->value();
-        auto divider_height = Ptr<FloatSpinnerCommandInput>{this->m_controls[DialogInputs::Height]}->value();
-        auto max_offset = Ptr<FloatSpinnerCommandInput>{this->m_controls[DialogInputs::Width]}->value();
-        auto divider_thickness = Ptr<FloatSpinnerCommandInput>{this->m_controls[DialogInputs::Thickness]}->value();
-        auto pocket_count = divider_count + 1;
-        auto total_panels = divider_count + 2;
-        auto pocket_offset = (max_offset - divider_thickness * total_panels) / pocket_count;
-
-        for (auto divider_num = 1; divider_num < pocket_count; divider_num++) {
-            auto divider_pos = pocket_offset * divider_num + divider_thickness * (divider_num + 1);
-
-            for (auto joint_type: {JointType::Inverse, JointType::Corner}) {
-                for (auto joint_position: {Position::Inside, Position::Outside}) {
-                    for (auto finger_orientation: {AxisFlag::Height, AxisFlag::Length}) {
-                        auto entity = this->m_registry.create();
-
-                        this->m_registry.emplace<InsidePanel>(entity);
-                        this->m_registry.emplace<PanelPosition>(entity, Position::Inside);
-                        this->m_registry.emplace<Enabled>(entity);
-                        this->m_registry.emplace<PanelName>(entity, "Width Divider");
-                        this->m_registry.emplace<JointName>(entity, "Width Divider");
-                        this->m_registry.emplace<ThicknessInput>(entity, this->m_controls[DialogInputs::Thickness]);
-                        this->m_registry.emplace<ExtrusionDistance>(entity);
-                        this->m_registry.emplace<JointThickness>(entity);
-                        this->m_registry.emplace<Dimensions>(entity, divider_length, divider_pos, divider_height, divider_thickness);
-                        this->m_registry.emplace<KerfInput>(entity, this->m_controls[DialogInputs::Kerf]);
-                        this->m_registry.emplace<FingerPatternInput>(entity, this->m_controls[DialogInputs::FingerMode]);
-                        this->m_registry.emplace<FingerPatternType>(entity, FingerMode::Automatic);
-                        this->m_registry.emplace<FingerWidthInput>(entity, this->m_controls[DialogInputs::FingerWidth]);
-                        this->m_registry.emplace<FingerWidth>(entity);
-                        this->m_registry.emplace<PanelOrientation>(entity, AxisFlag::Width);
-                        this->m_registry.emplace<WidthOrientation>(entity);
-                        this->m_registry.emplace<MaxOffsetInput>(entity, DialogInputs::Width, this->m_controls[DialogInputs::Width]);
-                        this->m_registry.emplace<MaxOffset>(entity);
-                        this->m_registry.emplace<PanelOffset>(entity, divider_pos);
-                        this->m_registry.emplace<JointPanelOffset>(entity);
-                        this->m_registry.emplace<EndReferencePoint>(entity);
-                        this->m_registry.emplace<StartReferencePoint>(entity);
-                        this->m_registry.emplace<PanelProfile>(entity);
-                        this->m_registry.emplace<JointOrientation>(entity, finger_orientation);
-                        m_registry
-                            .emplace<JointPatternPosition>(entity, Position::Inside, AxisFlag::Width, joint_type, finger_orientation, joint_position);
-                        this->m_registry.emplace<OrientationGroup>(entity, AxisFlag::Width, finger_orientation);
-                        this->m_registry.emplace<JointPatternDistance>(entity);
-                        this->m_registry.emplace<JointProfile>(
-                            entity, PanelType::Inside, joint_type, joint_position, FingerMode::Automatic, finger_orientation, AxisFlag::Width
-                        );
-
-                        std::unordered_map<AxisFlag, std::function<void(entt::entity)>> finger_orientation_selector = {
-                            {
-                                AxisFlag::Length,  [this](auto entity) {
-                                this->m_registry.emplace<JointLengthOrientation>(entity);
-                            }},
-                            {
-                                AxisFlag::Height, [this](auto entity) {
-                                this->m_registry.emplace<JointHeightOrientation>(entity);
-                            }}
-                        };
-                        finger_orientation_selector[finger_orientation](entity);
-
-                        auto joint_type_selector = std::unordered_map<JointType, std::function<void(entt::entity)>>{
-                            {
-                                JointType::Inverse,
-                                [this](entt::entity entity) {
-                                    this->m_registry.emplace<InverseJointPattern>(entity);
-                                }
-                            },
-                            {
-                                JointType::Corner,
-                                [this](entt::entity entity) {
-                                    this->m_registry.emplace<CornerJointPattern>(entity);
-                                }
-                            }
-                        };
-                        joint_type_selector[joint_type](entity);
-
-                        auto joint_pos_selector = std::unordered_map<Position, std::function<void(entt::entity)>>{
-                            {
-                                Position::Inside,
-                                [joint_type, this](entt::entity entity) {
-                                    this->m_registry.emplace<InsideJointPattern>(entity, joint_type);
-                                }
-                            },
-                            {
-                                Position::Outside,
-                                [joint_type, this](entt::entity entity) {
-                                    this->m_registry.emplace<OutsideJointPattern>(entity, joint_type);
-                                }
-                            }
-                        };
-                        joint_pos_selector[joint_position](entity);
-                    }
-                }
-            }
-        }
     });
 
-//    auto height = adsk::core::Ptr<IntegerSpinnerCommandInput>{inputs->addIntegerSpinnerCommandInput(
-//        "heightDividerCommandInput", "(#) Height Dividers", 0, 25, 1, 0
-//    )};
-//    addInputControl(DialogInputs::HeightDividerCount, height, [this](){
-//
-//        auto old_view = this->m_registry.view<InsidePanel, HeightOrientation>();
-//        this->m_registry.destroy(old_view.begin(), old_view.end());
-//
-//        auto divider_count = Ptr<IntegerSpinnerCommandInput>{this->m_controls[DialogInputs::HeightDividerCount]}->value();
-//
-//        if (divider_count <= 0) return;
-//
-//        auto divider_width = Ptr<FloatSpinnerCommandInput>{this->m_controls[DialogInputs::Width]}->value();
-//        auto divider_length = Ptr<FloatSpinnerCommandInput>{this->m_controls[DialogInputs::Length]}->value();
-//        auto max_offset = Ptr<FloatSpinnerCommandInput>{this->m_controls[DialogInputs::Height]}->value();
-//        auto divider_thickness = Ptr<FloatSpinnerCommandInput>{this->m_controls[DialogInputs::Thickness]}->value();
-//        auto pocket_count = divider_count + 1;
-//        auto total_panels = divider_count + 2;
-//        auto pocket_offset = (max_offset - divider_thickness * total_panels) / pocket_count;
-//
-//        for (auto divider_num = 1; divider_num < pocket_count; divider_num++) {
-//            auto divider_pos = pocket_offset * divider_num + divider_thickness * (divider_num + 1);
-//
-//            for (auto joint_type: {JointType::Inverse, JointType::Corner}) {
-//                for (auto joint_position: {Position::Inside, Position::Outside}) {
-//                    for (auto finger_orientation: {AxisFlag::Width, AxisFlag::Length}) {
-//                        this->m_app->userInterface()->messageBox("Height Divider POS: " + std::to_string(divider_pos));
-//                        auto entity = this->m_registry.create();
-//
-//                        this->m_registry.emplace<InsidePanel>(entity);
-//                        this->m_registry.emplace<PanelPosition>(entity, Position::Inside);
-//                        this->m_registry.emplace<Enabled>(entity);
-//                        this->m_registry.emplace<PanelName>(entity, "Height Divider");
-//                        this->m_registry.emplace<JointName>(entity, "Height Divider");
-//                        this->m_registry.emplace<ThicknessInput>(entity, this->m_controls[DialogInputs::Thickness]);
-//                        this->m_registry.emplace<ExtrusionDistance>(entity);
-//                        this->m_registry.emplace<JointThickness>(entity);
-//                        this->m_registry.emplace<Dimensions>(entity, divider_length, divider_width, divider_pos, divider_thickness);
-//                        this->m_registry.emplace<KerfInput>(entity, this->m_controls[DialogInputs::Kerf]);
-//                        this->m_registry.emplace<FingerPatternInput>(entity, this->m_controls[DialogInputs::FingerMode]);
-//                        this->m_registry.emplace<FingerPatternType>(entity, FingerMode::Automatic);
-//                        this->m_registry.emplace<FingerWidthInput>(entity, this->m_controls[DialogInputs::FingerWidth]);
-//                        this->m_registry.emplace<FingerWidth>(entity);
-//                        this->m_registry.emplace<PanelOrientation>(entity, AxisFlag::Height);
-//                        this->m_registry.emplace<WidthOrientation>(entity);
-//                        this->m_registry.emplace<MaxOffsetInput>(entity, DialogInputs::Height, this->m_controls[DialogInputs::Height]);
-//                        this->m_registry.emplace<MaxOffset>(entity);
-//                        this->m_registry.emplace<PanelOffset>(entity, divider_pos);
-//                        this->m_registry.emplace<JointPanelOffset>(entity);
-//                        this->m_registry.emplace<EndReferencePoint>(entity);
-//                        this->m_registry.emplace<StartReferencePoint>(entity);
-//                        this->m_registry.emplace<PanelProfile>(entity);
-//                        this->m_registry.emplace<JointOrientation>(entity, finger_orientation);
-//                        m_registry
-//                            .emplace<JointPatternPosition>(entity, Position::Inside, AxisFlag::Height, joint_type, finger_orientation, joint_position);
-//                        this->m_registry.emplace<OrientationGroup>(entity, AxisFlag::Height, finger_orientation);
-//                        this->m_registry.emplace<JointPatternDistance>(entity);
-//                        this->m_registry.emplace<JointProfile>(
-//                            entity, PanelType::Inside, joint_type, joint_position, FingerMode::Automatic, finger_orientation, AxisFlag::Height
-//                        );
-//
-//                        std::unordered_map<AxisFlag, std::function<void(entt::entity)>> finger_orientation_selector = {
-//                            {
-//                                AxisFlag::Length,  [this](auto entity) {
-//                                this->m_registry.emplace<JointLengthOrientation>(entity);
-//                            }},
-//                            {
-//                                AxisFlag::Width, [this](auto entity) {
-//                                this->m_registry.emplace<JointWidthOrientation>(entity);
-//                            }}
-//                        };
-//                        finger_orientation_selector[finger_orientation](entity);
-//
-//                        auto joint_type_selector = std::unordered_map<JointType, std::function<void(entt::entity)>>{
-//                            {
-//                                JointType::Inverse,
-//                                [this](entt::entity entity) {
-//                                    this->m_registry.emplace<InverseJointPattern>(entity);
-//                                }
-//                            },
-//                            {
-//                                JointType::Corner,
-//                                [this](entt::entity entity) {
-//                                    this->m_registry.emplace<CornerJointPattern>(entity);
-//                                }
-//                            }
-//                        };
-//                        joint_type_selector[joint_type](entity);
-//
-//                        auto joint_pos_selector = std::unordered_map<Position, std::function<void(entt::entity)>>{
-//                            {
-//                                Position::Inside,
-//                                [joint_type, this](entt::entity entity) {
-//                                    this->m_registry.emplace<InsideJointPattern>(entity, joint_type);
-//                                }
-//                            },
-//                            {
-//                                Position::Outside,
-//                                [joint_type, this](entt::entity entity) {
-//                                    this->m_registry.emplace<OutsideJointPattern>(entity, joint_type);
-//                                }
-//                            }
-//                        };
-//                        joint_pos_selector[joint_position](entity);
-//                    }
-//                }
-//            }
-//        }
-//    });
+    auto height = adsk::core::Ptr<IntegerSpinnerCommandInput>{inputs->addIntegerSpinnerCommandInput(
+        "heightDividerCommandInput", "(#) Height Dividers", 0, 25, 1, 0
+    )};
+    addInputControl(DialogInputs::HeightDividerCount, height, [this](){
+
+        auto old_view = this->m_registry.view<InsidePanel, HeightOrientation>();
+        this->m_registry.destroy(old_view.begin(), old_view.end());
+
+        auto dividers = Dividers<HeightOrientation>(this->m_registry, this->m_app, this->m_controls);
+        dividers.initialize("Height", DialogInputs::HeightDividerCount, DialogInputs::Height, AxisFlag::Height);
+    });
 }
 
 void CreateDialog::createPreviewTable(const adsk::core::Ptr<CommandInputs>& inputs) {

@@ -206,10 +206,11 @@ namespace silvanus::generatebox {
                     }},
                     {
                         {entities::Position::Outside, {
-                                jointTypes{std::make_tuple(entities::JointType::Normal, axisList{entities::AxisFlag::Length, entities::AxisFlag::Width})}
+                            jointTypes{std::make_tuple(entities::JointType::Normal, axisList{entities::AxisFlag::Length, entities::AxisFlag::Width})}
                         }},
                         {entities::Position::Inside, {
-                            jointTypes{std::make_tuple(entities::JointType::Normal, axisList{entities::AxisFlag::Length, entities::AxisFlag::Width})}
+                            jointTypes{std::make_tuple(entities::JointType::Inverse, axisList{entities::AxisFlag::Length, entities::AxisFlag::Width}),
+                                       std::make_tuple(entities::JointType::Corner, axisList{entities::AxisFlag::Length, entities::AxisFlag::Width})}
                         }}
                     }
                 },
@@ -245,7 +246,8 @@ namespace silvanus::generatebox {
                             jointTypes{std::make_tuple(entities::JointType::Normal, axisList{entities::AxisFlag::Length, entities::AxisFlag::Width})}
                         }},
                         {entities::Position::Inside, {
-                            jointTypes{std::make_tuple(entities::JointType::Normal, axisList{entities::AxisFlag::Length, entities::AxisFlag::Width})}
+                            jointTypes{std::make_tuple(entities::JointType::Inverse, axisList{entities::AxisFlag::Length, entities::AxisFlag::Width}),
+                                       std::make_tuple(entities::JointType::Corner, axisList{entities::AxisFlag::Length, entities::AxisFlag::Width})}
                         }}
                      }
                 },
@@ -277,11 +279,7 @@ namespace silvanus::generatebox {
                      }},
                     {
                         {entities::Position::Outside, {
-                                jointTypes{
-                                    std::make_tuple(
-                                        entities::JointType::Inverse,
-                                        axisList{entities::AxisFlag::Height, entities::AxisFlag::Width}
-                                        ),
+                                jointTypes{std::make_tuple(entities::JointType::Inverse, axisList{entities::AxisFlag::Height, entities::AxisFlag::Width}),
                                     std::make_tuple(
                                         entities::JointType::Corner,
                                         axisList{entities::AxisFlag::Height, entities::AxisFlag::Width}
