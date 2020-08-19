@@ -37,5 +37,5 @@ void CreatedEventHandler::notify(const Ptr<CommandCreatedEventArgs>& event_args)
     if (!is_ok)
         return;
 
-    std::shared_ptr<Fusion360Command>(m_command)->create(event_args);
+    m_command.lock()->create(event_args);
 }
