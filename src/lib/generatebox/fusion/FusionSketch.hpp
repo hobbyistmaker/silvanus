@@ -54,7 +54,10 @@ namespace silvanus::generatebox::fusion {
             std::vector<adsk::core::Ptr<adsk::fusion::SketchPoint>> m_default_sketch_points;
 
             bool positiveSketch();
+<<<<<<< HEAD
             bool isVerticalSketch();
+=======
+>>>>>>> df18ccd8aa9f9bcfbc023b68433b06c14fcdeb5b
 
             void addGeometricConstraints(const adsk::core::Ptr<adsk::fusion::SketchLineList>& lines);
             void addFaceOriginConstraint(
@@ -64,7 +67,10 @@ namespace silvanus::generatebox::fusion {
             void addOriginConstraint(const adsk::core::Ptr<adsk::fusion::SketchLineList>& lines);
             void addDistanceDimension(const adsk::core::Ptr<adsk::fusion::SketchLine>& line);
             void addDistanceDimension(const adsk::core::Ptr<adsk::fusion::SketchPoint>& lhs, const adsk::core::Ptr<adsk::fusion::SketchPoint>& rhs);
+<<<<<<< HEAD
             void addExtrusionSideConstraints(const adsk::core::Ptr<adsk::fusion::SketchLineList>& lines);
+=======
+>>>>>>> df18ccd8aa9f9bcfbc023b68433b06c14fcdeb5b
 
             adsk::core::Ptr<adsk::fusion::SketchPoint> minPoint();
             adsk::core::Ptr<adsk::fusion::SketchPoint> maxPoint();
@@ -93,7 +99,11 @@ namespace silvanus::generatebox::fusion {
                 const entities::ExtrusionDistance& depth,
                 adsk::core::Ptr<adsk::fusion::BRepBody> body
             ) const;
+<<<<<<< HEAD
             [[nodiscard]] adsk::core::Ptr<adsk::fusion::Component> parentComponent() const;
+=======
+            adsk::core::Ptr<adsk::fusion::Component> parentComponent() const;
+>>>>>>> df18ccd8aa9f9bcfbc023b68433b06c14fcdeb5b
     };
 
 }

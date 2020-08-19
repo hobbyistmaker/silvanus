@@ -564,6 +564,11 @@ namespace silvanus::generatebox {
             const std::function<void()>& handler
         );
         void addInputHandler(entities::DialogInputs reference, const std::function<void()>& handler);
+        static axisJointTypePositionMap addInsideJoints(
+            const entities::AxisFlag orientation,
+            const entities::JointType inside_joint_type,
+            const int outside_joint_type
+        );
         void addMinimumAxisDimensionChecks();
         void addMaximumKerfCheck();
         void addMinimumFingerWidthCheck();
@@ -596,11 +601,6 @@ namespace silvanus::generatebox {
         bool fast_preview() { return m_fast_preview->value(); };
         bool is_parametric() { return m_creation_mode->selectedItem()->index() == 0; };
 
-        static axisJointTypePositionMap addInsideJoints(
-            const entities::AxisFlag orientation,
-            const entities::JointType inside_joint_type,
-            const int outside_joint_type
-        );
     };
 
 }
