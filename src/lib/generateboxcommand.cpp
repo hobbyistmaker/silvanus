@@ -49,6 +49,25 @@ GenerateBoxCommand::GenerateBoxCommand(
     m_registry.on_construct<NoFingerPatternType>().connect<
         &entt::registry::remove_if_exists<ConstantFingerPatternType, ConstantAdaptiveFingerPatternType, AutomaticFingerPatternType>
     >();
+
+    m_registry.on_construct<InverseJointPattern>().connect<
+        &entt::registry::remove_if_exists<NormalJointPattern, BottomLapJointPattern, TopLapJointPattern, TrimJointPattern, NoJointPattern>
+    >();
+    m_registry.on_construct<NormalJointPattern>().connect<
+        &entt::registry::remove_if_exists<InverseJointPattern, BottomLapJointPattern, TopLapJointPattern, TrimJointPattern, NoJointPattern>
+    >();
+    m_registry.on_construct<BottomLapJointPattern>().connect<
+        &entt::registry::remove_if_exists<InverseJointPattern, NormalJointPattern, TopLapJointPattern, TrimJointPattern, NoJointPattern>
+    >();
+    m_registry.on_construct<TopLapJointPattern>().connect<
+        &entt::registry::remove_if_exists<InverseJointPattern, NormalJointPattern, BottomLapJointPattern, TrimJointPattern, NoJointPattern>
+    >();
+    m_registry.on_construct<TrimJointPattern>().connect<
+        &entt::registry::remove_if_exists<InverseJointPattern, NormalJointPattern, BottomLapJointPattern, TopLapJointPattern, NoJointPattern>
+    >();
+    m_registry.on_construct<NoJointPattern>().connect<
+        &entt::registry::remove_if_exists<InverseJointPattern, NormalJointPattern, BottomLapJointPattern, TopLapJointPattern, TrimJointPattern>
+    >();
 }
 
 void GenerateBoxCommand::onCreate(const adsk::core::Ptr<CommandCreatedEventArgs>& args)

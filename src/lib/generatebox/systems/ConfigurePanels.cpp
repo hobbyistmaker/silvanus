@@ -9,9 +9,15 @@
 #include "entities/AxisProfile.hpp"
 #include "entities/Dimensions.hpp"
 #include "entities/EndReferencePoint.hpp"
+#include "entities/HeightJointInput.hpp"
 #include "entities/InsidePanel.hpp"
 #include "entities/JointExtrusion.hpp"
+#include "entities/JointPatternPosition.hpp"
+#include "entities/JointPatternTags.hpp"
+#include "entities/JointPatternType.hpp"
+#include "entities/JointProfile.hpp"
 #include "entities/Kerf.hpp"
+#include "entities/LengthJointInput.hpp"
 #include "entities/OrientationTags.hpp"
 #include "entities/OutsidePanel.hpp"
 #include "entities/PanelExtrusion.hpp"
@@ -22,6 +28,7 @@
 #include "entities/PanelProfile.hpp"
 #include "entities/Point.hpp"
 #include "entities/StartReferencePoint.hpp"
+#include "entities/WidthJointInput.hpp"
 
 #include <map>
 #include <vector>
@@ -32,6 +39,7 @@ using namespace silvanus::generatebox::entities;
 using namespace silvanus::generatebox::systems;
 
 void ConfigurePanels::execute() {
+    updateLengthJoints();
 //    findJoints();
     updateExtrusionDistances();
     updateEndReferencePoints();
@@ -42,6 +50,65 @@ void ConfigurePanels::execute() {
     addPanelGroups();
     addPanelExtrusions();
     addJointExtrusions();
+}
+
+void ConfigurePanels::updateLengthJoints() {
+
+    auto full_selector = std::map<int, std::function<void(entt::registry&, entt::entity, JointPatternPosition&, JointProfile&)>>{
+        {0, { [](entt::registry& registry, entt::entity entity, JointPatternPosition& pattern, JointProfile& profile){
+            pattern.joint_type = JointType::Normal;
+            profile.joint_type = JointType::Normal;
+            registry.emplace_or_replace<NormalJointPattern>(entity);
+
+        }}},
+        {1, { [](entt::registry& registry, entt::entity entity, JointPatternPosition& pattern, JointProfile& profile){
+            pattern.joint_type = JointType::BottomLap;
+            profile.joint_type = JointType::BottomLap;
+            registry.emplace_or_replace<BottomLapJointPattern>(entity);
+        }}}
+    };
+    auto none_selector = std::map<int, std::function<void(entt::registry&, entt::entity, JointPatternPosition&, JointProfile&)>>{
+        {0, { [](entt::registry& registry, entt::entity entity, JointPatternPosition& pattern, JointProfile& profile){
+            pattern.joint_type = JointType::Normal;
+            profile.joint_type = JointType::Normal;
+            registry.emplace_or_replace<NormalJointPattern>(entity);
+
+        }}},
+        {1, { [](entt::registry& registry, entt::entity entity, JointPatternPosition& pattern, JointProfile& profile){
+            pattern.joint_type = JointType::None;
+            profile.joint_type = JointType::None;
+            registry.emplace_or_replace<NoJointPattern>(entity);
+        }}}
+    };
+
+    m_registry.view<JointPatternPosition, JointProfile, WidthOrientation, LengthJointInput, PanelName>().each([&, this](
+        auto entity, auto& pattern, auto& profile, auto const& panel_orientation, auto const& input, auto const& name
+    ){
+        full_selector[input.control->selectedItem()->index()](this->m_registry, entity, pattern, profile);
+    });
+    m_registry.view<JointPatternPosition, JointProfile, HeightOrientation, LengthJointInput, PanelName>().each([&, this](
+        auto entity, auto& pattern, auto& profile, auto const& panel_orientation, auto const& input, auto const& name
+    ){
+        none_selector[input.control->selectedItem()->index()](this->m_registry, entity, pattern, profile);
+    });
+
+    m_registry.view<JointPatternPosition, JointProfile, LengthOrientation, WidthJointInput, PanelName>().each([&, this](
+        auto entity, auto& pattern, auto& profile, auto const& panel_orientation, auto const& input, auto const& name
+    ){
+        full_selector[input.control->selectedItem()->index()](this->m_registry, entity, pattern, profile);
+    });
+    m_registry.view<JointPatternPosition, JointProfile, HeightOrientation, WidthJointInput, PanelName>().each([&, this](
+        auto entity, auto& pattern, auto& profile, auto const& panel_orientation, auto const& input, auto const& name
+    ){
+        none_selector[input.control->selectedItem()->index()](this->m_registry, entity, pattern, profile);
+    });
+
+//    m_registry.view<JointWidthOrientation, LengthOrientation, WidthJointInput>().each([&, this](
+//        auto entity, auto const& joint_orientation, auto const& panel_orientation, auto const& input
+//    ){
+//        selector[input.control->selectedItem()->index()](this->m_registry, entity);
+//    });
+//
 }
 
 //void ConfigurePanels::findJoints() {

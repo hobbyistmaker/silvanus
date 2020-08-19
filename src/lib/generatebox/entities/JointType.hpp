@@ -7,7 +7,7 @@
 
 namespace silvanus::generatebox::entities {
     enum class JointType {
-            Normal, Inverse, Corner, Removable, BottomLap, TopLap
+            Normal, Inverse, Corner, Removable, BottomLap, TopLap, Trim, None
     };
 }
 

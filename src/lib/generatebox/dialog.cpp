@@ -12,38 +12,41 @@
 #include "entities/AxisFlag.hpp"
 #include "entities/FingerMode.hpp"
 #include "entities/JointType.hpp"
+#include "entities/Dimensions.hpp"
 #include "entities/Enabled.hpp"
 #include "entities/EnableInput.hpp"
+#include "entities/EndReferencePoint.hpp"
+#include "entities/FingerWidth.hpp"
 #include "entities/FingerWidthInput.hpp"
 #include "entities/FingerPatternType.hpp"
+#include "entities/HeightJointInput.hpp"
 #include "entities/InsidePanel.hpp"
+#include "entities/JointName.hpp"
 #include "entities/JointOrientation.hpp"
+#include "entities/JointPatternDistance.hpp"
+#include "entities/JointPatternTags.hpp"
 #include "entities/JointPatternType.hpp"
+#include "entities/JointProfile.hpp"
+#include "entities/JointThickness.hpp"
 #include "entities/KerfInput.hpp"
+#include "entities/LengthJointInput.hpp"
+#include "entities/MaxOffset.hpp"
 #include "entities/MaxOffsetInput.hpp"
+#include "entities/OrientationGroup.hpp"
+#include "entities/OrientationTags.hpp"
 #include "entities/OutsidePanel.hpp"
 #include "entities/OverrideInput.hpp"
 #include "entities/PanelId.hpp"
 #include "entities/PanelName.hpp"
 #include "entities/PanelOrientation.hpp"
-#include "entities/Position.hpp"
-#include "entities/ToggleableThicknessInput.hpp"
-#include "entities/OrientationGroup.hpp"
-#include "entities/JointPatternDistance.hpp"
-#include "entities/JointThickness.hpp"
-#include "entities/JointName.hpp"
-#include "entities/OrientationTags.hpp"
-#include "entities/EndReferencePoint.hpp"
-#include "entities/FingerWidth.hpp"
-#include "entities/MaxOffset.hpp"
-#include "entities/JointPatternTags.hpp"
-#include "entities/Dimensions.hpp"
-#include "entities/PanelProfile.hpp"
-#include "entities/StartReferencePoint.hpp"
-#include "entities/JointProfile.hpp"
-#include "entities/ThicknessInput.hpp"
-#include "entities/PanelType.hpp"
 #include "entities/PanelPosition.hpp"
+#include "entities/PanelProfile.hpp"
+#include "entities/PanelType.hpp"
+#include "entities/Position.hpp"
+#include "entities/StartReferencePoint.hpp"
+#include "entities/ToggleableThicknessInput.hpp"
+#include "entities/ThicknessInput.hpp"
+#include "entities/WidthJointInput.hpp"
 
 #include <numeric>
 
@@ -146,16 +149,21 @@ void CreateDialog::createDividerInputs(const Ptr<CommandInputs>& inputs) {
         this->update(m_controls[DialogInputs::WidthDividerCount]);
     });
 
-//    m_length_divider_outside_joint = inputs->addDropDownCommandInput("lengthDividerOutsideJointInput", "Length Divider Joint", TextListDropDownStyle);
-//    auto const& length_items = m_length_divider_outside_joint->listItems();
-//    length_items->add("Rigid", true);
-//    length_items->add("Half Lap", false);
-//    m_length_divider_outside_joint->maxVisibleItems(2);
-//    addInputControl(DialogInputs::LengthDividerJointInput, m_length_divider_outside_joint, [this](){
-//        this->update(m_controls[DialogInputs::LengthDividerCount]);
-//        this->update(m_controls[DialogInputs::WidthDividerCount]);
-//    });
-//
+    m_length_divider_outside_joint = inputs->addDropDownCommandInput("lengthDividerOutsideJointInput", "Length Divider Joint", TextListDropDownStyle);
+    auto const& length_items = m_length_divider_outside_joint->listItems();
+    length_items->add("Tenon", true);
+    length_items->add("Half Lap", false);
+    m_length_divider_outside_joint->maxVisibleItems(2);
+    addInputControl(DialogInputs::LengthDividerJointInput, m_length_divider_outside_joint, [this](){
+        this->update(m_controls[DialogInputs::LengthDividerCount]);
+    });
+
+    m_panel_registry.view<JointLengthOrientation, InsideJointPattern, OutsidePanel>().each([this](
+        auto entity, auto const& orientation, auto const& pattern_position, auto const& panel_position
+    ){
+        this->m_panel_registry.emplace<LengthJointInput>(entity, this->m_length_divider_outside_joint);
+    });
+
     auto length = adsk::core::Ptr<IntegerSpinnerCommandInput>{inputs->addIntegerSpinnerCommandInput(
         "lengthDividerCommandInput", "(#) Length Dividers", 0, 25, 1, 0
     )};
@@ -164,27 +172,33 @@ void CreateDialog::createDividerInputs(const Ptr<CommandInputs>& inputs) {
         auto old_view = this->m_panel_registry.view<InsidePanel, LengthOrientation>();
         this->m_panel_registry.destroy(old_view.begin(), old_view.end());
 
-//        auto const joint_type = this->m_length_divider_outside_joint->selectedItem()->index();
-        auto const joint_type = 0;
-        if (this->m_divider_joint->selectedItem()->index() == 0) {
-            auto dividers = Dividers<LengthOrientation, JointType::TopLap>(this->m_panel_registry, this->m_app, this->m_controls, joint_type);
-            dividers.initialize("Length", DialogInputs::LengthDividerCount, DialogInputs::Length, AxisFlag::Length);
-        } else {
-            auto dividers = Dividers<LengthOrientation, JointType::BottomLap>(this->m_panel_registry, this->m_app, this->m_controls, joint_type);
-            dividers.initialize("Length", DialogInputs::LengthDividerCount, DialogInputs::Length, AxisFlag::Length);
-        }
+        auto const outside_joint_type = this->m_length_divider_outside_joint->selectedItem()->index();
+        auto const inside_joint_type = this->m_divider_joint->selectedItem()->index();
+        auto joint_selector = std::map<int, JointType>{
+            {0, JointType::TopLap},
+            {1, JointType::BottomLap}
+        };
+        auto joints = addInsideJoints(AxisFlag::Length, joint_selector[inside_joint_type], outside_joint_type);
+
+        auto dividers = Dividers<LengthOrientation>(this->m_panel_registry, this->m_app, this->m_controls, joints);
+        dividers.create("Length", DialogInputs::LengthDividerCount, DialogInputs::Length, AxisFlag::Length);
     });
 
-//    m_width_divider_outside_joint = inputs->addDropDownCommandInput("widthDividerOutsideJointInput", "Width Divider Joint", TextListDropDownStyle);
-//    auto const& width_items = m_width_divider_outside_joint->listItems();
-//    width_items->add("Rigid", true);
-//    width_items->add("Half Lap", false);
-//    m_width_divider_outside_joint->maxVisibleItems(2);
-//    addInputControl(DialogInputs::WidthDividerJointInput, m_width_divider_outside_joint, [this](){
-//        this->update(m_controls[DialogInputs::WidthDividerCount]);
-//        this->update(m_controls[DialogInputs::LengthDividerCount]);
-//    });
-//
+    m_width_divider_outside_joint = inputs->addDropDownCommandInput("widthDividerOutsideJointInput", "Width Divider Joint", TextListDropDownStyle);
+    auto const& width_items = m_width_divider_outside_joint->listItems();
+    width_items->add("Tenon", true);
+    width_items->add("Half Lap", false);
+    m_width_divider_outside_joint->maxVisibleItems(2);
+    addInputControl(DialogInputs::WidthDividerJointInput, m_width_divider_outside_joint, [this](){
+        this->update(m_controls[DialogInputs::WidthDividerCount]);
+    });
+
+    m_panel_registry.view<JointWidthOrientation, InsideJointPattern, OutsidePanel>().each([this](
+        auto entity, auto const& orientation, auto const& pattern_position, auto const& panel_position
+    ){
+        this->m_panel_registry.emplace<WidthJointInput>(entity, this->m_width_divider_outside_joint);
+    });
+
     auto width = adsk::core::Ptr<IntegerSpinnerCommandInput>{inputs->addIntegerSpinnerCommandInput(
         "widthDividerCommandInput", "(#) Width Dividers", 0, 25, 1, 0
     )};
@@ -193,29 +207,109 @@ void CreateDialog::createDividerInputs(const Ptr<CommandInputs>& inputs) {
         auto old_view = this->m_panel_registry.view<InsidePanel, WidthOrientation>();
         this->m_panel_registry.destroy(old_view.begin(), old_view.end());
 
-//        auto const joint_type = this->m_width_divider_outside_joint->selectedItem()->index();
-        auto const joint_type = 0;
-        if (this->m_divider_joint->selectedItem()->index() == 0) {
-            auto dividers = Dividers<WidthOrientation, JointType::BottomLap>(this->m_panel_registry, this->m_app, this->m_controls, joint_type);
-            dividers.initialize("Width", DialogInputs::WidthDividerCount, DialogInputs::Width, AxisFlag::Width);
-        } else {
-            auto dividers = Dividers<WidthOrientation, JointType::TopLap>(this->m_panel_registry, this->m_app, this->m_controls, joint_type);
-            dividers.initialize("Width", DialogInputs::WidthDividerCount, DialogInputs::Width, AxisFlag::Width);
+        auto const outside_joint_type = this->m_width_divider_outside_joint->selectedItem()->index();
+        auto const inside_joint_type = this->m_divider_joint->selectedItem()->index();
+        auto joint_selector = std::map<int, JointType>{
+            {0, JointType::BottomLap},
+            {1, JointType::TopLap}
         };
+        auto joints = addInsideJoints(AxisFlag::Width, joint_selector[inside_joint_type], outside_joint_type);
 
+        auto dividers = Dividers<WidthOrientation>(this->m_panel_registry, this->m_app, this->m_controls, joints);
+        dividers.create("Width", DialogInputs::WidthDividerCount, DialogInputs::Width, AxisFlag::Width);
     });
-//
+
 //    auto height = adsk::core::Ptr<IntegerSpinnerCommandInput>{inputs->addIntegerSpinnerCommandInput(
 //        "heightDividerCommandInput", "(#) Height Dividers", 0, 25, 1, 0
 //    )};
+//    m_panel_registry.view<JointHeightOrientation>().each([this](
+//        auto entity
+//    ){
+//        this->m_panel_registry.emplace<HeightJointInput>(entity);
+//    });
+//
 //    addInputControl(DialogInputs::HeightDividerCount, height, [this](){
 //
 //        auto old_view = this->m_panel_registry.view<InsidePanel, HeightOrientation>();
 //        this->m_panel_registry.destroy(old_view.begin(), old_view.end());
 //
 //        auto dividers = Dividers<HeightOrientation>(this->m_panel_registry, this->m_app, this->m_controls);
-//        dividers.initialize("Height", DialogInputs::HeightDividerCount, DialogInputs::Height, AxisFlag::Height);
+//        dividers.create("Height", DialogInputs::HeightDividerCount, DialogInputs::Height, AxisFlag::Height);
 //    });
+
+    addInputHandler(DialogInputs::Length, [this](){
+        this->update(m_controls[DialogInputs::LengthDividerCount]);
+        this->update(m_controls[DialogInputs::WidthDividerCount]);
+    });
+
+    addInputHandler(DialogInputs::Width, [this](){
+        this->update(m_controls[DialogInputs::LengthDividerCount]);
+        this->update(m_controls[DialogInputs::WidthDividerCount]);
+    });
+
+    addInputHandler(DialogInputs::Height, [this](){
+        this->update(m_controls[DialogInputs::LengthDividerCount]);
+        this->update(m_controls[DialogInputs::WidthDividerCount]);
+    });
+
+}
+
+axisJointTypePositionMap CreateDialog::addInsideJoints(
+    const AxisFlag panel_orientation,
+    const JointType inside_joint_type,
+    const int outside_joint_type
+) {
+    using jointTypeMap = std::map<entities::JointType, std::vector<entities::Position>>;
+    using selectorJointTypeMap = std::map<int, jointTypeMap>;
+    using axisSelectorMap = std::map<AxisFlag, selectorJointTypeMap>;
+
+    auto finger_orientation = axisJointTypePositionMap{
+    };
+
+    auto inverse_toplap_selector = selectorJointTypeMap{
+        {0, {
+            {JointType::Inverse, {Position::Outside}},
+            {JointType::Corner, {Position::Outside}}
+        }},
+        {1, {
+            {JointType::TopLap, {Position::Outside}},
+        }}
+    };
+    auto inverse_trim_selector = selectorJointTypeMap{
+        {0, {
+                {JointType::Inverse, {Position::Outside}},
+                {JointType::Corner, {Position::Outside}}
+            }},
+        {1, {
+                {JointType::Trim, {Position::Outside}},
+            }}
+    };
+    auto hgt_outside_joint_selector = axisSelectorMap{
+        {AxisFlag::Length, inverse_trim_selector},
+        {AxisFlag::Width, inverse_trim_selector},
+        {AxisFlag::Height, inverse_toplap_selector}
+    };
+    auto lw_outside_joint_selector = axisSelectorMap{
+        {AxisFlag::Length, inverse_toplap_selector},
+        {AxisFlag::Width, inverse_toplap_selector},
+        {AxisFlag::Height, inverse_trim_selector}
+    };
+
+    if (panel_orientation == AxisFlag::Length) {
+        finger_orientation[AxisFlag::Height] = hgt_outside_joint_selector[panel_orientation][outside_joint_type];
+        finger_orientation[AxisFlag::Width] = lw_outside_joint_selector[panel_orientation][outside_joint_type];
+        finger_orientation[AxisFlag::Width][inside_joint_type].emplace_back(Position::Inside);
+    } else if (panel_orientation == AxisFlag::Width) {
+        finger_orientation[AxisFlag::Height] = hgt_outside_joint_selector[panel_orientation][outside_joint_type];
+        finger_orientation[AxisFlag::Length] = lw_outside_joint_selector[panel_orientation][outside_joint_type];
+        finger_orientation[AxisFlag::Length][inside_joint_type].emplace_back(Position::Inside);
+    } else if (panel_orientation == AxisFlag::Height) {
+        finger_orientation[AxisFlag::Length][inside_joint_type].emplace_back(Position::Inside);
+        finger_orientation[AxisFlag::Length] = hgt_outside_joint_selector[panel_orientation][outside_joint_type];
+        finger_orientation[AxisFlag::Width] = hgt_outside_joint_selector[panel_orientation][outside_joint_type];
+    }
+
+    return finger_orientation;
 }
 
 void CreateDialog::createPreviewTable(const adsk::core::Ptr<CommandInputs>& inputs) {
@@ -424,7 +518,7 @@ void CreateDialog::createPanelTable(
                     m_panel_registry.emplace<JointPatternDistance>(entity);
                     m_panel_registry.emplace<JointPatternPosition>(entity, Position::Outside, row.orientation, joint_type, finger_orientation, joint_position);
                     m_panel_registry.emplace<JointProfile>(
-                        entity, joint_type, joint_position, FingerMode::Automatic, finger_orientation, row.orientation
+                        entity, Position::Outside, joint_position, joint_type, FingerMode::Automatic, 0, 0.0, 0.0, 0.0, 0.0, finger_orientation, row.orientation
                     );
                     m_panel_registry.emplace<JointThickness>(entity);
 
@@ -447,8 +541,7 @@ void CreateDialog::createPanelTable(
                     m_panel_registry.emplace<StartReferencePoint>(entity);
 
                     m_panel_registry.emplace<ToggleableThicknessInput>(
-                            entity, override_control, references.thickness,
-                            thickness_control, DialogInputs::Thickness, default_thickness
+                            entity, override_control, references.thickness, thickness_control, DialogInputs::Thickness, default_thickness
                     );
 
                     panel_orientation_selector[row.orientation](entity);

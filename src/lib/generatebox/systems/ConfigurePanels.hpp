@@ -45,6 +45,7 @@ namespace silvanus::generatebox::systems
             void addPanelGroups();
             void updateEndReferencePoints();
             void updateExtrusionDistances();
+            void updateLengthJoints();
             void updatePanelOffsets();
             void updatePanelProfiles();
             void updateStartReferencePoints();

@@ -14,6 +14,8 @@ namespace silvanus::generatebox::entities {
     struct CornerJointPattern : public JointPatternTag{};
     struct BottomLapJointPattern : public JointPatternTag{};
     struct TopLapJointPattern : public JointPatternTag{};
+    struct TrimJointPattern : public JointPatternTag{};
+    struct NoJointPattern : public JointPatternTag{};
 }
 
 #endif //SILVANUSPRO_JOINTPATTERNTAGS_HPP

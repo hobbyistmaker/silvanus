@@ -14,8 +14,10 @@
 #include "fusion/PanelFeature.hpp"
 #include "entities/AxisFlag.hpp"
 #include "entities/Enabled.hpp"
+#include "entities/InsidePanel.hpp"
 #include "entities/JointOrientation.hpp"
 #include "entities/JoinedPanels.hpp"
+#include "entities/OutsidePanel.hpp"
 #include "entities/PanelExtrusion.hpp"
 #include "entities/PanelProfile.hpp"
 #include "entities/PanelGroup.hpp"
@@ -53,41 +55,77 @@ void ParametricRenderer::execute(DefaultModelingOrientations model_orientation, 
 
     auto panel_groups = std::map<AxisFlag, std::map<PanelProfile, std::map<Position, PanelRenderData>, ComparePanelProfile>>{};
 
-    auto const view = m_registry.view<Enabled, PanelGroup, JointGroup, PanelExtrusion, JointOrientation, JoinedPanels>();
-    for (auto const entity : view) {
-        auto const& panel_group       = view.get<PanelGroup>(entity);
-        auto const& panel_extrusion   = view.get<PanelExtrusion>(entity);
-        auto const& joint_orientation = view.get<JointOrientation>(entity);
-        auto const& joined_panels     = view.get<JoinedPanels>(entity);
-        auto const& joint_group       = view.get<JointGroup>(entity);
+    auto const outside_view = m_registry.view<Enabled, OutsidePanel, PanelGroup, JointGroup, PanelExtrusion, JointOrientation, JoinedPanels>();
+    for (auto const entity : outside_view) {
+        auto const& panel_group       = outside_view.get<PanelGroup>(entity);
+        auto const& panel_extrusion   = outside_view.get<PanelExtrusion>(entity);
+        auto const& joint_orientation = outside_view.get<JointOrientation>(entity);
+        auto const& joined_panels     = outside_view.get<JoinedPanels>(entity);
+        auto const& joint_group       = outside_view.get<JointGroup>(entity);
 
         auto &group = panel_groups[panel_group.orientation][panel_group.profile][panel_group.position];
+
+        auto group_selector = std::map<JointType, renderJointTypeMap*>{
+            {JointType::Inverse, &group.joints.inverse},
+            {JointType::Corner, &group.joints.corner},
+            {JointType::TopLap, &group.joints.toplap},
+            {JointType::BottomLap, &group.joints.bottomlap},
+            {JointType::Trim, &group.joints.trim},
+            {JointType::Normal, &group.joints.normal}
+        };
 
         group.names.insert(panel_extrusion.name);
         group.panels[panel_group.distance].insert(panel_extrusion);
 
         if (joint_group.profile.finger_type != FingerMode::None) {
             for (auto &joined_panel: joined_panels.panels) {
-                if (joint_group.profile.joint_type == JointType::Inverse) {
-                    auto& joined_panel_group = group.joints.inverse[joint_orientation.axis].outside[joint_group.profile];
-                    joined_panel_group.names.insert(joined_panel.extrusion.name);
-                    joined_panel_group.extrusions.insert(joined_panel.extrusion);
-                } else if (joint_group.profile.joint_type == JointType::Corner) {
-                    auto& joined_panel_group = group.joints.corner[joint_orientation.axis].outside[joint_group.profile];
-                    joined_panel_group.names.insert(joined_panel.extrusion.name);
-                    joined_panel_group.extrusions.insert(joined_panel.extrusion);
-                } else {
-                    auto& joined_panel_group = group.joints.normal[joint_orientation.axis].outside[joint_group.profile];
-                    joined_panel_group.names.insert(joined_panel.extrusion.name);
-                    joined_panel_group.extrusions.insert(joined_panel.extrusion);
+                if (joint_group.profile.joint_type == JointType::None) {
+                    continue;
                 }
+                auto& joined_panel_group = (*group_selector[joint_group.profile.joint_type])[joint_orientation.axis].outside[joint_group.profile];
+                joined_panel_group.names.insert(joined_panel.extrusion.name);
+                joined_panel_group.extrusions.insert(joined_panel.extrusion);
             }
         }
     }
 
-    for (auto const& [axis, axis_data] : panel_groups) {
-        for (auto const& [profile, profile_data] : axis_data) {
-            for (auto const& [position, position_data]: profile_data) {
+    auto const inside_view = m_registry.view<Enabled, InsidePanel, PanelGroup, JointGroup, PanelExtrusion, JointOrientation, JoinedPanels>();
+    for (auto const entity : inside_view) {
+        auto const& panel_group       = inside_view.get<PanelGroup>(entity);
+        auto const& panel_extrusion   = inside_view.get<PanelExtrusion>(entity);
+        auto const& joint_orientation = inside_view.get<JointOrientation>(entity);
+        auto const& joined_panels     = inside_view.get<JoinedPanels>(entity);
+        auto const& joint_group       = inside_view.get<JointGroup>(entity);
+
+        auto &group = panel_groups[panel_group.orientation][panel_group.profile][panel_group.position];
+
+        auto group_selector = std::map<JointType, renderJointTypeMap*>{
+            {JointType::Inverse, &group.joints.inverse},
+            {JointType::Corner, &group.joints.corner},
+            {JointType::TopLap, &group.joints.toplap},
+            {JointType::BottomLap, &group.joints.bottomlap},
+            {JointType::Trim, &group.joints.trim},
+            {JointType::Normal, &group.joints.normal}
+        };
+
+        group.names.insert(panel_extrusion.name);
+        group.panels[panel_group.distance].insert(panel_extrusion);
+
+        if (joint_group.profile.finger_type != FingerMode::None) {
+            for (auto &joined_panel: joined_panels.panels) {
+                if (joint_group.profile.joint_type == JointType::None) {
+                    continue;
+                }
+                auto& joined_panel_group = (*group_selector[joint_group.profile.joint_type])[joint_orientation.axis].inside[joint_group.profile];
+                joined_panel_group.names.insert(joined_panel.extrusion.name);
+                joined_panel_group.extrusions.insert(joined_panel.extrusion);
+            }
+        }
+    }
+
+    for (auto& [axis, axis_data] : panel_groups) {
+        for (auto& [profile, profile_data] : axis_data) {
+            for (auto& [position, position_data]: profile_data) {
                 auto const& plane     = orientations[model_orientation][axis];
                 auto const& transform = sketch_transforms[model_orientation][axis];
 
@@ -131,7 +169,7 @@ auto ParametricRenderer::renderSinglePanel(
     const PanelProfileSketch& sketch,
     const PanelExtrusion& data,
     const DefaultModelingOrientations& model_orientation,
-    const JointRenderData& joints
+    JointRenderData& joints
 ) -> Ptr<ExtrudeFeature> {
     auto const extrusion = sketch.extrudeProfile(data.distance, data.offset);
 
@@ -199,16 +237,30 @@ void ParametricRenderer::renderJointSketches(
     const ExtrusionDistance& panel_thickness,
     const DefaultModelingOrientations& model_orientation,
     const adsk::core::Ptr<ExtrudeFeature>& extrusion,
-    const JointRenderData& joints
+    JointRenderData& joints
 ) {
-    for (auto&[joint_orientation, joint_groups]: joints.normal) {
-        renderJointSketch(cuts, panel_name, panel_thickness, model_orientation, extrusion, "Finger", joint_orientation, joint_groups);
-    }
-    for (auto&[joint_orientation, joint_groups]: joints.inverse) {
-        renderJointSketch(cuts, panel_name, panel_thickness, model_orientation, extrusion, "Finger", joint_orientation, joint_groups);
-    }
-    for (auto&[joint_orientation, joint_groups]: joints.corner) {
-        renderJointSketch(cuts, panel_name, panel_thickness, model_orientation, extrusion, "Corner", joint_orientation, joint_groups);
+    auto group_selector = std::map<JointType, renderJointTypeMap*>{
+        {JointType::Inverse, &joints.inverse},
+        {JointType::Corner, &joints.corner},
+        {JointType::TopLap, &joints.toplap},
+        {JointType::BottomLap, &joints.bottomlap},
+        {JointType::Trim, &joints.trim},
+        {JointType::Normal, &joints.normal}
+    };
+
+    auto name_selector = std::map<JointType, std::string>{
+        {JointType::Normal, "Normal Finger"},
+        {JointType::Inverse, "Inverse Finger"},
+        {JointType::Corner, "Corner Finger"},
+        {JointType::TopLap, "Top Lap Finger"},
+        {JointType::BottomLap, "Bottom Lap Finger"},
+        {JointType::Trim, "Trim Finger"}
+    };
+
+    for (auto &[joint_type, joint_name]: name_selector){
+        for (auto&[joint_orientation, joint_groups]: *group_selector[joint_type]) {
+            renderJointSketch(cuts, panel_name, panel_thickness, model_orientation, extrusion, joint_name, joint_orientation, joint_groups);
+        }
     }
 }
 
@@ -225,23 +277,25 @@ void ParametricRenderer::renderJointSketch(
     auto pairs    = std::vector<CutProfile>{};
     auto const profiles = joint_groups.outside;
 
-    for (auto const& [profile, joints]: profiles) {
-        if ((profile.joint_type == JointType::Inverse) && (profile.finger_count <= 1)) {
-            continue;
-        }
-        auto const suffix          = " " + concat_names(std::vector<std::string>(joints.names.begin(), joints.names.end())) + " " + sketch_prefix + " Sketch";
-        auto const profile_name   = panel_name + suffix;
-        auto const pattern_offset = profile.pattern_offset;
-        auto const finger_width   = profile.finger_width;
+    for (auto const& profile_group: {joint_groups.outside, joint_groups.inside}) {
+        for (auto const& [profile, joints]: profile_group) {
+            if ((profile.joint_type == JointType::Inverse) && (profile.finger_count <= 1)) {
+                continue;
+            }
+            auto const suffix          = " " + concat_names(std::vector<std::string>(joints.names.begin(), joints.names.end())) + " " + sketch_prefix + " Sketch";
+            auto const profile_name   = panel_name + suffix;
+            auto const pattern_offset = profile.pattern_offset;
+            auto const finger_width   = profile.finger_width;
 
-        auto sketch = PanelFingerSketch(
-            extrusion,
-            face_selectors[model_orientation][joint_orientation],
-            Point3D::create(pattern_offset, 0, 0),
-            Point3D::create(finger_width, panel_thickness.value, 0),
-            profile_name
-        );
-        pairs.emplace_back(CutProfile{sketch, joints, profile});
+            auto sketch = PanelFingerSketch(
+                extrusion,
+                face_selectors[model_orientation][joint_orientation],
+                Point3D::create(pattern_offset, 0, 0),
+                Point3D::create(finger_width, panel_thickness.value, 0),
+                profile_name
+            );
+            pairs.emplace_back(CutProfile{sketch, joints, profile});
+        }
+        cuts.emplace_back(pairs);
     }
-    cuts.emplace_back(pairs);
 }
