@@ -113,7 +113,7 @@ namespace silvanus::generatebox::render {
                 const fusion::PanelProfileSketch& sketch,
                 const entities::PanelExtrusion& extrusion,
                 const adsk::core::DefaultModelingOrientations& orientation,
-                const JointRenderData& joints
+                JointRenderData& joints
             ) -> adsk::core::Ptr<adsk::fusion::ExtrudeFeature>;
 
             static void renderPanelCopies(
@@ -128,7 +128,7 @@ namespace silvanus::generatebox::render {
                 const entities::ExtrusionDistance& panel_thickness,
                 const adsk::core::DefaultModelingOrientations& orientation,
                 const adsk::core::Ptr<adsk::fusion::ExtrudeFeature>& extrusion,
-                const JointRenderData& joints
+                JointRenderData& joints
             );
 
         public:

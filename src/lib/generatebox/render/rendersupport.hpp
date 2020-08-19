@@ -52,10 +52,17 @@ namespace silvanus::generatebox::render {
         std::map<entities::JointProfile, JointRenderGroup, entities::CompareJointProfile> inside;
     };
 
+    using renderJointTypeMap = std::map<entities::AxisFlag, JointRenderProfileGroup>;
+
     struct JointRenderData {
-        std::map<entities::AxisFlag, JointRenderProfileGroup> normal;
-        std::map<entities::AxisFlag, JointRenderProfileGroup> inverse;
-        std::map<entities::AxisFlag, JointRenderProfileGroup> corner;
+        renderJointTypeMap normal;
+        renderJointTypeMap inverse;
+        renderJointTypeMap corner;
+        renderJointTypeMap toplap;
+        renderJointTypeMap bottomlap;
+        renderJointTypeMap trim;
+        renderJointTypeMap mortise;
+        renderJointTypeMap tenon;
     };
 
     struct PanelRenderData {

@@ -16,8 +16,8 @@ namespace silvanus::generatebox::entities {
     struct JointGroup {
         JointProfile profile;
         JointThickness joint_thickness;
-        Position joint;
         Position panel;
+        Position joint;
     };
 }
 

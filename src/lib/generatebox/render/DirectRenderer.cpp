@@ -45,28 +45,32 @@ void DirectRenderer::execute(DefaultModelingOrientations model_orientation, cons
         auto& panel_extrusion    = view.get<PanelExtrusion>(entity);
         auto& joint_orientation  = view.get<JointOrientation>(entity);
         auto& joined_panels      = view.get<JoinedPanels>(entity);
-        auto& joint_group = view.get<JointGroup>(entity);
+        auto& joint_group        = view.get<JointGroup>(entity);
 
         auto& group = panel_groups[panel_group.orientation][panel_group.profile][panel_group.position];
+
+        auto group_selector = std::map<JointType, renderJointTypeMap*>{
+            {JointType::Inverse, &group.joints.inverse},
+            {JointType::Corner, &group.joints.corner},
+            {JointType::TopLap, &group.joints.toplap},
+            {JointType::BottomLap, &group.joints.bottomlap},
+            {JointType::Trim, &group.joints.trim},
+            {JointType::Normal, &group.joints.normal},
+            {JointType::Mortise, &group.joints.mortise},
+            {JointType::Tenon, &group.joints.tenon}
+        };
 
         group.names.insert(panel_extrusion.name);
         group.panels[panel_group.distance].insert(panel_extrusion);
 
         if (joint_group.profile.finger_type != FingerMode::None) {
             for (auto& joined_panel: joined_panels.panels) {
-                if (joint_group.profile.joint_type == JointType::Inverse) {
-                    auto& joined_panel_group = group.joints.inverse[joint_orientation.axis].outside[joint_group.profile];
-                    joined_panel_group.names.insert(joined_panel.extrusion.name);
-                    joined_panel_group.extrusions.insert(joined_panel.extrusion);
-                } else if (joint_group.profile.joint_type == JointType::Corner) {
-                    auto& joined_panel_group = group.joints.corner[joint_orientation.axis].outside[joint_group.profile];
-                    joined_panel_group.names.insert(joined_panel.extrusion.name);
-                    joined_panel_group.extrusions.insert(joined_panel.extrusion);
-                } else {
-                    auto& joined_panel_group = group.joints.normal[joint_orientation.axis].outside[joint_group.profile];
-                    joined_panel_group.names.insert(joined_panel.extrusion.name);
-                    joined_panel_group.extrusions.insert(joined_panel.extrusion);
+                if (joint_group.profile.joint_type == JointType::None) {
+                    continue;
                 }
+                auto& joined_panel_group = (*group_selector[joint_group.profile.joint_type])[joint_orientation.axis].outside[joint_group.profile];
+                joined_panel_group.names.insert(joined_panel.extrusion.name);
+                joined_panel_group.extrusions.insert(joined_panel.extrusion);
             }
         }
     }
@@ -81,24 +85,28 @@ void DirectRenderer::execute(DefaultModelingOrientations model_orientation, cons
 
         auto& group = panel_groups[panel_group.orientation][panel_group.profile][panel_group.position];
 
+        auto group_selector = std::map<JointType, renderJointTypeMap*>{
+            {JointType::Inverse, &group.joints.inverse},
+            {JointType::Corner, &group.joints.corner},
+            {JointType::TopLap, &group.joints.toplap},
+            {JointType::BottomLap, &group.joints.bottomlap},
+            {JointType::Trim, &group.joints.trim},
+            {JointType::Normal, &group.joints.normal},
+            {JointType::Mortise, &group.joints.mortise},
+            {JointType::Tenon, &group.joints.tenon}
+        };
+
         group.names.insert(panel_extrusion.name);
         group.panels[panel_group.distance].insert(panel_extrusion);
 
         if (joint_group.profile.finger_type != FingerMode::None) {
             for (auto& joined_panel: joined_panels.panels) {
-                if (joint_group.profile.joint_type == JointType::Inverse) {
-                    auto& joined_panel_group = group.joints.inverse[joint_orientation.axis].inside[joint_group.profile];
-                    joined_panel_group.names.insert(joined_panel.extrusion.name);
-                    joined_panel_group.extrusions.insert(joined_panel.extrusion);
-                } else if (joint_group.profile.joint_type == JointType::Corner) {
-                    auto& joined_panel_group = group.joints.corner[joint_orientation.axis].inside[joint_group.profile];
-                    joined_panel_group.names.insert(joined_panel.extrusion.name);
-                    joined_panel_group.extrusions.insert(joined_panel.extrusion);
-                } else {
-                    auto& joined_panel_group = group.joints.normal[joint_orientation.axis].inside[joint_group.profile];
-                    joined_panel_group.names.insert(joined_panel.extrusion.name);
-                    joined_panel_group.extrusions.insert(joined_panel.extrusion);
+                if (joint_group.profile.joint_type == JointType::None) {
+                    continue;
                 }
+                auto& joined_panel_group = (*group_selector[joint_group.profile.joint_type])[joint_orientation.axis].inside[joint_group.profile];
+                joined_panel_group.names.insert(joined_panel.extrusion.name);
+                joined_panel_group.extrusions.insert(joined_panel.extrusion);
             }
         }
     }
@@ -144,9 +152,26 @@ void DirectRenderer::execute(DefaultModelingOrientations model_orientation, cons
                     transform->translation(transform_vector);
                     m_temp_mgr->transform(box, transform);
 
-                    renderNormalJoints(model_orientation, axis, position_data, panel, box, position_data.joints.normal);
-                    renderNormalJoints(model_orientation, axis, position_data, panel, box, position_data.joints.inverse);
-                    renderCornerJoints(model_orientation, axis, position_data, panel, box, position_data.joints.corner);
+                    auto normal_group_selector = std::map<JointType, renderJointTypeMap*>{
+                        {JointType::Inverse, &position_data.joints.inverse},
+                        {JointType::TopLap, &position_data.joints.toplap},
+                        {JointType::BottomLap, &position_data.joints.bottomlap},
+                        {JointType::Trim, &position_data.joints.trim},
+                        {JointType::Normal, &position_data.joints.normal},
+                        {JointType::Mortise, &position_data.joints.mortise},
+                        {JointType::Tenon, &position_data.joints.tenon}
+                    };
+                    auto corner_group_selector = std::map<JointType, renderJointTypeMap*>{
+                        {JointType::Corner, &position_data.joints.corner},
+                        {JointType::Tenon, &position_data.joints.tenon}
+                    };
+
+                    for (auto& [joint_type, joint_group]: normal_group_selector){
+                        renderNormalJoints(model_orientation, axis, position_data, panel, box, *joint_group);
+                    }
+                    for (auto& [joint_type, joint_group]: corner_group_selector){
+                        renderCornerJoints(model_orientation, axis, position_data, panel, box, *joint_group);
+                    }
 
                     auto body = m_bodies->add(box);
                     body->name(panel.name + " Panel Body");
@@ -177,11 +202,10 @@ void DirectRenderer::renderNormalJoints(
     const std::map<entities::AxisFlag, JointRenderProfileGroup>& joints_group
 ) {
     for (auto const&[joint_orientation, joint_groups]: joints_group) {
-        for (auto const&[joint_profile, joint_profile_data]: joint_groups.outside) {
-            renderNormalJoint(model_orientation, axis, panel, box, joint_orientation, joint_profile, joint_profile_data);
-        }
-        for (auto const&[joint_profile, joint_profile_data]: joint_groups.inside) {
-            renderNormalJoint(model_orientation, axis, panel, box, joint_orientation, joint_profile, joint_profile_data);
+        for (auto const& joint_position: {joint_groups.outside, joint_groups.inside}) {
+            for (auto const&[joint_profile, joint_profile_data]: joint_position) {
+                renderNormalJoint(model_orientation, axis, panel, box, joint_orientation, joint_profile, joint_profile_data);
+            }
         }
     }
 }
@@ -242,11 +266,10 @@ void DirectRenderer::renderCornerJoints(
     const std::map<entities::AxisFlag, JointRenderProfileGroup>& joints_group
 ) {
     for (auto const&[joint_orientation, joint_groups]: joints_group) {
-        for (auto const&[joint_profile, joint_profile_data]: joint_groups.outside) {
-            renderCornerJoint(model_orientation, axis, panel, box, joint_orientation, joint_profile, joint_profile_data);
-        }
-        for (auto const&[joint_profile, joint_profile_data]: joint_groups.inside) {
-            renderCornerJoint(model_orientation, axis, panel, box, joint_orientation, joint_profile, joint_profile_data);
+        for (auto const& joint_position: {joint_groups.outside, joint_groups.inside}) {
+            for (auto const&[joint_profile, joint_profile_data]: joint_position) {
+                renderCornerJoint(model_orientation, axis, panel, box, joint_orientation, joint_profile, joint_profile_data);
+            }
         }
     }
 }

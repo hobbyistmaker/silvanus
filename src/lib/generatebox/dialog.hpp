@@ -109,6 +109,7 @@ namespace silvanus::generatebox {
     using inputConfigs = std::unordered_map<bool, const std::vector<const InputConfig>>;
     using axisList = std::vector<entities::AxisFlag>;
     using referenceMap = std::unordered_map<adsk::core::DefaultModelingOrientations, PanelReferencePointIds>;
+    using axisJointTypePositionMap = std::map<entities::AxisFlag, std::map<entities::JointType, std::vector<entities::Position>>>;
 
     struct DimensionTableRow {
         const entities::Panels       id;
@@ -594,6 +595,12 @@ namespace silvanus::generatebox {
         bool full_preview() { return m_full_preview->value(); };
         bool fast_preview() { return m_fast_preview->value(); };
         bool is_parametric() { return m_creation_mode->selectedItem()->index() == 0; };
+
+        static axisJointTypePositionMap addInsideJoints(
+            const entities::AxisFlag orientation,
+            const entities::JointType inside_joint_type,
+            const int outside_joint_type
+        );
     };
 
 }

@@ -9,11 +9,15 @@
 
 namespace silvanus::generatebox::entities {
     struct JointPatternTag { Position position; };
-    struct InverseJointPattern : public JointPatternTag{};
-    struct NormalJointPattern : public JointPatternTag{};
-    struct CornerJointPattern : public JointPatternTag{};
     struct BottomLapJointPattern : public JointPatternTag{};
+    struct CornerJointPattern : public JointPatternTag{};
+    struct InverseJointPattern : public JointPatternTag{};
+    struct MortiseJointPattern : public JointPatternTag{};
+    struct NoJointPattern : public JointPatternTag{};
+    struct NormalJointPattern : public JointPatternTag{};
+    struct TenonJointPattern : public JointPatternTag{};
     struct TopLapJointPattern : public JointPatternTag{};
+    struct TrimJointPattern : public JointPatternTag{};
 }
 
 #endif //SILVANUSPRO_JOINTPATTERNTAGS_HPP
