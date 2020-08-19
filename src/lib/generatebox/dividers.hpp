@@ -110,10 +110,6 @@ namespace silvanus::generatebox {
 
                                 m_registry.emplace<T>(entity);
 
-//                                if (joint_type == entities::JointType::Trim) {
-//                                    m_registry.emplace<entities::ActionTrimAxis>(entity, joint_orientation, t_panel_orientation, divider_count);
-//                                }
-//
                                 m_registry.emplace<entities::Dimensions>(entity, divider_length, divider_width, divider_height, divider_thickness);
 
                                 m_registry.emplace<entities::Enabled>(entity);
@@ -180,7 +176,9 @@ namespace silvanus::generatebox {
                                     { entities::JointType::Corner, [this](entt::entity entity) { m_registry.emplace<entities::CornerJointPattern>(entity); }},
                                     { entities::JointType::BottomLap, [this](entt::entity entity) { m_registry.emplace<entities::BottomLapJointPattern>(entity); }},
                                     { entities::JointType::TopLap, [this](entt::entity entity) { m_registry.emplace<entities::TopLapJointPattern>(entity); }},
-                                    { entities::JointType::Trim, [this](entt::entity entity) { m_registry.emplace<entities::TrimJointPattern>(entity); }}
+                                    { entities::JointType::Trim, [this](entt::entity entity) { m_registry.emplace<entities::TrimJointPattern>(entity); }},
+                                    { entities::JointType::Tenon, [this](entt::entity entity) { m_registry.emplace<entities::TenonJointPattern>(entity); }},
+                                    { entities::JointType::Mortise, [this](entt::entity entity) { m_registry.emplace<entities::MortiseJointPattern>(entity); }}
                                 };
                                 joint_type_selector[joint_type](entity);
 

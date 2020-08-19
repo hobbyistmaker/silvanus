@@ -67,7 +67,7 @@ void ConfigureJoints::addFingerParameters() {
         auto width = finger_width.value;
 
         auto default_fingers = ceil(length / width);
-        auto estimated_fingers = max(3.0, (floor(default_fingers / 2) * 2) - 1);
+        auto estimated_fingers = max(5.0, (floor(default_fingers / 2) * 2) - 1);
         auto actual_finger_width = length / estimated_fingers;
         auto pattern_offset = actual_finger_width;
         auto actual_number_fingers = floor(estimated_fingers / 2);
@@ -86,7 +86,7 @@ void ConfigureJoints::addFingerParameters() {
         auto width = finger_width.value;
 
         auto default_fingers = ceil(length / width);
-        auto estimated_fingers = max(3.0, (floor(default_fingers / 2) * 2) - 1);
+        auto estimated_fingers = max(5.0, (floor(default_fingers / 2) * 2) - 1);
         auto actual_finger_width = length / estimated_fingers;
         auto pattern_offset = actual_finger_width * 2;
         auto actual_number_fingers = (ceil(estimated_fingers / 2) - 2);
@@ -105,7 +105,7 @@ void ConfigureJoints::addFingerParameters() {
         auto user_finger_width = finger_width.value;
 
         auto default_fingers = ceil(pattern_length / user_finger_width);
-        auto estimated_fingers = max(3.0, (floor(default_fingers / 2) * 2) - 1);
+        auto estimated_fingers = max(5.0, (floor(default_fingers / 2) * 2) - 1);
         auto actual_finger_width = pattern_length / estimated_fingers;
         auto pattern_offset = 0.0;
         auto actual_number_fingers = 2;
@@ -166,6 +166,34 @@ void ConfigureJoints::addFingerParameters() {
         values.pattern_offset = 0;
     });
 
+
+    auto tenon_automatic_view = m_registry.view<TenonJointPattern, JointPatternDistance>();
+    tenon_automatic_view.each([this](
+        auto entity, auto const& pattern, auto const& pattern_distance
+    ){
+        auto actual_finger_width = pattern_distance.value / 3;
+        auto pattern_offset = 0.0;
+        auto actual_number_fingers = 2;
+        auto distance = pattern_distance.value;
+
+        this->m_registry.emplace_or_replace<JointPatternValues>(
+            entity, (int)actual_number_fingers, actual_finger_width, actual_finger_width, distance, pattern_offset
+        );
+    });
+
+    auto mortise_automatic_view = m_registry.view<MortiseJointPattern, JointPatternDistance>();
+    mortise_automatic_view.each([this](
+        auto entity, auto const& pattern, auto const& pattern_distance
+    ){
+        auto actual_finger_width = pattern_distance.value / 3;
+        auto pattern_offset = 0.0 + actual_finger_width;
+        auto actual_number_fingers = 1;
+        auto distance = pattern_distance.value;
+
+        this->m_registry.emplace_or_replace<JointPatternValues>(
+            entity, (int)actual_number_fingers, actual_finger_width, actual_finger_width, distance, pattern_offset
+        );
+    });
 
     auto toplap_automatic_view = m_registry.view<TopLapJointPattern, JointPatternDistance>();
     toplap_automatic_view.each([this](

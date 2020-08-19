@@ -71,7 +71,9 @@ void ParametricRenderer::execute(DefaultModelingOrientations model_orientation, 
             {JointType::TopLap, &group.joints.toplap},
             {JointType::BottomLap, &group.joints.bottomlap},
             {JointType::Trim, &group.joints.trim},
-            {JointType::Normal, &group.joints.normal}
+            {JointType::Normal, &group.joints.normal},
+            {JointType::Mortise, &group.joints.mortise},
+            {JointType::Tenon, &group.joints.tenon}
         };
 
         group.names.insert(panel_extrusion.name);
@@ -105,7 +107,9 @@ void ParametricRenderer::execute(DefaultModelingOrientations model_orientation, 
             {JointType::TopLap, &group.joints.toplap},
             {JointType::BottomLap, &group.joints.bottomlap},
             {JointType::Trim, &group.joints.trim},
-            {JointType::Normal, &group.joints.normal}
+            {JointType::Normal, &group.joints.normal},
+            {JointType::Mortise, &group.joints.mortise},
+            {JointType::Tenon, &group.joints.tenon}
         };
 
         group.names.insert(panel_extrusion.name);
@@ -245,7 +249,9 @@ void ParametricRenderer::renderJointSketches(
         {JointType::TopLap, &joints.toplap},
         {JointType::BottomLap, &joints.bottomlap},
         {JointType::Trim, &joints.trim},
-        {JointType::Normal, &joints.normal}
+        {JointType::Normal, &joints.normal},
+        {JointType::Mortise, &joints.mortise},
+        {JointType::Tenon, &joints.tenon},
     };
 
     auto name_selector = std::map<JointType, std::string>{
@@ -254,7 +260,9 @@ void ParametricRenderer::renderJointSketches(
         {JointType::Corner, "Corner Finger"},
         {JointType::TopLap, "Top Lap Finger"},
         {JointType::BottomLap, "Bottom Lap Finger"},
-        {JointType::Trim, "Trim Finger"}
+        {JointType::Trim, "Trim Finger"},
+        {JointType::Mortise, "Mortise"},
+        {JointType::Tenon, "Tenon"}
     };
 
     for (auto &[joint_type, joint_name]: name_selector){

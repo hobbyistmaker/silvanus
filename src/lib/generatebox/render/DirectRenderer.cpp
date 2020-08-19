@@ -45,7 +45,7 @@ void DirectRenderer::execute(DefaultModelingOrientations model_orientation, cons
         auto& panel_extrusion    = view.get<PanelExtrusion>(entity);
         auto& joint_orientation  = view.get<JointOrientation>(entity);
         auto& joined_panels      = view.get<JoinedPanels>(entity);
-        auto& joint_group = view.get<JointGroup>(entity);
+        auto& joint_group        = view.get<JointGroup>(entity);
 
         auto& group = panel_groups[panel_group.orientation][panel_group.profile][panel_group.position];
 
@@ -55,7 +55,9 @@ void DirectRenderer::execute(DefaultModelingOrientations model_orientation, cons
             {JointType::TopLap, &group.joints.toplap},
             {JointType::BottomLap, &group.joints.bottomlap},
             {JointType::Trim, &group.joints.trim},
-            {JointType::Normal, &group.joints.normal}
+            {JointType::Normal, &group.joints.normal},
+            {JointType::Mortise, &group.joints.mortise},
+            {JointType::Tenon, &group.joints.tenon}
         };
 
         group.names.insert(panel_extrusion.name);
@@ -89,7 +91,9 @@ void DirectRenderer::execute(DefaultModelingOrientations model_orientation, cons
             {JointType::TopLap, &group.joints.toplap},
             {JointType::BottomLap, &group.joints.bottomlap},
             {JointType::Trim, &group.joints.trim},
-            {JointType::Normal, &group.joints.normal}
+            {JointType::Normal, &group.joints.normal},
+            {JointType::Mortise, &group.joints.mortise},
+            {JointType::Tenon, &group.joints.tenon}
         };
 
         group.names.insert(panel_extrusion.name);
@@ -148,18 +152,26 @@ void DirectRenderer::execute(DefaultModelingOrientations model_orientation, cons
                     transform->translation(transform_vector);
                     m_temp_mgr->transform(box, transform);
 
-                    auto group_selector = std::map<JointType, renderJointTypeMap*>{
+                    auto normal_group_selector = std::map<JointType, renderJointTypeMap*>{
                         {JointType::Inverse, &position_data.joints.inverse},
                         {JointType::TopLap, &position_data.joints.toplap},
                         {JointType::BottomLap, &position_data.joints.bottomlap},
                         {JointType::Trim, &position_data.joints.trim},
-                        {JointType::Normal, &position_data.joints.normal}
+                        {JointType::Normal, &position_data.joints.normal},
+                        {JointType::Mortise, &position_data.joints.mortise},
+                        {JointType::Tenon, &position_data.joints.tenon}
+                    };
+                    auto corner_group_selector = std::map<JointType, renderJointTypeMap*>{
+                        {JointType::Corner, &position_data.joints.corner},
+                        {JointType::Tenon, &position_data.joints.tenon}
                     };
 
-                    for (auto& [joint_type, joint_group]: group_selector){
+                    for (auto& [joint_type, joint_group]: normal_group_selector){
                         renderNormalJoints(model_orientation, axis, position_data, panel, box, *joint_group);
                     }
-                    renderCornerJoints(model_orientation, axis, position_data, panel, box, position_data.joints.corner);
+                    for (auto& [joint_type, joint_group]: corner_group_selector){
+                        renderCornerJoints(model_orientation, axis, position_data, panel, box, *joint_group);
+                    }
 
                     auto body = m_bodies->add(box);
                     body->name(panel.name + " Panel Body");

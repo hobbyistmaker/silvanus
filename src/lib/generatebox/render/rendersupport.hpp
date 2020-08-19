@@ -61,6 +61,8 @@ namespace silvanus::generatebox::render {
         renderJointTypeMap toplap;
         renderJointTypeMap bottomlap;
         renderJointTypeMap trim;
+        renderJointTypeMap mortise;
+        renderJointTypeMap tenon;
     };
 
     struct PanelRenderData {

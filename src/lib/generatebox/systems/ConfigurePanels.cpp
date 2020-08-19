@@ -56,28 +56,38 @@ void ConfigurePanels::updateLengthJoints() {
 
     auto full_selector = std::map<int, std::function<void(entt::registry&, entt::entity, JointPatternPosition&, JointProfile&)>>{
         {0, { [](entt::registry& registry, entt::entity entity, JointPatternPosition& pattern, JointProfile& profile){
-            pattern.joint_type = JointType::Normal;
-            profile.joint_type = JointType::Normal;
-            registry.emplace_or_replace<NormalJointPattern>(entity);
+            pattern.joint_type = JointType::Mortise;
+            profile.joint_type = JointType::Mortise;
+            registry.emplace_or_replace<MortiseJointPattern>(entity);
 
         }}},
         {1, { [](entt::registry& registry, entt::entity entity, JointPatternPosition& pattern, JointProfile& profile){
             pattern.joint_type = JointType::BottomLap;
             profile.joint_type = JointType::BottomLap;
             registry.emplace_or_replace<BottomLapJointPattern>(entity);
-        }}}
+        }}},
+        {2, { [](entt::registry& registry, entt::entity entity, JointPatternPosition& pattern, JointProfile& profile){
+                pattern.joint_type = JointType::Normal;
+                profile.joint_type = JointType::Normal;
+                registry.emplace_or_replace<NormalJointPattern>(entity);
+            }}}
     };
     auto none_selector = std::map<int, std::function<void(entt::registry&, entt::entity, JointPatternPosition&, JointProfile&)>>{
         {0, { [](entt::registry& registry, entt::entity entity, JointPatternPosition& pattern, JointProfile& profile){
-            pattern.joint_type = JointType::Normal;
-            profile.joint_type = JointType::Normal;
-            registry.emplace_or_replace<NormalJointPattern>(entity);
+            pattern.joint_type = JointType::None;
+            profile.joint_type = JointType::None;
+            registry.emplace_or_replace<NoJointPattern>(entity);
 
         }}},
         {1, { [](entt::registry& registry, entt::entity entity, JointPatternPosition& pattern, JointProfile& profile){
             pattern.joint_type = JointType::None;
             profile.joint_type = JointType::None;
             registry.emplace_or_replace<NoJointPattern>(entity);
+        }}},
+        {2, { [](entt::registry& registry, entt::entity entity, JointPatternPosition& pattern, JointProfile& profile){
+            pattern.joint_type = JointType::Normal;
+            profile.joint_type = JointType::Normal;
+            registry.emplace_or_replace<NormalJointPattern>(entity);
         }}}
     };
 

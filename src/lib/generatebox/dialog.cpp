@@ -153,7 +153,8 @@ void CreateDialog::createDividerInputs(const Ptr<CommandInputs>& inputs) {
     auto const& length_items = m_length_divider_outside_joint->listItems();
     length_items->add("Tenon", true);
     length_items->add("Half Lap", false);
-    m_length_divider_outside_joint->maxVisibleItems(2);
+    length_items->add("Box Joint", false);
+    m_length_divider_outside_joint->maxVisibleItems(3);
     addInputControl(DialogInputs::LengthDividerJointInput, m_length_divider_outside_joint, [this](){
         this->update(m_controls[DialogInputs::LengthDividerCount]);
     });
@@ -188,7 +189,8 @@ void CreateDialog::createDividerInputs(const Ptr<CommandInputs>& inputs) {
     auto const& width_items = m_width_divider_outside_joint->listItems();
     width_items->add("Tenon", true);
     width_items->add("Half Lap", false);
-    m_width_divider_outside_joint->maxVisibleItems(2);
+    width_items->add("Box Joint", false);
+    m_width_divider_outside_joint->maxVisibleItems(3);
     addInputControl(DialogInputs::WidthDividerJointInput, m_width_divider_outside_joint, [this](){
         this->update(m_controls[DialogInputs::WidthDividerCount]);
     });
@@ -267,20 +269,26 @@ axisJointTypePositionMap CreateDialog::addInsideJoints(
     };
 
     auto inverse_toplap_selector = selectorJointTypeMap{
-        {0, {
+        {2, {
             {JointType::Inverse, {Position::Outside}},
             {JointType::Corner, {Position::Outside}}
         }},
         {1, {
             {JointType::TopLap, {Position::Outside}},
+        }},
+        {0, {
+            {JointType::Tenon, {Position::Outside}},
         }}
     };
     auto inverse_trim_selector = selectorJointTypeMap{
-        {0, {
+        {2, {
                 {JointType::Inverse, {Position::Outside}},
                 {JointType::Corner, {Position::Outside}}
             }},
         {1, {
+                {JointType::Trim, {Position::Outside}},
+            }},
+        {0, {
                 {JointType::Trim, {Position::Outside}},
             }}
     };
