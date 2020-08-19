@@ -60,6 +60,21 @@ void FusionSketch::initialize_sketch(const string& name, bool construction) {
     std::sort(m_default_world_points.begin(), m_default_world_points.end(), AscendingWorldGeometry());
 }
 
+void FusionSketch::addExtrusionSideConstraints(const Ptr<SketchLineList> &lines) {
+
+    if (isVerticalSketch()) {
+        auto first_sketch_line = m_sketch->sketchCurves()->sketchLines()->item(1);
+        auto second_sketch_line = m_sketch->sketchCurves()->sketchLines()->item(3);
+        m_sketch->geometricConstraints()->addCollinear(first_sketch_line, lines->item(1));
+        m_sketch->geometricConstraints()->addCollinear(second_sketch_line, lines->item(3));
+    } else {
+        auto first_sketch_line = m_sketch->sketchCurves()->sketchLines()->item(0);
+        auto second_sketch_line = m_sketch->sketchCurves()->sketchLines()->item(2);
+        m_sketch->geometricConstraints()->addCollinear(first_sketch_line, lines->item(0));
+        m_sketch->geometricConstraints()->addCollinear(second_sketch_line, lines->item(2));
+    }
+}
+
 void FusionSketch::addGeometricConstraints(const Ptr<SketchLineList>& lines) {
     auto constraints = m_sketch->geometricConstraints();
 
@@ -77,6 +92,12 @@ void FusionSketch::addGeometricConstraints(const Ptr<SketchLineList>& lines) {
 
 bool pointsAreEqual(const Ptr<Point3D>& a, const Ptr<Point3D>& b) {
     return (a->x() == b->x()) && (a->y() == b->y()) && (a->z() == b->z());
+}
+
+bool FusionSketch::isVerticalSketch() {
+    auto first_line = m_sketch->sketchCurves()->sketchLines()->item(0);
+
+    return first_line->startSketchPoint()->geometry()->x() == first_line->endSketchPoint()->geometry()->x();
 }
 
 void FusionSketch::addFaceOriginConstraint(const Ptr<SketchLineList>& lines, const Ptr<SketchPoint>& point) {
