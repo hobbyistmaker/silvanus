@@ -13,6 +13,7 @@
 #include "entities/FingerWidth.hpp"
 #include "entities/FingerWidthInput.hpp"
 #include "entities/InsidePanel.hpp"
+#include "entities/JointPatternTags.hpp"
 #include "entities/JointThickness.hpp"
 #include "entities/MaxOffset.hpp"
 #include "entities/MaxOffsetInput.hpp"
