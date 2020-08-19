@@ -106,7 +106,7 @@ namespace silvanus::generatebox {
     using jointTypes = std::vector<std::tuple<entities::JointType, std::vector<entities::AxisFlag>>>;
     using jointPositions = std::map<entities::Position, jointTypes>;
     using inputAxisMaps = std::vector<std::tuple<entities::DialogInputs, entities::AxisFlag>>;
-    using inputConfigs = std::unordered_map<bool, const std::vector<const InputConfig>>;
+    using inputConfigs = std::unordered_map<bool, std::vector<InputConfig>>;
     using axisList = std::vector<entities::AxisFlag>;
     using referenceMap = std::unordered_map<adsk::core::DefaultModelingOrientations, PanelReferencePointIds>;
     using axisJointTypePositionMap = std::map<entities::AxisFlag, std::map<entities::JointType, std::vector<entities::Position>>>;
