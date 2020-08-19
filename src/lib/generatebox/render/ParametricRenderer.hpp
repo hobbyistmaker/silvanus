@@ -122,14 +122,13 @@ namespace silvanus::generatebox::render {
                 const entities::PanelExtrusion &extrusion
             );
 
-            void renderJointSketches(
-                std::vector<std::vector<CutProfile>>& cuts,
+            auto renderJointSketches(
                 const std::string& panel_name,
                 const entities::ExtrusionDistance& panel_thickness,
                 const adsk::core::DefaultModelingOrientations& orientation,
                 const adsk::core::Ptr<adsk::fusion::ExtrudeFeature>& extrusion,
                 JointRenderData& joints
-            );
+            ) -> std::vector<std::vector<CutProfile>>;
 
         public:
             ParametricRenderer(adsk::core::Ptr<adsk::core::Application> &app, entt::registry &registry) : m_app{app}, m_registry{registry} {};
@@ -139,8 +138,7 @@ namespace silvanus::generatebox::render {
                 const adsk::core::Ptr<adsk::fusion::Component> &component
             ) override;
 
-            void renderJointSketch(
-                std::vector<std::vector<CutProfile>>& cuts,
+            auto renderJointSketch(
                 const std::string& panel_name,
                 const entities::ExtrusionDistance& panel_thickness,
                 const adsk::core::DefaultModelingOrientations& model_orientation,
@@ -148,7 +146,7 @@ namespace silvanus::generatebox::render {
                 const std::string& sketch_prefix,
                 const entities::AxisFlag& joint_orientation,
                 const JointRenderProfileGroup& joint_groups
-            ) ;
+            ) -> std::vector<CutProfile>;
     };
 }
 

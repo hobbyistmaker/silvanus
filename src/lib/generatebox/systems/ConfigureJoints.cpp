@@ -174,7 +174,7 @@ void ConfigureJoints::addFingerParameters() {
         auto actual_finger_width = pattern_distance.value / 3;
         auto pattern_offset = 0.0;
         auto actual_number_fingers = 2;
-        auto distance = pattern_distance.value;
+        auto distance = pattern_distance.value - actual_finger_width;
 
         this->m_registry.emplace_or_replace<JointPatternValues>(
             entity, (int)actual_number_fingers, actual_finger_width, actual_finger_width, distance, pattern_offset

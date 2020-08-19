@@ -21,7 +21,7 @@ namespace silvanus {
      
         const std::string description = "Create a parametric box with finger joints.";
         const std::string id = "SilvanusProGenerateBoxCommand";
-        const std::string dialog = "Create Finger Jointed Box";
+        const std::string dialog = "Create Finger Jointed Box (0.5.6 alpha)";
 
         adsk::core::Ptr<adsk::core::UserInterface> m_ui;
 

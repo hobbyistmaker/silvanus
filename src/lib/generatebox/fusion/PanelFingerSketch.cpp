@@ -30,18 +30,11 @@ adsk::core::Ptr<SketchLineList> PanelFingerSketch::drawFinger(const Ptr<Point3D>
     // TODO add constraints
     addGeometricConstraints(lines);
     addFaceOriginConstraint(lines, minPoint());
-<<<<<<< HEAD
     for (int n : {0}) {
         addDistanceDimension(lines->item(n));
     }
     addDistanceDimension(minPoint(), lines->item(0)->startSketchPoint());
     addExtrusionSideConstraints(lines);
-=======
-    for (int n : {0, 1}) {
-        addDistanceDimension(lines->item(n));
-    }
-    addDistanceDimension(minPoint(), lines->item(0)->startSketchPoint());
->>>>>>> df18ccd8aa9f9bcfbc023b68433b06c14fcdeb5b
 
     return lines;
 }

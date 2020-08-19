@@ -181,9 +181,7 @@ auto ParametricRenderer::renderSinglePanel(
     auto const body = extrusion->bodies()->item(0);
     body->name(data.name + " Panel Body");
 
-    std::vector<std::vector<CutProfile>> cuts;
-
-    renderJointSketches(cuts, names, data.distance, model_orientation, extrusion, joints);
+    auto cuts = renderJointSketches(names, data.distance, model_orientation, extrusion, joints);
 
     for (auto const& cut_pairs: cuts) {
         for (auto const& cut: cut_pairs) {
@@ -235,14 +233,15 @@ void ParametricRenderer::renderPanelCopies(
     }
 }
 
-void ParametricRenderer::renderJointSketches(
-    std::vector<std::vector<CutProfile>>& cuts,
+auto ParametricRenderer::renderJointSketches(
     const std::string& panel_name,
     const ExtrusionDistance& panel_thickness,
     const DefaultModelingOrientations& model_orientation,
     const adsk::core::Ptr<ExtrudeFeature>& extrusion,
     JointRenderData& joints
-) {
+) -> std::vector<std::vector<CutProfile>>{
+    std::vector<std::vector<CutProfile>> cuts;
+
     auto group_selector = std::map<JointType, renderJointTypeMap*>{
         {JointType::Inverse, &joints.inverse},
         {JointType::Corner, &joints.corner},
@@ -267,13 +266,14 @@ void ParametricRenderer::renderJointSketches(
 
     for (auto &[joint_type, joint_name]: name_selector){
         for (auto&[joint_orientation, joint_groups]: *group_selector[joint_type]) {
-            renderJointSketch(cuts, panel_name, panel_thickness, model_orientation, extrusion, joint_name, joint_orientation, joint_groups);
+            cuts.emplace_back(renderJointSketch(panel_name, panel_thickness, model_orientation, extrusion, joint_name, joint_orientation, joint_groups));
         }
     }
+
+    return cuts;
 }
 
-void ParametricRenderer::renderJointSketch(
-    std::vector<std::vector<CutProfile>> &cuts,
+auto ParametricRenderer::renderJointSketch(
     const std::string& panel_name,
     const ExtrusionDistance &panel_thickness,
     const DefaultModelingOrientations &model_orientation,
@@ -281,13 +281,13 @@ void ParametricRenderer::renderJointSketch(
     const std::string& sketch_prefix,
     const AxisFlag &joint_orientation,
     const JointRenderProfileGroup &joint_groups
-) {
+) -> std::vector<CutProfile>{
     auto pairs    = std::vector<CutProfile>{};
     auto const profiles = joint_groups.outside;
 
     for (auto const& profile_group: {joint_groups.outside, joint_groups.inside}) {
         for (auto const& [profile, joints]: profile_group) {
-            if ((profile.joint_type == JointType::Inverse) && (profile.finger_count <= 1)) {
+            if ((profile.joint_type == JointType::Inverse) && (profile.finger_count < 1)) {
                 continue;
             }
             auto const suffix          = " " + concat_names(std::vector<std::string>(joints.names.begin(), joints.names.end())) + " " + sketch_prefix + " Sketch";
@@ -304,6 +304,7 @@ void ParametricRenderer::renderJointSketch(
             );
             pairs.emplace_back(CutProfile{sketch, joints, profile});
         }
-        cuts.emplace_back(pairs);
     }
+
+    return pairs;
 }
