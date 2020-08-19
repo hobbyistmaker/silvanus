@@ -6,3 +6,8 @@ tests/
 *.log
 venv/
 cmake-build*
+.vs/
+CMakeSettings.json
+*.dll
+*.obj
+out/
