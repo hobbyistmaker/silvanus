@@ -12,7 +12,7 @@
 #include <Fusion/FusionAll.h>
 
 #include "common/common.h"
-#include "generatebox/dialog.hpp"
+#include "lib/generatebox/dialog/dialog.hpp"
 #include "generatebox/systems/SilvanusCore.hpp"
 
 namespace silvanus {

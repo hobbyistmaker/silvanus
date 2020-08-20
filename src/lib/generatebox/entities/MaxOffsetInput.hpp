@@ -10,7 +10,6 @@
 namespace silvanus::generatebox::entities {
     struct MaxOffsetInput
     {
-        DialogInputs reference;
         adsk::core::Ptr<adsk::core::FloatSpinnerCommandInput> control;
     };
 }

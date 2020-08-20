@@ -53,8 +53,8 @@ namespace silvanus::generatebox {
     class Dividers {
 
             adsk::core::Ptr<adsk::core::Application> m_app;
+            entt::registry &m_configuration;
             entt::registry &m_registry;
-            controlsDef& m_controls;
             jointsDef& m_joints;
 
             std::map<entities::AxisFlag, std::vector<entities::AxisFlag>> joint_orientations_map = {
@@ -64,28 +64,30 @@ namespace silvanus::generatebox {
             };
 
         public:
-            Dividers(entt::registry& registry, adsk::core::Ptr<adsk::core::Application>& app, controlsDef& controls, jointsDef& joints) :
-                m_registry{registry}, m_app{app}, m_controls{controls}, m_joints{joints} {};
+            Dividers(entt::registry& registry, entt::registry& configuration, adsk::core::Ptr<adsk::core::Application>& app, jointsDef& joints) :
+                m_registry{registry}, m_configuration{configuration}, m_app{app}, m_joints{joints} {};
 
             void create(
                 const std::string& name,
-                entities::DialogInputs count_id,
-                entities::DialogInputs t_max_offset,
+                int divider_count,
+                double max_offset,
                 entities::AxisFlag t_panel_orientation
             ) {
                 auto old_view = m_registry.view<entities::InsidePanel, T>();
                 m_registry.destroy(old_view.begin(), old_view.end());
 
-                auto divider_count = adsk::core::Ptr<adsk::core::IntegerSpinnerCommandInput>{m_controls[count_id]}->value();
-
                 if (divider_count <= 0) return;
 
-                auto input_length = adsk::core::Ptr<adsk::core::FloatSpinnerCommandInput>{m_controls[entities::DialogInputs::Length]}->value();
-                auto input_width = adsk::core::Ptr<adsk::core::FloatSpinnerCommandInput>{m_controls[entities::DialogInputs::Width]}->value();
-                auto input_height = adsk::core::Ptr<adsk::core::FloatSpinnerCommandInput>{m_controls[entities::DialogInputs::Height]}->value();
+                auto finger_mode_control = m_configuration.ctx<entities::DialogBoxFingerMode>().control;
+                auto finger_width_control = m_configuration.ctx<entities::DialogBoxFingerWidthInput>().control;
+                auto kerf_input_control = m_configuration.ctx<entities::DialogBoxKerfInput>().control;
+                auto default_thickness_control = m_configuration.ctx<entities::DialogBoxThicknessInput>().control;
 
-                auto max_offset = adsk::core::Ptr<adsk::core::FloatSpinnerCommandInput>{m_controls[t_max_offset]}->value();
-                auto divider_thickness = adsk::core::Ptr<adsk::core::FloatSpinnerCommandInput>{m_controls[entities::DialogInputs::Thickness]}->value();
+                auto input_length = m_configuration.ctx<entities::DialogBoxLengthInput>().control->value();
+                auto input_width = m_configuration.ctx<entities::DialogBoxWidthInput>().control->value();
+                auto input_height = m_configuration.ctx<entities::DialogBoxHeightInput>().control->value();
+                auto divider_thickness = default_thickness_control->value();
+
                 auto pocket_count = divider_count + 1;
                 auto total_panels = divider_count + 2;
                 auto pocket_offset = (max_offset - divider_thickness * total_panels) / pocket_count;
@@ -116,10 +118,10 @@ namespace silvanus::generatebox {
                                 m_registry.emplace<entities::EndReferencePoint>(entity);
                                 m_registry.emplace<entities::ExtrusionDistance>(entity);
 
-                                m_registry.emplace<entities::FingerPatternInput>(entity,m_controls[entities::DialogInputs::FingerMode]);
+                                m_registry.emplace<entities::FingerPatternInput>(entity, finger_mode_control);
                                 m_registry.emplace<entities::FingerPatternType>(entity, entities::FingerMode::Automatic);
                                 m_registry.emplace<entities::FingerWidth>(entity);
-                                m_registry.emplace<entities::FingerWidthInput>(entity,m_controls[entities::DialogInputs::FingerWidth]);
+                                m_registry.emplace<entities::FingerWidthInput>(entity, finger_width_control);
 
                                 m_registry.emplace<entities::InsidePanel>(entity);
 
@@ -147,10 +149,10 @@ namespace silvanus::generatebox {
                                 );
                                 m_registry.emplace<entities::JointThickness>(entity);
 
-                                m_registry.emplace<entities::KerfInput>(entity,m_controls[entities::DialogInputs::Kerf]);
+                                m_registry.emplace<entities::KerfInput>(entity, kerf_input_control);
 
                                 m_registry.emplace<entities::MaxOffset>(entity);
-                                m_registry.emplace<entities::MaxOffsetInput>(entity, t_max_offset,m_controls[t_max_offset]);
+//                                m_registry.emplace<entities::MaxOffsetInput>(entity, t_max_offset, m_controls[t_max_offset]);
 
                                 m_registry.emplace<entities::OrientationGroup>(entity, t_panel_orientation, joint_orientation);
 
@@ -162,7 +164,7 @@ namespace silvanus::generatebox {
 
                                 m_registry.emplace<entities::StartReferencePoint>(entity);
 
-                                m_registry.emplace<entities::ThicknessInput>(entity,m_controls[entities::DialogInputs::Thickness]);
+                                m_registry.emplace<entities::ThicknessInput>(entity, default_thickness_control);
 
                                 std::unordered_map<entities::AxisFlag, std::function<void(entt::entity)>> joint_orientation_selector = {
                                     { entities::AxisFlag::Length, [this](auto entity) { m_registry.emplace<entities::JointLengthOrientation>(entity); }},

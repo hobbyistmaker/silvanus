@@ -9,6 +9,15 @@
 
 #include <Core/CoreAll.h>
 
+#include <dlfcn.h>
+#include <libgen.h>
+
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/path_traits.hpp>
+
+#include "plog/Log.h"
+#include "plog/Initializers/RollingFileInitializer.h"
+
 #include "SilvanusPro.h"
 #include "lib/generateboxcommand.hpp"
 
@@ -37,6 +46,16 @@ extern "C" XI_EXPORT bool run(const char* context)
     if (!ui)
         return false;
 
+    // MAC Only
+    Dl_info dli;
+    dladdr((void*)run, &dli);
+
+    // Using boost::filesystem to support older MacOS
+    auto fpath = boost::filesystem::path(dli.dli_fname);
+    auto const bname = fpath.parent_path().append("silvanus.log");
+    // -- MAC Only
+    plog::init(plog::verbose, bname.c_str());
+
     auto active_product = Ptr<Product>{app->activeProduct()};
 
     buttons.emplace_back(
@@ -46,6 +65,7 @@ extern "C" XI_EXPORT bool run(const char* context)
     );
     
     ui->messageBox("Silvanus Pro Addin Started.");
+    PLOG_DEBUG << "Silvanus Pro Addin started.";
 
     adsk::autoTerminate(false);
     return true;
@@ -67,6 +87,7 @@ extern "C" XI_EXPORT bool stop(const char* context)
 		ui = nullptr;
 	}
 
+	PLOG_INFO << "Silvanus Pro Addin stopped.";
     adsk::terminate();
 	return true;
 }

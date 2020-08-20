@@ -32,6 +32,8 @@
 #include <map>
 #include <unordered_map>
 
+#include "plog/Log.h"
+
 using std::max;
 
 using namespace adsk::core;
@@ -53,6 +55,7 @@ void ConfigureJoints::updateJointPatternDistances() {
     m_registry.view<JointPatternDistance, OrientationGroup, EndReferencePoint>().each([this](
         auto& pattern_distance, auto const& orientation, auto const& reference
     ) {
+        m_app->userInterface()->messageBox("updateJointPatternDistances");
         auto const& distance = this->reference_selector[orientation.panel][orientation.finger](reference);
         pattern_distance.value = distance.value;
     });
@@ -63,6 +66,7 @@ void ConfigureJoints::addFingerParameters() {
     normal_automatic_view.each([this](
         auto entity, auto const& pattern, auto const& finger_width, auto const& pattern_distance, auto const& pattern_type
     ){
+        PLOG_DEBUG << "addFingerParameters::NormalJointPattern";
         auto length = pattern_distance.value;
         auto width = finger_width.value;
 
@@ -82,6 +86,7 @@ void ConfigureJoints::addFingerParameters() {
     inverse_automatic_view.each([this](
         auto entity, auto const& pattern, auto const& finger_width, auto const& pattern_distance, auto const& pattern_type
     ){
+        PLOG_DEBUG << "InverseJointPattern";
         auto length = pattern_distance.value;
         auto width = finger_width.value;
 
@@ -101,6 +106,7 @@ void ConfigureJoints::addFingerParameters() {
     corner_automatic_view.each([this](
         auto entity, auto const& pattern, auto const& finger_width, auto const& pattern_distance, auto const& pattern_type
     ){
+        PLOG_DEBUG << "CornerJointPattern";
         auto pattern_length = pattern_distance.value;
         auto user_finger_width = finger_width.value;
 
