@@ -142,10 +142,39 @@ void FusionSketch::addDistanceDimension(const Ptr<SketchLine>& line) {
     );
 }
 
+void FusionSketch::addDistanceDimension(const Ptr<SketchLine>& line, const Ptr<SketchLine>& normal) {
+    auto text_x = (normal->startSketchPoint()->geometry()->x() - line->startSketchPoint()->geometry()->x())/2;
+    auto text_y = normal->startSketchPoint()->geometry()->y() - normal->endSketchPoint()->geometry()->y();
+
+    auto lhs = line->startSketchPoint();
+    auto lhs_x = lhs->geometry()->x();
+    auto lhs_y = lhs->geometry()->y();
+
+    auto text_point = Point3D::create(lhs_x + text_x, lhs_y + text_y, lhs->geometry()->z());
+
+    m_sketch->sketchDimensions()->addDistanceDimension(
+        line->startSketchPoint(), line->endSketchPoint(), AlignedDimensionOrientation, text_point
+    );
+}
+
 void FusionSketch::addDistanceDimension(const Ptr<SketchPoint>& lhs, const Ptr<SketchPoint>& rhs) {
     auto text_point = Point3D::create(lhs->geometry()->x(), lhs->geometry()->y(), lhs->geometry()->z());
     text_point->x(text_point->x() - 1);
     text_point->y(text_point->y() - 1);
+
+    m_sketch->sketchDimensions()->addDistanceDimension(
+        lhs, rhs, AlignedDimensionOrientation, text_point
+    );
+}
+
+void FusionSketch::addDistanceDimension(const Ptr<SketchPoint>& lhs, const Ptr<SketchPoint>& rhs, const Ptr<SketchLine>& normal) {
+    auto text_x = (rhs->geometry()->x() - lhs->geometry()->x())/2;
+    auto text_y = normal->startSketchPoint()->geometry()->y() - normal->endSketchPoint()->geometry()->y();
+
+    auto lhs_x = lhs->geometry()->x();
+    auto lhs_y = lhs->geometry()->y();
+
+    auto text_point = Point3D::create(lhs_x + text_x, lhs_y + text_y, lhs->geometry()->z());
 
     m_sketch->sketchDimensions()->addDistanceDimension(
         lhs, rhs, AlignedDimensionOrientation, text_point

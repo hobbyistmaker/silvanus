@@ -63,7 +63,16 @@ namespace silvanus::generatebox::fusion {
             );
             void addOriginConstraint(const adsk::core::Ptr<adsk::fusion::SketchLineList>& lines);
             void addDistanceDimension(const adsk::core::Ptr<adsk::fusion::SketchLine>& line);
+            void addDistanceDimension(
+                const adsk::core::Ptr<adsk::fusion::SketchLine>& line,
+                const adsk::core::Ptr<adsk::fusion::SketchLine>& normal
+            );
             void addDistanceDimension(const adsk::core::Ptr<adsk::fusion::SketchPoint>& lhs, const adsk::core::Ptr<adsk::fusion::SketchPoint>& rhs);
+            void addDistanceDimension(
+                const adsk::core::Ptr<adsk::fusion::SketchPoint>& lhs,
+                const adsk::core::Ptr<adsk::fusion::SketchPoint>& rhs,
+                const adsk::core::Ptr<adsk::fusion::SketchLine>& normal
+            );
             void addExtrusionSideConstraints(const adsk::core::Ptr<adsk::fusion::SketchLineList>& lines);
 
             adsk::core::Ptr<adsk::fusion::SketchPoint> minPoint();

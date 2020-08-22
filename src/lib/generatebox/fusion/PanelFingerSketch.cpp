@@ -27,13 +27,10 @@ adsk::core::Ptr<SketchLineList> PanelFingerSketch::drawFinger(const Ptr<Point3D>
     auto end_point = offsetPoint3D(start_point, end);
     auto lines = m_sketch->sketchCurves()->sketchLines()->addTwoPointRectangle(start_point, end_point);
 
-    // TODO add constraints
     addGeometricConstraints(lines);
     addFaceOriginConstraint(lines, minPoint());
-    for (int n : {0}) {
-        addDistanceDimension(lines->item(n));
-    }
-    addDistanceDimension(minPoint(), lines->item(0)->startSketchPoint());
+    addDistanceDimension(lines->item(0), lines->item(1));
+    addDistanceDimension(minPoint(), lines->item(0)->startSketchPoint(), lines->item(1));
     addExtrusionSideConstraints(lines);
 
     return lines;
