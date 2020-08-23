@@ -8,12 +8,16 @@
 #include <vector>
 
 #include <Core/CoreAll.h>
+#include <Fusion/FusionAll.h>
 
-#include <dlfcn.h>
-#include <libgen.h>
+#ifdef __APPLE__
+    #include <dlfcn.h>
+    #include <libgen.h>
 
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/path_traits.hpp>
+    #include <boost/filesystem.hpp>
+    #include <boost/filesystem/path_traits.hpp>
+#elif defined _WIN32 || defined _WIN64
+#endif
 
 #include "plog/Log.h"
 #include "plog/Initializers/RollingFileInitializer.h"
@@ -46,12 +50,30 @@ extern "C" XI_EXPORT bool run(const char* context)
     if (!ui)
         return false;
 
+#ifdef __APPLE__
     // MAC Only
     Dl_info dli;
     dladdr((void*)run, &dli);
 
-    // Using boost::filesystem to support older MacOS
     auto fpath = boost::filesystem::path(dli.dli_fname);
+#elif defined _WIN32 || defined _WIN64
+    char path[MAX_PATH];
+    HMODULE hm = NULL;
+
+    if (GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+    GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+    (LPCSTR) &run, &hm) == 0)
+    {
+        int ret = GetLastError();
+        ui->messageBox("Error finding DLL: " + std::to_string(ret));
+    }
+    if (GetModuleFileName(hm, path, sizeof(path)) == 0) {
+        int ret = GetLastError();
+        ui->messageBox("Error finding DLL file name: " + std::to_string(ret));
+    }
+    auto fpath = boost::filesystem::path(path);
+#endif
+    // Using boost::filesystem to support older MacOS
     auto const bname = fpath.parent_path().append("silvanus.log");
     // -- MAC Only
     plog::init(plog::verbose, bname.c_str());

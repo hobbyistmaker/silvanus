@@ -21,6 +21,8 @@
 #include "entities/ThicknessInput.hpp"
 #include "entities/ToggleableThicknessInput.hpp"
 
+#include "plog/Log.h"
+
 #include <map>
 
 using namespace silvanus::generatebox::systems;
@@ -36,35 +38,33 @@ void ReadInputs::execute() {
 }
 
 void ReadInputs::readDimensionsInputs() {
-    auto dimension_view = m_registry.view<Dimensions, DimensionsInputs>();
-    dimension_view.each(
+    m_registry.view<Dimensions, DimensionsInputs>().each(
         [](auto &dimensions, auto const &inputs) {
-            dimensions.length = inputs.length_control->value();
-            dimensions.width  = inputs.width_control->value();
-            dimensions.height = inputs.height_control->value();
+            PLOG_DEBUG << "Reading panel dimensions" << inputs.length->value() << ", " << inputs.width->value() << ", " << inputs.height->value();
+            dimensions.length = inputs.length->value();
+            dimensions.width  = inputs.width->value();
+            dimensions.height = inputs.height->value();
         }
     );
 
-    auto thickness_view = m_registry.view<Dimensions, ToggleableThicknessInput>();
-    thickness_view.each(
-        [this](auto& dimensions, auto const& thickness) {
+    m_registry.view<Dimensions, ToggleableThicknessInput>().each(
+        [](auto& dimensions, auto const& thickness) {
             dimensions.thickness = thickness.selector->value() ? thickness.enabled->value() : thickness.disabled->value();
         }
     );
 
-    auto divider_view = m_registry.view<Dimensions, ThicknessInput>();
-    divider_view.each(
-        [this](auto& dimensions, auto const& thickness) {
+    m_registry.view<Dimensions, ThicknessInput>().each(
+        [](auto& dimensions, auto const& thickness) {
+            PLOG_DEBUG << "Reading panel thickness " << thickness.control->value();
             dimensions.thickness = thickness.control->value();
         }
     );
 }
 
 void ReadInputs::readKerfInputs() {
-    auto view = m_registry.view<KerfInput>();
-
-    view.each(
+    m_registry.view<KerfInput>().each(
         [this](auto entity, auto const &kerf) {
+            PLOG_DEBUG << "Reading kerf input " << kerf.control->value();
             if (kerf.control->value() == 0) {
                 m_registry.remove_if_exists<Kerf>(entity);
                 return;
@@ -77,10 +77,9 @@ void ReadInputs::readKerfInputs() {
 }
 
 void ReadInputs::readFingerWidthInputs() {
-    auto view = m_registry.view<FingerWidth, FingerWidthInput>();
-
-    view.each(
+    m_registry.view<FingerWidth, FingerWidthInput>().each(
         [](auto &width, auto const &input) {
+            PLOG_DEBUG << "reading FingerWidth " << input.control->value();
             width.value = input.control->value();
         }
     );
@@ -114,9 +113,10 @@ void ReadInputs::readFingerTypeInputs() {
         }
     };
 
-    auto view = m_registry.view<FingerPatternType, JointProfile, FingerPatternInput>();
-    view.each(
+    m_registry.view<FingerPatternType, JointProfile, FingerPatternInput>().each(
         [&](auto entity, auto &pattern, auto & profile, auto const &input) {
+            PLOG_DEBUG << " setting finger mode to " << input.control->selectedItem()->index();
+
             auto finger_mode = static_cast<FingerMode>(input.control->selectedItem()->index());
             pattern.value = finger_mode;
             profile.finger_type = finger_mode;
@@ -126,26 +126,26 @@ void ReadInputs::readFingerTypeInputs() {
 }
 
 void ReadInputs::readMaxOffsetInputs() {
-    auto view = m_registry.view<MaxOffset, MaxOffsetInput>();
-
-    view.each(
+    m_registry.view<MaxOffset, MaxOffsetInput>().each(
         [](auto &offset, auto const &input) {
+            PLOG_DEBUG << " setting max offset to " << input.control->value();
+
             offset.value = input.control->value();
         }
     );
 }
 
 void ReadInputs::readEnableInputs() {
-    auto view = m_registry.view<EnableInput>();
-
-    view.each(
+    m_registry.view<EnableInput>().each(
         [this](auto entity, auto const &enable_input) {
             auto enabled = enable_input.control->value();
             if (!enabled) {
+                PLOG_DEBUG << " Removing enabled flag from entity.";
                 m_registry.remove_if_exists<Enabled>(entity);
                 return;
             }
 
+            PLOG_DEBUG << " Adding enabled flag to entity.";
             m_registry.emplace_or_replace<Enabled>(entity, true);
         }
     );

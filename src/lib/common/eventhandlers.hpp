@@ -16,6 +16,8 @@
 
 #include "fusion360command.hpp"
 
+#include "plog/Log.h"
+
 namespace silvanus::common {
 
     class CommandDestroyHandler : public adsk::core::CommandEventHandler {
@@ -25,6 +27,7 @@ namespace silvanus::common {
     public:
         explicit CommandDestroyHandler(std::weak_ptr<Fusion360Command> command) : m_command{std::move( command )} {};
         void notify(const adsk::core::Ptr<adsk::core::CommandEventArgs>& args) override {
+            if (!args) return;
             m_command.lock()->destroy(args);
         };
     };
@@ -36,6 +39,7 @@ namespace silvanus::common {
     public:
         explicit CommandExecuteHandler(std::weak_ptr<Fusion360Command> command) : m_command{std::move( command )} {};
         void notify(const adsk::core::Ptr<adsk::core::CommandEventArgs>& args) override {
+            if (!args) return;
             m_command.lock()->execute(args);
         };
     };
@@ -47,6 +51,7 @@ namespace silvanus::common {
     public:
         explicit InputChangedHandler(std::weak_ptr<Fusion360Command> command) : m_command{std::move( command )} {};
         void notify(const adsk::core::Ptr<adsk::core::InputChangedEventArgs>& args) override {
+            if (!args) return;
             m_command.lock()->change(args);
         };
     };
@@ -58,6 +63,8 @@ namespace silvanus::common {
     public:
         explicit ExecutePreviewHandler(std::weak_ptr<Fusion360Command> command) : m_command{std::move( command )} {};
         void notify(const adsk::core::Ptr<adsk::core::CommandEventArgs>& args) override {
+            if (!args) return;
+            if (!args->isValid()) return;
             m_command.lock()->preview(args);
         };
     };
@@ -69,7 +76,9 @@ namespace silvanus::common {
     public:
         explicit ValidateInputsHandler(std::weak_ptr<Fusion360Command> command) : m_command{std::move( command )} {};
         void notify(const adsk::core::Ptr<adsk::core::ValidateInputsEventArgs>& args) override {
-            args->areInputsValid(m_command.lock()->validate(args));
+            if (!args) return;
+            auto result = m_command.lock()->validate(args);
+            args->areInputsValid(result);
         };
     };
     

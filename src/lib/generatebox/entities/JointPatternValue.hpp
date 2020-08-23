@@ -12,6 +12,8 @@ namespace silvanus::generatebox::entities {
         double finger_offset;
         double pattern_distance;
         double pattern_offset;
+        double corner_width;
+        double corner_distance;
     };
 }
 

@@ -27,6 +27,8 @@
 #include <Core/CoreAll.h>
 #include <Fusion/FusionAll.h>
 
+#include "plog/Log.h"
+
 using namespace adsk::core;
 using namespace adsk::fusion;
 
@@ -51,29 +53,26 @@ GenerateBoxCommand::GenerateBoxCommand(
         &entt::registry::remove_if_exists<ConstantFingerPatternType, ConstantAdaptiveFingerPatternType, AutomaticFingerPatternType>
     >();
 
-    m_registry.on_construct<InverseJointPattern>().connect<
-        &entt::registry::remove_if_exists<NormalJointPattern, BottomLapJointPattern, TopLapJointPattern, TrimJointPattern, NoJointPattern, TenonJointPattern, MortiseJointPattern>
+    m_registry.on_construct<BoxJointPattern>().connect<
+        &entt::registry::remove_if_exists<LapJointPattern, TrimJointPattern, NoJointPattern, TenonJointPattern, DoubleTenonJointPattern, TripleTenonJointPattern, QuadTenonJointPattern>
     >();
-    m_registry.on_construct<NormalJointPattern>().connect<
-        &entt::registry::remove_if_exists<InverseJointPattern, BottomLapJointPattern, TopLapJointPattern, TrimJointPattern, NoJointPattern, TenonJointPattern, MortiseJointPattern>
-    >();
-    m_registry.on_construct<BottomLapJointPattern>().connect<
-        &entt::registry::remove_if_exists<InverseJointPattern, NormalJointPattern, TopLapJointPattern, TrimJointPattern, NoJointPattern, TenonJointPattern, MortiseJointPattern>
-    >();
-    m_registry.on_construct<TopLapJointPattern>().connect<
-        &entt::registry::remove_if_exists<InverseJointPattern, NormalJointPattern, BottomLapJointPattern, TrimJointPattern, NoJointPattern, TenonJointPattern, MortiseJointPattern>
+    m_registry.on_construct<LapJointPattern>().connect<
+        &entt::registry::remove_if_exists<BoxJointPattern, TrimJointPattern, NoJointPattern, TenonJointPattern, DoubleTenonJointPattern, TripleTenonJointPattern, QuadTenonJointPattern>
     >();
     m_registry.on_construct<TrimJointPattern>().connect<
-        &entt::registry::remove_if_exists<InverseJointPattern, NormalJointPattern, BottomLapJointPattern, TopLapJointPattern, NoJointPattern, TenonJointPattern, MortiseJointPattern>
+        &entt::registry::remove_if_exists<BoxJointPattern, LapJointPattern, NoJointPattern, TenonJointPattern, DoubleTenonJointPattern, TripleTenonJointPattern, QuadTenonJointPattern>
     >();
     m_registry.on_construct<TenonJointPattern>().connect<
-        &entt::registry::remove_if_exists<InverseJointPattern, NormalJointPattern, BottomLapJointPattern, TopLapJointPattern, NoJointPattern, MortiseJointPattern, TrimJointPattern>
+        &entt::registry::remove_if_exists<BoxJointPattern, LapJointPattern, NoJointPattern, TrimJointPattern, DoubleTenonJointPattern, TripleTenonJointPattern, QuadTenonJointPattern>
     >();
-    m_registry.on_construct<MortiseJointPattern>().connect<
-        &entt::registry::remove_if_exists<InverseJointPattern, NormalJointPattern, BottomLapJointPattern, TopLapJointPattern, NoJointPattern, TenonJointPattern, TrimJointPattern>
+    m_registry.on_construct<DoubleTenonJointPattern>().connect<
+        &entt::registry::remove_if_exists<BoxJointPattern, LapJointPattern, NoJointPattern, TrimJointPattern, TenonJointPattern, TripleTenonJointPattern, QuadTenonJointPattern>
+    >();
+    m_registry.on_construct<QuadTenonJointPattern>().connect<
+        &entt::registry::remove_if_exists<BoxJointPattern, LapJointPattern, NoJointPattern, TrimJointPattern, TenonJointPattern, DoubleTenonJointPattern, TripleTenonJointPattern>
     >();
     m_registry.on_construct<NoJointPattern>().connect<
-        &entt::registry::remove_if_exists<InverseJointPattern, NormalJointPattern, BottomLapJointPattern, TopLapJointPattern, TrimJointPattern, TenonJointPattern, MortiseJointPattern>
+        &entt::registry::remove_if_exists<BoxJointPattern, LapJointPattern, TrimJointPattern, TenonJointPattern, DoubleTenonJointPattern, TripleTenonJointPattern, QuadTenonJointPattern>
     >();
 }
 
@@ -84,8 +83,8 @@ void GenerateBoxCommand::onCreate(const adsk::core::Ptr<CommandCreatedEventArgs>
     auto product = adsk::core::Ptr<Product>{m_app->activeProduct()};
     auto design = adsk::core::Ptr<Design>{product};
 
-    command->setDialogMinimumSize(329, 425);
-    command->setDialogInitialSize(329, 425);
+    command->setDialogMinimumSize(705, 620);
+    command->setDialogInitialSize(705, 620);
     command->isRepeatable(false);
     command->okButtonText("Create");
 
@@ -117,11 +116,15 @@ void GenerateBoxCommand::onExecute(const adsk::core::Ptr<CommandEventArgs>& args
     auto root_component = design->rootComponent();
     auto orientation = preferences->generalPreferences()->defaultModelingOrientation();
 
+    command_dialog.initializePanels();
+
     m_core.execute(orientation, root_component, command_dialog.is_parametric());
 }
 
 void GenerateBoxCommand::onPreview(const adsk::core::Ptr<CommandEventArgs>& args) {
     if (!command_dialog.full_preview() && !command_dialog.fast_preview()) return;
+
+    command_dialog.initializePanels();
 
     auto preferences = adsk::core::Ptr<Preferences>{m_app->preferences()};
     auto product = adsk::core::Ptr<Product>{m_app->activeProduct()};

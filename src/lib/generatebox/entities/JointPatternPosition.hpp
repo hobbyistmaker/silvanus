@@ -6,15 +6,15 @@
 #define SILVANUSPRO_JOINTPATTERNPOSITION_HPP
 
 #include "entities/AxisFlag.hpp"
-#include "entities/JointType.hpp"
+#include "entities/JointPattern.hpp"
 #include "entities/Position.hpp"
 
 namespace silvanus::generatebox::entities {
     struct JointPatternPosition {
         Position  panel_position;
-        AxisFlag  panel_orientation;
-        JointType joint_type;
-        AxisFlag  joint_orientation;
+        AxisFlag         panel_orientation;
+        JointPatternType joint_type;
+        AxisFlag         joint_orientation;
         Position  joint_position;
     };
 }

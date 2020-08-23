@@ -32,7 +32,7 @@ namespace silvanus::generatebox::render {
 
             jointTransformVectorPanelAxisMap joint_yup_vectors = {
                 {entities::AxisFlag::Length, {
-                    {entities::AxisFlag::Height, {adsk::core::Vector3D::create(0.0, 0.0, 1.0), adsk::core::Vector3D::create(1.0, 0.0, 0.0)} },
+                    {entities::AxisFlag::Height, {adsk::core::Vector3D::create(0.0, 0.0, 1.0), adsk::core::Vector3D::create(0.0, 1.0, 0.0)} },
                     {entities::AxisFlag::Width, {adsk::core::Vector3D::create(0.0, 1.0, 0.0), adsk::core::Vector3D::create(0.0, 0.0, 1.0)} }
                 }},
                 {entities::AxisFlag::Width, {
@@ -237,22 +237,13 @@ namespace silvanus::generatebox::render {
                 const adsk::core::Ptr<adsk::fusion::Component>& component
             ) override;
 
-            void renderCornerJoints(
-                const adsk::core::DefaultModelingOrientations &model_orientation,
-                entities::AxisFlag axis,
-                const PanelRenderData& group_data,
-                const entities::PanelExtrusion &panel,
-                const adsk::core::Ptr<adsk::fusion::BRepBody> &box,
-                const std::map<entities::AxisFlag, JointRenderProfileGroup>& joints_group
-            );
-
             void renderNormalJoints(
                 const adsk::core::DefaultModelingOrientations &model_orientation,
                 entities::AxisFlag axis,
                 const PanelRenderData& group_data,
                 const entities::PanelExtrusion &panel,
                 const adsk::core::Ptr<adsk::fusion::BRepBody> &box,
-                const std::map<entities::AxisFlag, JointRenderProfileGroup>& joints_group
+                const renderJointTypeMap& joints_group
             );
 
             void renderNormalJoint(

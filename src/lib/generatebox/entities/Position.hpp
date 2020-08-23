@@ -12,4 +12,14 @@ namespace silvanus::generatebox::entities {
     };
 }
 
+namespace std {
+    template<>
+    class hash<silvanus::generatebox::entities::Position> {
+        public:
+            std::size_t operator()(silvanus::generatebox::entities::Position const& key) const noexcept {
+                return (size_t) key;
+            }
+    };
+}
+
 #endif //SILVANUSPRO_POSITION_HPP

@@ -11,6 +11,8 @@
 
 #include <map>
 
+#include "plog/Log.h"
+
 using namespace adsk::core;
 using namespace adsk::fusion;
 
@@ -21,7 +23,8 @@ using namespace silvanus::generatebox::fusion;
 adsk::core::Ptr<adsk::fusion::RectangularPatternFeature> FingerCutsPattern::copy(
     const DefaultModelingOrientations model_orientation,
     const std::vector<adsk::core::Ptr<adsk::fusion::ExtrudeFeature>>& features,
-    const JointProfile& profile
+    const JointProfile& profile,
+    const bool corner
 ) {
     Ptr<ObjectCollection> entities = adsk::core::ObjectCollection::create();
 
@@ -32,12 +35,15 @@ adsk::core::Ptr<adsk::fusion::RectangularPatternFeature> FingerCutsPattern::copy
     }
 
     auto axis_edges = m_axes_selector[model_orientation][profile.joint_orientation][profile.panel_orientation];
+    auto pattern_distance = corner ? profile.corner_distance : profile.pattern_distance;
+    auto finger_count = corner ? 2 : profile.finger_count;
+    PLOG_DEBUG << "FingerCutsPattern: " << (int)profile.joint_orientation << ":" << (int)profile.panel_orientation;
 
     try {
         const Ptr<ConstructionAxis>& first_edge = axis_edges();
 
-        Ptr<ValueInput> count = ValueInput::createByReal(profile.finger_count);
-        Ptr<ValueInput> distance = ValueInput::createByReal(profile.pattern_distance);
+        Ptr<ValueInput> count = ValueInput::createByReal(finger_count);
+        Ptr<ValueInput> distance = ValueInput::createByReal(pattern_distance);
 
         Ptr<RectangularPatternFeatures> patterns = m_component->features()->rectangularPatternFeatures();
 
@@ -48,10 +54,10 @@ adsk::core::Ptr<adsk::fusion::RectangularPatternFeature> FingerCutsPattern::copy
         return m_component->features()->rectangularPatternFeatures()->add(pattern_input);
 
     } catch(const std::runtime_error& re) {
-            m_app->userInterface()->messageBox(re.what());
+            m_app->userInterface()->messageBox(std::to_string((int)profile.joint_orientation) + ":" + std::to_string((int)profile.panel_orientation));
             return nullptr;
     } catch(const std::exception &exc) {
-            m_app->userInterface()->messageBox(exc.what());
+            m_app->userInterface()->messageBox(std::to_string((int)profile.joint_orientation) + ":" + std::to_string((int)profile.panel_orientation));
             return nullptr;
     }
 }

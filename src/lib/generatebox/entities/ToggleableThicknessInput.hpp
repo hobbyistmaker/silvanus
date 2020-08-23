@@ -7,7 +7,7 @@
 
 #include <BoolValueCommandInput.h>
 #include <FloatSpinnerCommandInput.h>
-#include "DialogInputs.hpp"
+#include "lib/generatebox/dialog/entities/DialogInputs.hpp"
 
 namespace silvanus::generatebox::entities {
     struct ToggleableThicknessInput

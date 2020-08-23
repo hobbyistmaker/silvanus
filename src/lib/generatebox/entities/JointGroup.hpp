@@ -9,7 +9,7 @@
 #include "FingerMode.hpp"
 #include "JointProfile.hpp"
 #include "JointThickness.hpp"
-#include "JointType.hpp"
+#include "JointPattern.hpp"
 #include "Position.hpp"
 
 namespace silvanus::generatebox::entities {

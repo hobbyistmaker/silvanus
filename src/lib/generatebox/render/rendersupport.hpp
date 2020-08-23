@@ -5,6 +5,7 @@
 #ifndef SILVANUSPRO_RENDERSUPPORT_HPP
 #define SILVANUSPRO_RENDERSUPPORT_HPP
 
+#include "entities/JointDirection.hpp"
 #include "entities/JointExtrusion.hpp"
 #include "entities/JointProfile.hpp"
 #include "entities/PanelExtrusion.hpp"
@@ -18,63 +19,51 @@ namespace silvanus::generatebox::render {
 
     struct CompareExtrusion {
         bool operator()(const entities::PanelExtrusion &lhs, const entities::PanelExtrusion &rhs) const {
-            return (lhs.distance
-                       .value < rhs.distance
-                                   .value) || (
-                       (rhs.distance
-                           .value >= lhs.distance
-                                        .value) && (lhs.offset
-                                                       .value < rhs.offset
-                                                                   .value)
+            return (lhs.distance.value < rhs.distance.value) || (
+                       (rhs.distance.value >= lhs.distance.value) && (lhs.offset.value < rhs.offset.value)
                    );
         }
 
         bool operator()(const entities::JointExtrusion &lhs, const entities::JointExtrusion &rhs) const {
-            return (lhs.distance
-                       .value < rhs.distance
-                                   .value) || (
-                       (rhs.distance
-                           .value >= lhs.distance
-                                        .value) && (lhs.offset
-                                                       .value < rhs.offset
-                                                                   .value)
+            return (lhs.distance.value < rhs.distance.value) || (
+                       (rhs.distance.value >= lhs.distance.value) && (lhs.offset.value < rhs.offset.value)
                    );
         }
     };
 
     struct JointRenderGroup {
-        std::set<std::string>                                       names;
+        std::set<std::string>                                names;
         std::set<entities::JointExtrusion, CompareExtrusion> extrusions;
     };
 
-    struct JointRenderProfileGroup {
-        std::map<entities::JointProfile, JointRenderGroup, entities::CompareJointProfile> outside;
-        std::map<entities::JointProfile, JointRenderGroup, entities::CompareJointProfile> inside;
-    };
+//    struct JointRenderProfileGroup {
+//        std::map<entities::JointProfile, JointRenderGroup, entities::CompareJointProfile> outside;
+//        std::map<entities::JointProfile, JointRenderGroup, entities::CompareJointProfile> inside;
+//    };
 
-    using renderJointTypeMap = std::map<entities::AxisFlag, JointRenderProfileGroup>;
+    using profileRenderGroupMap = std::map<entities::JointProfile, JointRenderGroup, entities::CompareJointProfile>;
+    using renderJointTypeMap = std::map<entities::AxisFlag, profileRenderGroupMap>;
+    using jointDirectionTypeMap = std::map<entities::JointDirectionType, renderJointTypeMap>;
+    using jointPatternTypeMap = std::map<entities::JointPatternType, jointDirectionTypeMap>;
 
-    struct JointRenderData {
-        renderJointTypeMap normal;
-        renderJointTypeMap inverse;
-        renderJointTypeMap corner;
-        renderJointTypeMap toplap;
-        renderJointTypeMap bottomlap;
-        renderJointTypeMap trim;
-        renderJointTypeMap mortise;
-        renderJointTypeMap tenon;
-    };
+//    struct JointRenderData {
+//        jointDirectionTypeMap box_joint;
+//        jointDirectionTypeMap lap_joint;
+//        jointDirectionTypeMap trim;
+//        jointDirectionTypeMap tenon;
+//    };
 
     struct PanelRenderData {
         std::set<std::string>                                                                                                          names;
         std::map<entities::ExtrusionDistance, std::set<entities::PanelExtrusion, CompareExtrusion>, entities::CompareDimension>        panels;
-        JointRenderData                                                                                                                joints;
+        jointPatternTypeMap                                                                                                            joints;
     };
 
     struct CutProfile {
-        fusion::PanelFingerSketch        sketch;
-        JointRenderGroup                 group;
+        fusion::PanelFingerSketch sketch;
+        JointRenderGroup          group;
         entities::JointProfile    profile;
+        bool                      corner = false;
     };
 
     using axis_plane_map = std::map<entities::AxisFlag, adsk::core::Ptr<adsk::fusion::ConstructionPlane>>;

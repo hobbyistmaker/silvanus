@@ -113,7 +113,7 @@ namespace silvanus::generatebox::render {
                 const fusion::PanelProfileSketch& sketch,
                 const entities::PanelExtrusion& extrusion,
                 const adsk::core::DefaultModelingOrientations& orientation,
-                JointRenderData& joints
+                jointPatternTypeMap& joints
             ) -> adsk::core::Ptr<adsk::fusion::ExtrudeFeature>;
 
             static void renderPanelCopies(
@@ -127,7 +127,7 @@ namespace silvanus::generatebox::render {
                 const entities::ExtrusionDistance& panel_thickness,
                 const adsk::core::DefaultModelingOrientations& orientation,
                 const adsk::core::Ptr<adsk::fusion::ExtrudeFeature>& extrusion,
-                JointRenderData& joints
+                jointPatternTypeMap& joints
             ) -> std::vector<std::vector<CutProfile>>;
 
         public:
@@ -145,7 +145,17 @@ namespace silvanus::generatebox::render {
                 const adsk::core::Ptr<adsk::fusion::ExtrudeFeature>& extrusion,
                 const std::string& sketch_prefix,
                 const entities::AxisFlag& joint_orientation,
-                const JointRenderProfileGroup& joint_groups
+                const profileRenderGroupMap& joint_groups
+            ) -> std::vector<CutProfile>;
+
+            auto renderCornerJointSketch(
+                const std::string& panel_name,
+                const entities::ExtrusionDistance& panel_thickness,
+                const adsk::core::DefaultModelingOrientations& model_orientation,
+                const adsk::core::Ptr<adsk::fusion::ExtrudeFeature>& extrusion,
+                const std::string& sketch_prefix,
+                const entities::AxisFlag& joint_orientation,
+                const profileRenderGroupMap& joint_groups
             ) -> std::vector<CutProfile>;
     };
 }

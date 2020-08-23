@@ -14,7 +14,7 @@
 #include <Fusion/FusionAll.h>
 
 #include "FusionSketch.hpp"
-#include "../entities/DialogInputs.hpp"
+#include "lib/generatebox/dialog/entities/DialogInputs.hpp"
 #include "Dimensions.hpp"
 #include "PanelProfile.hpp"
 

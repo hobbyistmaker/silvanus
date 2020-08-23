@@ -29,30 +29,30 @@ namespace silvanus::generatebox::fusion {
 
         panelOrientationMap m_yup_axes_selector = {
             {entities::AxisFlag::Height, {
-                {entities::AxisFlag::Width, [this](){ return this->m_component->xConstructionAxis(); } },
-                {entities::AxisFlag::Length, [this](){ return this->m_component->zConstructionAxis(); } }
+                {entities::AxisFlag::Width, [this](){ return m_component->xConstructionAxis(); } },
+                {entities::AxisFlag::Length, [this](){ return m_component->zConstructionAxis(); } }
             }},
             {entities::AxisFlag::Width, {
-                {entities::AxisFlag::Height, [this](){ return this->m_component->xConstructionAxis(); } },
-                {entities::AxisFlag::Length, [this](){ return this->m_component->yConstructionAxis(); } }
+                {entities::AxisFlag::Height, [this](){ return m_component->xConstructionAxis(); } },
+                {entities::AxisFlag::Length, [this](){ return m_component->yConstructionAxis(); } }
             }},
             {entities::AxisFlag::Length, {
-                {entities::AxisFlag::Height, [this](){ return this->m_component->zConstructionAxis(); } },
-                {entities::AxisFlag::Width, [this](){ return this->m_component->yConstructionAxis(); } }
+                {entities::AxisFlag::Height, [this](){ return m_component->zConstructionAxis(); } },
+                {entities::AxisFlag::Width, [this](){ return m_component->yConstructionAxis(); } }
             }}
         };
         panelOrientationMap m_zup_axes_selector = {
             {entities::AxisFlag::Height, {
-                {entities::AxisFlag::Width, [this](){ return this->m_component->xConstructionAxis(); } },
-                {entities::AxisFlag::Length, [this](){ return this->m_component->yConstructionAxis(); } }
+                {entities::AxisFlag::Width, [this](){ return m_component->xConstructionAxis(); } },
+                {entities::AxisFlag::Length, [this](){ return m_component->yConstructionAxis(); } }
             }},
             {entities::AxisFlag::Width, {
-                {entities::AxisFlag::Height, [this](){ return this->m_component->xConstructionAxis(); } },
-                {entities::AxisFlag::Length, [this](){ return this->m_component->zConstructionAxis(); } }
+                {entities::AxisFlag::Height, [this](){ return m_component->xConstructionAxis(); } },
+                {entities::AxisFlag::Length, [this](){ return m_component->zConstructionAxis(); } }
             }},
             {entities::AxisFlag::Length, {
-                {entities::AxisFlag::Height, [this](){ return this->m_component->yConstructionAxis(); } },
-                {entities::AxisFlag::Width, [this](){ return this->m_component->zConstructionAxis(); } }
+                {entities::AxisFlag::Height, [this](){ return m_component->yConstructionAxis(); } },
+                {entities::AxisFlag::Width, [this](){ return m_component->zConstructionAxis(); } }
             }}
         };
 
@@ -67,7 +67,8 @@ namespace silvanus::generatebox::fusion {
         [[nodiscard]] adsk::core::Ptr<adsk::fusion::RectangularPatternFeature> copy(
             const adsk::core::DefaultModelingOrientations model_orientation,
             const std::vector<adsk::core::Ptr<adsk::fusion::ExtrudeFeature>>& features,
-            const entities::JointProfile& profile
+            const entities::JointProfile& profile,
+            const bool corner
         );
     };
 

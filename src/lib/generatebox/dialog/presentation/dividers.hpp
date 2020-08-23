@@ -19,17 +19,17 @@
 #include "entities/JointPatternDistance.hpp"
 #include "entities/JointPatternPosition.hpp"
 #include "entities/JointPatternTags.hpp"
-#include "entities/JointPatternType.hpp"
+#include "entities/JointDirection.hpp"
 #include "entities/JointProfile.hpp"
 #include "entities/JointThickness.hpp"
-#include "entities/JointType.hpp"
+#include "entities/JointPattern.hpp"
 #include "entities/KerfInput.hpp"
 #include "entities/InsidePanel.hpp"
 #include "entities/MaxOffset.hpp"
 #include "entities/MaxOffsetInput.hpp"
 #include "entities/OrientationGroup.hpp"
 #include "entities/OrientationTags.hpp"
-#include "entities/PanelName.hpp"
+#include "entities/Panel.hpp"
 #include "entities/PanelPosition.hpp"
 #include "entities/PanelProfile.hpp"
 #include "entities/PanelType.hpp"
@@ -43,11 +43,11 @@
 
 #include <string>
 
-namespace silvanus::generatebox {
+namespace silvanus::generatebox::dialog {
 
 
     using controlsDef = std::unordered_map<entities::DialogInputs, adsk::core::Ptr<adsk::core::CommandInput> >;
-    using jointsDef = std::map<entities::AxisFlag, std::map<entities::JointType, std::vector<entities::Position>>>;
+    using jointsDef = std::map<entities::AxisFlag, std::map<entities::JointPatternType, std::vector<entities::Position>>>;
 
     template <class T>
     class Dividers {
@@ -78,14 +78,14 @@ namespace silvanus::generatebox {
 
                 if (divider_count <= 0) return;
 
-                auto finger_mode_control = m_configuration.ctx<entities::DialogBoxFingerMode>().control;
-                auto finger_width_control = m_configuration.ctx<entities::DialogBoxFingerWidthInput>().control;
-                auto kerf_input_control = m_configuration.ctx<entities::DialogBoxKerfInput>().control;
-                auto default_thickness_control = m_configuration.ctx<entities::DialogBoxThicknessInput>().control;
+                auto finger_mode_control = m_configuration.ctx<entities::DialogFingerMode>().control;
+                auto finger_width_control = m_configuration.ctx<entities::DialogFingerWidthInput>().control;
+                auto kerf_input_control = m_configuration.ctx<entities::DialogKerfInput>().control;
+                auto default_thickness_control = m_configuration.ctx<entities::DialogThicknessInput>().control;
 
-                auto input_length = m_configuration.ctx<entities::DialogBoxLengthInput>().control->value();
-                auto input_width = m_configuration.ctx<entities::DialogBoxWidthInput>().control->value();
-                auto input_height = m_configuration.ctx<entities::DialogBoxHeightInput>().control->value();
+                auto input_length = m_configuration.ctx<entities::DialogLengthInput>().control->value();
+                auto input_width = m_configuration.ctx<entities::DialogWidthInput>().control->value();
+                auto input_height = m_configuration.ctx<entities::DialogHeightInput>().control->value();
                 auto divider_thickness = default_thickness_control->value();
 
                 auto pocket_count = divider_count + 1;
@@ -156,9 +156,8 @@ namespace silvanus::generatebox {
 
                                 m_registry.emplace<entities::OrientationGroup>(entity, t_panel_orientation, joint_orientation);
 
-                                m_registry.emplace<entities::PanelName>(entity, name + " Divider");
+                                m_registry.emplace<entities::Panel>(entity, name + " Divider", 0, t_panel_orientation);
                                 m_registry.emplace<entities::PanelOffset>(entity, divider_pos);
-                                m_registry.emplace<entities::PanelOrientation>(entity, t_panel_orientation);
                                 m_registry.emplace<entities::PanelPosition>(entity, entities::Position::Inside);
                                 m_registry.emplace<entities::PanelProfile>(entity);
 
@@ -173,22 +172,22 @@ namespace silvanus::generatebox {
                                 };
                                 joint_orientation_selector[joint_orientation](entity);
 
-                                auto joint_type_selector = std::unordered_map<entities::JointType, std::function<void(entt::entity)>>{
-                                    { entities::JointType::Inverse, [this](entt::entity entity) { m_registry.emplace<entities::InverseJointPattern>(entity); }},
-                                    { entities::JointType::Corner, [this](entt::entity entity) { m_registry.emplace<entities::CornerJointPattern>(entity); }},
-                                    { entities::JointType::BottomLap, [this](entt::entity entity) { m_registry.emplace<entities::BottomLapJointPattern>(entity); }},
-                                    { entities::JointType::TopLap, [this](entt::entity entity) { m_registry.emplace<entities::TopLapJointPattern>(entity); }},
-                                    { entities::JointType::Trim, [this](entt::entity entity) { m_registry.emplace<entities::TrimJointPattern>(entity); }},
-                                    { entities::JointType::Tenon, [this](entt::entity entity) { m_registry.emplace<entities::TenonJointPattern>(entity); }},
-                                    { entities::JointType::Mortise, [this](entt::entity entity) { m_registry.emplace<entities::MortiseJointPattern>(entity); }}
-                                };
-                                joint_type_selector[joint_type](entity);
-
-                                auto joint_pos_selector = std::unordered_map<entities::Position, std::function<void(entities::JointType, entt::entity)>>{
-                                    { entities::Position::Inside, [this](entities::JointType joint_type, entt::entity entity) {
+//                                auto joint_type_selector = std::unordered_map<entities::JointPatternType, std::function<void(entt::entity)>>{
+//                                    { entities::JointPatternType::Inverse, [this](entt::entity entity) { m_registry.emplace<entities::InverseJointPattern>(entity); }},
+//                                    { entities::JointPatternType::Corner, [this](entt::entity entity) { m_registry.emplace<entities::CornerJointPattern>(entity); }},
+//                                    { entities::JointPatternType::BottomLap, [this](entt::entity entity) { m_registry.emplace<entities::LapJointPattern>(entity); }},
+//                                    { entities::JointPatternType::TopLap, [this](entt::entity entity) { m_registry.emplace<entities::TopLapJointPattern>(entity); }},
+//                                    { entities::JointPatternType::Trim, [this](entt::entity entity) { m_registry.emplace<entities::TrimJointPattern>(entity); }},
+//                                    { entities::JointPatternType::Tenon, [this](entt::entity entity) { m_registry.emplace<entities::TenonJointPattern>(entity); }},
+//                                    { entities::JointPatternType::Mortise, [this](entt::entity entity) { m_registry.emplace<entities::MortiseJointPattern>(entity); }}
+//                                };
+//                                joint_type_selector[joint_type](entity);
+//
+                                auto joint_pos_selector = std::unordered_map<entities::Position, std::function<void(entities::JointPatternType, entt::entity)>>{
+                                    { entities::Position::Inside, [this](entities::JointPatternType joint_type, entt::entity entity) {
                                            m_registry.emplace<entities::InsideJointPattern>(entity, joint_type);
                                         }},
-                                    { entities::Position::Outside, [this](entities::JointType joint_type, entt::entity entity) {
+                                    { entities::Position::Outside, [this](entities::JointPatternType joint_type, entt::entity entity) {
                                            m_registry.emplace<entities::OutsideJointPattern>(entity, joint_type);
                                         }}
                                 };

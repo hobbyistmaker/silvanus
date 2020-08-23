@@ -11,7 +11,7 @@
 namespace silvanus::generatebox::entities {
     struct PanelExtrusion {
         ExtrusionDistance  distance;
-        PanelOffset offset;
+        PanelOffset        offset;
         std::string        name;
     };
 

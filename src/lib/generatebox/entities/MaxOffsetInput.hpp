@@ -5,7 +5,7 @@
 #ifndef SILVANUSPRO_MAXOFFSETINPUT_HPP
 #define SILVANUSPRO_MAXOFFSETINPUT_HPP
 
-#include "DialogInputs.hpp"
+#include "lib/generatebox/dialog/entities/DialogInputs.hpp"
 
 namespace silvanus::generatebox::entities {
     struct MaxOffsetInput

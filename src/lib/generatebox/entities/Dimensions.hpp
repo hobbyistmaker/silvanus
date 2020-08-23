@@ -5,15 +5,15 @@
 #ifndef SILVANUSPRO_DIMENSIONS_HPP
 #define SILVANUSPRO_DIMENSIONS_HPP
 
-#include "DialogInputs.hpp"
+#include "lib/generatebox/dialog/entities/DialogInputs.hpp"
 #include <Core/CoreAll.h>
 
 namespace silvanus::generatebox::entities {
 
     struct DimensionsInputs {
-        adsk::core::Ptr<adsk::core::FloatSpinnerCommandInput> length_control;
-        adsk::core::Ptr<adsk::core::FloatSpinnerCommandInput> width_control;
-        adsk::core::Ptr<adsk::core::FloatSpinnerCommandInput> height_control;
+        adsk::core::Ptr<adsk::core::FloatSpinnerCommandInput> length;
+        adsk::core::Ptr<adsk::core::FloatSpinnerCommandInput> width;
+        adsk::core::Ptr<adsk::core::FloatSpinnerCommandInput> height;
     };
 
     struct Dimensions {

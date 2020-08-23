@@ -83,6 +83,7 @@ namespace silvanus::generatebox::systems {
 
             void execute();
 
+            void updateJointProfileGroups() const;
     };
 
 }

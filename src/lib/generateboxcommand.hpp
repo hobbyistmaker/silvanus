@@ -12,7 +12,7 @@
 #include <Fusion/FusionAll.h>
 
 #include "common/common.h"
-#include "lib/generatebox/dialog/dialog.hpp"
+#include "lib/generatebox/dialog/presentation/dialog.hpp"
 #include "generatebox/systems/SilvanusCore.hpp"
 
 namespace silvanus {
@@ -21,13 +21,15 @@ namespace silvanus {
      
         const std::string description = "Create a parametric box with finger joints.";
         const std::string id = "SilvanusProGenerateBoxCommand";
-        const std::string dialog = "Create Finger Jointed Box (0.5.6 alpha)";
+        const std::string dialog = "Create Finger Jointed Box (0.6.0 alpha)";
 
         adsk::core::Ptr<adsk::core::UserInterface> m_ui;
 
         entt::registry m_registry;
-        generatebox::CreateDialog command_dialog = generatebox::CreateDialog(m_registry);
+        generatebox::dialog::CreateDialog command_dialog = generatebox::dialog::CreateDialog(m_registry);
         generatebox::systems::SilvanusCore m_core = generatebox::systems::SilvanusCore(m_app, m_registry);
+
+        bool updated = false;
 
     public:
         explicit GenerateBoxCommand(

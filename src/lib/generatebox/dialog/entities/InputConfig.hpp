@@ -10,7 +10,7 @@
 
 #include "entities/DialogInputs.hpp"
 
-namespace silvanus::generatebox {
+namespace silvanus::generatebox::dialog {
     struct InputConfig {
         entities::DialogInputs lookup;
         std::string            parameter;

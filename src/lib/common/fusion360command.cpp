@@ -7,6 +7,8 @@
 #include <Core/CoreAll.h>
 #include "fusion360command.hpp"
 
+#include "plog/Log.h"
+
 using namespace adsk::core;
 using namespace adsk::fusion;
 using namespace silvanus::common;
@@ -19,10 +21,20 @@ Fusion360Command::Fusion360Command(
 }
 
 void Fusion360Command::change(const Ptr<InputChangedEventArgs>& args) {
+    PLOG_DEBUG << "Fusion360Command::change";
+    if (!args) {
+        PLOG_DEBUG << "no args";
+        return;
+    }
     dirty = onChange(args);
 }
 
 void Fusion360Command::create(const Ptr<CommandCreatedEventArgs>& args) {
+    PLOG_DEBUG << "Fusion360Command::create";
+    if (!args) {
+        PLOG_DEBUG << "no args";
+        return;
+    }
     onCreate(args);
 }
 

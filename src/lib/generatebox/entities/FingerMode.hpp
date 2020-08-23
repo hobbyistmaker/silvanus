@@ -11,4 +11,15 @@ namespace silvanus::generatebox::entities {
     };
 }
 
+
+namespace std {
+    template<>
+    class hash<silvanus::generatebox::entities::FingerMode> {
+        public:
+            std::size_t operator()(silvanus::generatebox::entities::FingerMode const& key) const noexcept {
+                return (size_t) key;
+            }
+    };
+}
+
 #endif //SILVANUSPRO_FINGERMODE_HPP

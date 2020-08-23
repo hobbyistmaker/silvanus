@@ -7,40 +7,39 @@
 
 #include "ConfigurePanels.hpp"
 #include "entities/AxisProfile.hpp"
-#include "entities/BackPanel.hpp"
-#include "entities/BottomPanel.hpp"
 #include "entities/Dimensions.hpp"
 #include "entities/EndReferencePoint.hpp"
-#include "entities/FrontPanel.hpp"
 #include "entities/HeightJointInput.hpp"
 #include "entities/InsidePanel.hpp"
+#include "entities/JointDirection.hpp"
 #include "entities/JointExtrusion.hpp"
+#include "entities/JointName.hpp"
+#include "entities/JointPatternDistance.hpp"
 #include "entities/JointPatternPosition.hpp"
 #include "entities/JointPatternTags.hpp"
-#include "entities/JointPatternType.hpp"
 #include "entities/JointProfile.hpp"
+#include "entities/JointThickness.hpp"
 #include "entities/Kerf.hpp"
-#include "entities/LeftPanel.hpp"
 #include "entities/LengthJointInput.hpp"
 #include "entities/OrientationTags.hpp"
 #include "entities/OutsidePanel.hpp"
 #include "entities/PanelExtrusion.hpp"
 #include "entities/PanelGroup.hpp"
 #include "entities/PanelId.hpp"
-#include "entities/PanelName.hpp"
+#include "entities/Panel.hpp"
 #include "entities/PanelOffsetInput.hpp"
 #include "entities/PanelOrientation.hpp"
 #include "entities/PanelPosition.hpp"
 #include "entities/PanelProfile.hpp"
 #include "entities/PanelTag.hpp"
 #include "entities/Point.hpp"
-#include "entities/RightPanel.hpp"
 #include "entities/StartReferencePoint.hpp"
-#include "entities/TopPanel.hpp"
 #include "entities/WidthJointInput.hpp"
 
 #include <map>
 #include <vector>
+
+#include "plog/Log.h"
 
 using namespace adsk::core;
 using namespace adsk::fusion;
@@ -48,9 +47,6 @@ using namespace silvanus::generatebox::entities;
 using namespace silvanus::generatebox::systems;
 
 void ConfigurePanels::execute() {
-    updatePanelIds();
-    updateLengthJoints();
-//    findJoints();
     updateExtrusionDistances();
     updateEndReferencePoints();
     updatePanelProfiles();
@@ -62,164 +58,20 @@ void ConfigurePanels::execute() {
     addJointExtrusions();
 }
 
-void ConfigurePanels::updatePanelIds() {
-
-    auto selector = std::map<Panels, std::function<void(entt::entity)>>{
-        {Panels::Top, { [this](entt::entity entity) {
-            this->m_registry.emplace_or_replace<TopPanel>(entity);
-        }}},
-        {Panels::Bottom, { [this](entt::entity entity) {
-            auto const& offset = this->m_registry.ctx<PanelOffsetInput>();
-            this->m_registry.emplace_or_replace<BottomPanel>(entity);
-            this->m_registry.emplace_or_replace<PanelOffsetInput>(entity, offset);
-        }}},
-        {Panels::Back, { [this](entt::entity entity) {
-            this->m_registry.emplace_or_replace<BackPanel>(entity);
-        }}},
-        {Panels::Front, { [this](entt::entity entity) {
-            this->m_registry.emplace_or_replace<FrontPanel>(entity);
-        }}},
-        {Panels::Left, { [this](entt::entity entity) {
-            this->m_registry.emplace_or_replace<LeftPanel>(entity);
-        }}},
-        {Panels::Right, { [this](entt::entity entity) {
-            this->m_registry.emplace_or_replace<RightPanel>(entity);
-        }}}
-    };
-
-    m_registry.view<PanelId>().each([&, this](
-        auto entity, auto const& id
-    ){
-        selector[id.value](entity);
-    });
-
-}
-
-void ConfigurePanels::updateLengthJoints() {
-
-    auto full_selector = std::map<int, std::function<void(entt::registry&, entt::entity, JointPatternPosition&, JointProfile&)>>{
-        {0, { [](entt::registry& registry, entt::entity entity, JointPatternPosition& pattern, JointProfile& profile){
-            pattern.joint_type = JointType::Mortise;
-            profile.joint_type = JointType::Mortise;
-            registry.emplace_or_replace<MortiseJointPattern>(entity);
-
-        }}},
-        {1, { [](entt::registry& registry, entt::entity entity, JointPatternPosition& pattern, JointProfile& profile){
-            pattern.joint_type = JointType::BottomLap;
-            profile.joint_type = JointType::BottomLap;
-            registry.emplace_or_replace<BottomLapJointPattern>(entity);
-        }}},
-        {2, { [](entt::registry& registry, entt::entity entity, JointPatternPosition& pattern, JointProfile& profile){
-                pattern.joint_type = JointType::Normal;
-                profile.joint_type = JointType::Normal;
-                registry.emplace_or_replace<NormalJointPattern>(entity);
-            }}}
-    };
-    auto none_selector = std::map<int, std::function<void(entt::registry&, entt::entity, JointPatternPosition&, JointProfile&)>>{
-        {0, { [](entt::registry& registry, entt::entity entity, JointPatternPosition& pattern, JointProfile& profile){
-            pattern.joint_type = JointType::None;
-            profile.joint_type = JointType::None;
-            registry.emplace_or_replace<NoJointPattern>(entity);
-
-        }}},
-        {1, { [](entt::registry& registry, entt::entity entity, JointPatternPosition& pattern, JointProfile& profile){
-            pattern.joint_type = JointType::None;
-            profile.joint_type = JointType::None;
-            registry.emplace_or_replace<NoJointPattern>(entity);
-        }}},
-        {2, { [](entt::registry& registry, entt::entity entity, JointPatternPosition& pattern, JointProfile& profile){
-            pattern.joint_type = JointType::Normal;
-            profile.joint_type = JointType::Normal;
-            registry.emplace_or_replace<NormalJointPattern>(entity);
-        }}}
-    };
-
-    m_registry.view<JointPatternPosition, JointProfile, WidthOrientation, LengthJointInput, PanelName>().each([&, this](
-        auto entity, auto& pattern, auto& profile, auto const& panel_orientation, auto const& input, auto const& name
-    ){
-        full_selector[input.control->selectedItem()->index()](this->m_registry, entity, pattern, profile);
-    });
-    m_registry.view<JointPatternPosition, JointProfile, HeightOrientation, LengthJointInput, PanelName>().each([&, this](
-        auto entity, auto& pattern, auto& profile, auto const& panel_orientation, auto const& input, auto const& name
-    ){
-        none_selector[input.control->selectedItem()->index()](this->m_registry, entity, pattern, profile);
-    });
-
-    m_registry.view<JointPatternPosition, JointProfile, LengthOrientation, WidthJointInput, PanelName>().each([&, this](
-        auto entity, auto& pattern, auto& profile, auto const& panel_orientation, auto const& input, auto const& name
-    ){
-        full_selector[input.control->selectedItem()->index()](this->m_registry, entity, pattern, profile);
-    });
-    m_registry.view<JointPatternPosition, JointProfile, HeightOrientation, WidthJointInput, PanelName>().each([&, this](
-        auto entity, auto& pattern, auto& profile, auto const& panel_orientation, auto const& input, auto const& name
-    ){
-        none_selector[input.control->selectedItem()->index()](this->m_registry, entity, pattern, profile);
-    });
-
-//    m_registry.view<JointWidthOrientation, LengthOrientation, WidthJointInput>().each([&, this](
-//        auto entity, auto const& joint_orientation, auto const& panel_orientation, auto const& input
-//    ){
-//        selector[input.control->selectedItem()->index()](this->m_registry, entity);
-//    });
-//
-}
-
-//void ConfigurePanels::findJoints() {
-//
-//    auto width_view = m_registry.view<PanelOrientation, PanelName, Dimensions>();
-//    for (auto const& entity: width_view) {
-//        auto dimensions = width_view.get<Dimensions>(entity);
-//        auto orientation = width_view.get<PanelOrientation>(entity).axis;
-//
-//        auto [first_length, first_width, first_height] = dimensions_selector[orientation](dimensions);
-//
-//        findWidthJoints(entity, first_length, first_width, first_height);
-//    }
-//}
-//
-//void ConfigurePanels::findWidthJoints(
-//    entt::entity first_panel, AxisProfile first_length, AxisProfile first_width, AxisProfile first_height
-//) {
-//    auto width_view = m_registry.view<PanelOrientation, Dimensions>();
-//
-//    for (auto const& second_panel: width_view) {
-//        auto dimensions = width_view.get<Dimensions>(second_panel);
-//        auto orientation = width_view.get<PanelOrientation>(second_panel).axis;
-//
-//        auto [second_length, second_width, second_height] = dimensions_selector[orientation](dimensions);
-//
-//        auto length_overlaps = (first_length.start.x <= second_length.end.x) && (first_length.end.x >= second_length.start.x)
-//            && (first_length.end.y >= second_length.start.y) && (first_length.start.y <= second_length.end.y);
-//
-//        auto width_overlaps = (first_width.start.x <= second_width.end.x) && (first_width.end.x >= second_width.start.x)
-//            && (first_width.end.y >= second_width.start.y) && (first_width.start.y <= second_width.end.y);
-//
-//        auto height_overlaps = (first_height.start.x <= second_height.end.x) && (first_height.end.x >= second_height.start.x)
-//            && (first_height.end.y >= second_height.start.y) && (first_height.start.y <= second_height.end.y);
-//
-//
-//        if (length_overlaps && width_overlaps && height_overlaps) {
-////            auto overlap_msg = first + "(" + std::to_string(first_length.start.x) + "," + std::to_string(first_length.start.y) + ") panel overlaps with " + second + "(" + std::to_string(second_length.start.x) + "," + std::to_string(second_length.start.y) + ") panel.";
-//        }
-//    }
-//}
-
 void ConfigurePanels::updateExtrusionDistances() {
-    auto view = m_registry.view<ExtrusionDistance, Dimensions>();
-
-    view.each([](
+    m_registry.view<ExtrusionDistance, Dimensions>().each([](
         auto& distance, auto const& dimensions
     ){
+        PLOG_DEBUG << "Updating extrusion distance";
         distance.value = dimensions.thickness;
     });
 }
 
 void ConfigurePanels::updateEndReferencePoints() {
-    auto view = m_registry.view<EndReferencePoint, Dimensions>();
-
-    view.each([](
+    m_registry.view<EndReferencePoint, Dimensions>().each([](
         auto& reference, auto const &dimensions
     ){
+        PLOG_DEBUG << "Updating end reference points";
         reference.length.value = dimensions.length;
         reference.width.value = dimensions.width;
         reference.height.value = dimensions.height;
@@ -228,25 +80,28 @@ void ConfigurePanels::updateEndReferencePoints() {
 
 void ConfigurePanels::updatePanelProfiles() {
     auto length_view = m_registry.view<PanelProfile, LengthOrientation, EndReferencePoint>();
-    length_view.each([this](
+    length_view.each([](
         auto& profile, auto const& orientation, auto const& reference
     ){
+        PLOG_DEBUG << "Updating LengthOrientation panel profile";
         profile.length.value = reference.width.value;
         profile.width.value = reference.height.value;
     });
 
     auto width_view = m_registry.view<PanelProfile, WidthOrientation, EndReferencePoint>();
-    width_view.each([this](
+    width_view.each([](
         auto& profile, auto const& orientation, auto const& reference
     ){
+        PLOG_DEBUG << "Updating WidthOrientation panel profile";
         profile.length.value = reference.length.value;
         profile.width.value = reference.height.value;
     });
 
     auto height_view = m_registry.view<PanelProfile, HeightOrientation, EndReferencePoint>();
-    height_view.each([this](
+    height_view.each([](
         auto& profile, auto const& orientation, auto const& reference
     ){
+        PLOG_DEBUG << "Updating HeightOrientation panel profile";
         profile.length.value = reference.length.value;
         profile.width.value = reference.width.value;
     });
@@ -255,6 +110,7 @@ void ConfigurePanels::updatePanelProfiles() {
     kerf_view.each([](
         auto& profile, auto const& kerf
     ){
+        PLOG_DEBUG << "Adjusting panel profile kerf";
         profile.length.value += kerf.value;
         profile.width.value += kerf.value;
     });
@@ -265,6 +121,7 @@ void ConfigurePanels::updateStartReferencePoints() {
     length_view.each([](
         auto& start, auto const& orientation, auto const& end, auto const& extrusion_distance
     ){
+        PLOG_DEBUG << "Updating start reference points for length orientation";
         auto length = end.length.value - extrusion_distance.value;
 
         start.length.value = length;
@@ -276,6 +133,7 @@ void ConfigurePanels::updateStartReferencePoints() {
     width_view.each([](
         auto& start, auto const& orientation, auto const& end, auto const& extrusion_distance
     ){
+        PLOG_DEBUG << "Updating start reference points for width orientation";
         auto width = end.width.value - extrusion_distance.value;
         start.width.value = width;
         start.length = end.length;
@@ -286,6 +144,8 @@ void ConfigurePanels::updateStartReferencePoints() {
     height_view.each([](
         auto& start, auto const& orientation, auto const& end, auto const& extrusion_distance
     ){
+        PLOG_DEBUG << "Updating start reference points for height orientation";
+
         auto height = end.height.value - extrusion_distance.value;
         start.height.value = height;
         start.length = end.length;
@@ -294,15 +154,10 @@ void ConfigurePanels::updateStartReferencePoints() {
 }
 
 void ConfigurePanels::updatePanelOffsets() {
-    m_registry.view<PanelOffset>().each([](
-        auto& offset
-    ){
-        offset.value = 0;
-    });
-
     m_registry.view<PanelOffset, PanelOffsetInput>().each([](
         auto& offset, auto const& input
     ){
+        PLOG_DEBUG << "Updating panel offsets";
         offset.value = input.control->value();
     });
 
@@ -310,6 +165,7 @@ void ConfigurePanels::updatePanelOffsets() {
     length_view.each([](
         auto& offset, auto const& orientation, auto const& end, auto const& distance
     ){
+        PLOG_DEBUG << "Adjusting length orientation panel offsets.";
         offset.value += (end.length.value - distance.value);
     });
 
@@ -317,6 +173,7 @@ void ConfigurePanels::updatePanelOffsets() {
     width_view.each([](
         auto& offset, auto const& orientation, auto const& end, auto const& distance
     ){
+        PLOG_DEBUG << "Adjusting width orientation panel offsets.";
         offset.value += (end.width.value - distance.value);
     });
 
@@ -324,20 +181,15 @@ void ConfigurePanels::updatePanelOffsets() {
     height_view.each([](
         auto& offset, auto const& orientation, auto const& end, auto const& distance
     ){
+        PLOG_DEBUG << "Adjusting height orientation panel offsets.";
         offset.value += (end.height.value - distance.value);
-    });
-
-    auto joint_view = m_registry.view<JointPanelOffset, PanelOffset>();
-    joint_view.each([](
-        auto& joint, auto const& panel
-    ){
-        joint.value = panel.value;
     });
 
     auto kerf_view = m_registry.view<PanelOffset, OutsidePanel, Kerf>();
     kerf_view.each([](
         auto& offset, auto const& panel, auto const& kerf
     ){
+        PLOG_DEBUG << "Adjusting panel offset kerf.";
         if (offset.value == 0) return;
         offset.value += kerf.value;
     });
@@ -345,44 +197,49 @@ void ConfigurePanels::updatePanelOffsets() {
     m_registry.view<JointPanelOffset, OutsidePanel, Kerf>().each([](
         auto& offset, auto const& panel, auto const& kerf
     ){
+        PLOG_DEBUG << "Adjusting joint panel offset kerf.";
         if (offset.value == 0) return;
         offset.value += kerf.value;
     });
 }
 
 void ConfigurePanels::addPanelGroups() {
-    m_registry.view<PanelOrientation, PanelProfile, ExtrusionDistance, PanelPosition>().each([this](
-        auto entity, auto const& orientation, auto const& profile, auto const& distance, auto const& position
+    m_registry.view<Panel, PanelProfile, ExtrusionDistance, PanelPosition>().each([this](
+        auto entity, auto const& panel, auto const& profile, auto const& distance, auto const& position
     ){
-        this->m_registry.emplace_or_replace<PanelGroup>(
-            entity, orientation.axis, profile, distance, position.value
+        PLOG_DEBUG << "Creating panel group";
+        m_registry.emplace_or_replace<PanelGroup>(
+            entity, panel.orientation, profile, distance, position.value
         );
     });
 }
 
 void ConfigurePanels::addPanelExtrusions() {
-    m_registry.view<PanelName, PanelOffset, ExtrusionDistance>().each([this](
-        auto entity, auto const& name, auto const& offset, auto const& distance
+    m_registry.view<Panel, PanelOffset, ExtrusionDistance>().each([this](
+        auto entity, auto const& panel, auto const& offset, auto const& distance
     ){
-        this->m_registry.emplace_or_replace<PanelExtrusion>(
-            entity, distance, offset, name.value
+        PLOG_DEBUG << "Creating panel extrusions";
+        m_registry.emplace_or_replace<PanelExtrusion>(
+            entity, distance, offset, panel.name
         );
     });
 }
 
 void ConfigurePanels::addJointExtrusions()
 {
-    m_registry.view<PanelExtrusion>().each([&, this](
-        auto entity, auto const& extrusion
+    m_registry.view<JointThickness, JointPanelOffset, JointName>().each([this](
+        auto entity, auto const& distance, auto const& offset, auto const& name
     ){
-        this->m_registry.emplace_or_replace<JointExtrusion>(
-            entity, extrusion.distance, extrusion.offset, extrusion.name
+        PLOG_DEBUG << "Adding joint extrusion";
+        m_registry.emplace<JointExtrusion>(
+            entity, distance.value, offset.value, name.value
         );
     });
 
-    m_registry.view<JointExtrusion, InsidePanel, Kerf>().each([this](
+    m_registry.view<JointExtrusion, InsidePanel, Kerf>().each([](
         auto& extrusion, auto const& panel, auto const& kerf
     ){
+        PLOG_DEBUG << "Adjusting joint extrusion kerf";
         extrusion.distance.value -= kerf.value;
         extrusion.offset.value += kerf.value/2;
     });
