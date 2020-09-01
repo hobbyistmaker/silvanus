@@ -16,6 +16,7 @@
 #include "entities/Panel.hpp"
 
 #include "plog/Log.h"
+#include "FingerPattern.hpp"
 
 #include <map>
 #include <set>
@@ -36,25 +37,18 @@ void DirectRenderer::execute(DefaultModelingOrientations model_orientation, cons
 
     auto panel_groups = axisProfileGroup{};
 
-    auto      view = m_registry.view<Enabled, JointProfileGroup, JointEnabled, Panel, PanelGroup, JointGroup, PanelExtrusion, JointOrientation, JointName, JointExtrusion, JointDirection>();
-    for (auto entity : view) {
-        auto& panel               = view.get<Panel>(entity);
-        auto& joint_name          = view.get<JointName>(entity);
-        auto const& enabled       = view.get<Enabled>(entity);
-        auto const& joint_enabled = view.get<JointEnabled>(entity);
+    auto      test_view = m_registry.view<Enabled, JointProfileGroup, JointEnabled>().proxy();
+    for (auto &&[entity, enabled, joint_profile_group, joint_enabled]: test_view) {
+        PLOG_DEBUG << "Test view entry found.";
+    }
+
+    auto      view = m_registry.view<Enabled, JointProfileGroup, JointEnabled, Panel, PanelGroup, JointGroup, PanelExtrusion, JointOrientation, JointName, JointExtrusion, JointDirection>().proxy();
+    for (auto &&[entity, enabled, joint_profile_group, joint_enabled, panel, panel_group, joint_group, panel_extrusion, joint_orientation, joint_name, joint_extrusion, joint_direction]: view) {
 
         PLOG_DEBUG << panel.name << " enabled == " << (int) enabled.value;
         PLOG_DEBUG << panel.name << " joint to " << joint_name.value << " enabled == " << (int) joint_enabled.value;
 
         if (!enabled.value || !joint_enabled.value) continue;
-
-        auto& panel_group        = view.get<PanelGroup>(entity);
-        auto& panel_extrusion    = view.get<PanelExtrusion>(entity);
-        auto& joint_orientation  = view.get<JointOrientation>(entity);
-        auto& joint_group        = view.get<JointGroup>(entity);
-        auto& joint_profile_group= view.get<JointProfileGroup>(entity);
-        auto& joint_extrusion    = view.get<JointExtrusion>(entity);
-        auto& joint_direction    = view.get<JointDirection>(entity);
 
         PLOG_DEBUG << "Adding Panel " << panel.name << " with joint to " << joint_name.value << " for direct render";
         PLOG_DEBUG << "Joint direction is " << (int)joint_direction.value;
@@ -66,7 +60,7 @@ void DirectRenderer::execute(DefaultModelingOrientations model_orientation, cons
         group.names.insert(panel_extrusion.name);
         group.panels[panel_group.distance].insert(panel_extrusion);
 
-        if ((joint_group.profile.finger_type == FingerMode::None) || (joint_group.profile.joint_type == JointPatternType::None)) {
+        if ((joint_group.profile.finger_type == FingerPatternType::None) || (joint_group.profile.joint_type == JointPatternType::None)) {
                 continue;
         }
 
@@ -86,6 +80,18 @@ void DirectRenderer::execute(DefaultModelingOrientations model_orientation, cons
         PLOG_DEBUG << "Joint direction: " << (int)joint_group.profile.joint_direction;
     }
 
+    if (panel_groups.empty()) {
+        PLOG_DEBUG << "No panels found to render.";
+        return;
+    }
+
+    processPanelGroups(model_orientation, panel_groups);
+}
+
+void DirectRenderer::processPanelGroups(
+    const DefaultModelingOrientations &model_orientation,
+    const std::map<AxisFlag, std::map<PanelProfile, std::map<Position, std::map<std::set<size_t>, PanelRenderData>>, ComparePanelProfile>> &panel_groups
+) {
     for (auto&[axis, axis_data] : panel_groups) {
         for (auto&[profile, profile_data] : axis_data) {
             for (auto& [position, position_data]: profile_data) {

@@ -289,8 +289,12 @@ namespace silvanus::generatebox::entities
         adsk::core::Ptr<adsk::core::TextBoxCommandInput> control;
     };
     struct DialogJointIndex {
-        std::map<entt::entity, std::vector<entt::entity>> first_panels;
-        std::map<entt::entity, std::vector<entt::entity>> second_panels;
+        std::map<entt::entity, std::set<entt::entity>> first_panels;
+        std::map<entt::entity, std::set<entt::entity>> second_panels;
+    };
+
+    struct DialogPanelEnableValue {
+        bool value;
     };
 }
 

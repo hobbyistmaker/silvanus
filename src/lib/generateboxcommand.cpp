@@ -9,7 +9,7 @@
 
 #include "entities/Dimensions.hpp"
 #include "entities/EndReferencePoint.hpp"
-#include "entities/FingerPatternType.hpp"
+#include "entities/FingerPattern.hpp"
 #include "entities/FingerWidth.hpp"
 #include "entities/FingerWidthInput.hpp"
 #include "entities/InsidePanel.hpp"
@@ -83,8 +83,8 @@ void GenerateBoxCommand::onCreate(const adsk::core::Ptr<CommandCreatedEventArgs>
     auto product = adsk::core::Ptr<Product>{m_app->activeProduct()};
     auto design = adsk::core::Ptr<Design>{product};
 
-    command->setDialogMinimumSize(705, 620);
-    command->setDialogInitialSize(705, 620);
+//    command->setDialogMinimumSize(200, 200);
+//    command->setDialogInitialSize(200, 200);
     command->isRepeatable(false);
     command->okButtonText("Create");
 

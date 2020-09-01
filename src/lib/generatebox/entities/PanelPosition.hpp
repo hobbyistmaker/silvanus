@@ -13,5 +13,10 @@ namespace silvanus::generatebox::entities {
             Position value;
     };
 
+    struct PanelPositions {
+        Position first;
+        Position second;
+    };
+
 }
 #endif //SILVANUSPRO_PANELPOSITION_HPP

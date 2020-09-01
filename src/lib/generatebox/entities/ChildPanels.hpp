@@ -10,7 +10,7 @@
 
 namespace silvanus::generatebox::entities {
     struct ChildPanels {
-        std::vector<entt::entity> panels;
+        std::set<entt::entity> panels;
     };
 }
 #endif //SILVANUSPRO_CHILDPANELS_HPP

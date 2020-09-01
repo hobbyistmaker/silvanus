@@ -22,7 +22,7 @@
 #include "lib/generatebox/dialog/entities/InputConfig.hpp"
 #include "entities/AxisFlag.hpp"
 #include "entities/DialogInputs.hpp"
-#include "entities/FingerMode.hpp"
+#include "entities/FingerPattern.hpp"
 #include "entities/JointPatternTags.hpp"
 #include "entities/JointDirection.hpp"
 #include "entities/JointPattern.hpp"
@@ -30,6 +30,9 @@
 #include "entities/Panel.hpp"
 #include "entities/Panels.hpp"
 #include "entities/Position.hpp"
+#include "createpaneloverriderow.hpp"
+
+#include "systems/DialogSystemManager.hpp"
 
 namespace silvanus::generatebox::dialog {
 
@@ -116,15 +119,15 @@ namespace silvanus::generatebox::dialog {
         adsk::core::Ptr<adsk::core::FloatSpinnerCommandInput> use_default;
     };
 
-    template <class T, entities::AxisFlag A>
-    void addPanelOrientation(entt::registry& registry) {
-        registry.view<entities::DialogPanel>().each([&](
-            auto entity, auto const& panel
-        ){
-            if (panel.orientation != A) return;
-            registry.emplace<T>(entity);
-        });
-    }
+//    template <class T, entities::AxisFlag A>
+//    void addPanelOrientation(entt::registry& registry) {
+//        registry.view<entities::DialogPanel>().each([&](
+//            auto entity, auto const& panel
+//        ){
+//            if (panel.orientation != A) return;
+//            registry.emplace<T>(entity);
+//        });
+//    }
 
     class CreateDialog {
 
@@ -175,6 +178,7 @@ namespace silvanus::generatebox::dialog {
             std::vector<std::function<bool()> >                                                           m_validators;
             std::vector<std::string>                                                                      m_ignore_updates;
             std::vector<bool>                                                                             m_results;
+            std::unique_ptr<DialogSystemManager>                                                          m_systems;
 
             entt::registry m_configuration = entt::registry{};
             entt::registry &m_panel_registry;
@@ -575,7 +579,7 @@ namespace silvanus::generatebox::dialog {
                 const adsk::core::Ptr<adsk::core::CommandInputs> &inputs,
                 adsk::core::Ptr<adsk::core::TableCommandInput> &table,
                 const DimensionTableRow &row
-            ) -> entt::entity;
+            ) -> CreatePanelOverrideRow;
 
             void addTableTitles(adsk::core::Ptr<adsk::core::TableCommandInput>& table) const;
             auto createDimensionGroup(
@@ -586,7 +590,7 @@ namespace silvanus::generatebox::dialog {
             ) -> adsk::core::Ptr<adsk::core::FloatSpinnerCommandInput>;
             void createDividerInputs(const adsk::core::Ptr<adsk::core::CommandInputs>& inputs);
             void createFingerModeSelectionDropDown(const adsk::core::Ptr<adsk::core::CommandInputs>& inputs);
-            static auto createJointTable(
+            static auto createStandardJointTable(
                 const adsk::core::Ptr<adsk::core::CommandInputs>& inputs
             ) -> adsk::core::Ptr<adsk::core::TableCommandInput>;
             void createOffsetInputs(const adsk::core::Ptr<adsk::core::CommandInputs>& inputs);
@@ -596,7 +600,10 @@ namespace silvanus::generatebox::dialog {
             void createPreviewTable(const adsk::core::Ptr<adsk::core::CommandInputs>& inputs);
             void createModelSelectionDropDown(const adsk::core::Ptr<adsk::core::CommandInputs>& inputs);
 
-            static auto detectPanelCollision(const entities::DialogPanelJoint &first, const entities::DialogPanelJoint &second) -> entities::DialogPanelCollisionPair;
+//            static auto detectPanelCollision(
+//                const entities::DialogPanelJoint &first,
+//                const entities::DialogPanelJoint &second
+//            ) -> entities::DialogPanelCollisionPair;
 
             [[nodiscard]] adsk::core::Ptr<adsk::core::TableCommandInput> initializePanelTable(const adsk::core::Ptr<adsk::core::CommandInputs> &inputs) const;
 
@@ -633,7 +640,9 @@ namespace silvanus::generatebox::dialog {
             void createPanelDimensions();
             void createPanelJoints();
 
+            template <class F1, class F2, class T>
             void findJoints();
+            template <class F2, class T>
             void findSecondaryPanels(
                     entities::DialogPanelJoint first
             );
@@ -653,6 +662,7 @@ namespace silvanus::generatebox::dialog {
 
         public:
             explicit CreateDialog(entt::registry &registry) : m_panel_registry(registry) {
+                m_systems = std::make_unique<DialogSystemManager>(m_configuration);
                 m_configuration.set<entities::DialogErrorMessage>("");
             };
 

@@ -31,6 +31,7 @@
 #include <string>
 
 #include "plog/Log.h"
+#include "FingerPattern.hpp"
 
 using namespace adsk::core;
 using namespace adsk::fusion;
@@ -67,25 +68,12 @@ void ParametricRenderer::execute(DefaultModelingOrientations model_orientation, 
 
     auto panel_groups = axisProfileGroup{};
 
-    auto const outside_view = m_registry.view<Enabled, JointProfileGroup, JointEnabled, Panel, PanelGroup, JointGroup, PanelExtrusion, JointOrientation, JointName, JointExtrusion, JointDirection>();
-    for (auto const entity : outside_view) {
-        auto& panel               = outside_view.get<Panel>(entity);
-        auto& joint_name          = outside_view.get<JointName>(entity);
-        auto const& enabled       = outside_view.get<Enabled>(entity);
-        auto const& joint_enabled = outside_view.get<JointEnabled>(entity);
-
+    auto      view = m_registry.view<Enabled, JointProfileGroup, JointEnabled, Panel, PanelGroup, JointGroup, PanelExtrusion, JointOrientation, JointName, JointExtrusion, JointDirection>().proxy();
+    for (auto &&[entity, enabled, joint_profile_group, joint_enabled, panel, panel_group, joint_group, panel_extrusion, joint_orientation, joint_name, joint_extrusion, joint_direction]: view) {
         PLOG_DEBUG << panel.name << " enabled == " << (int) enabled.value;
         PLOG_DEBUG << panel.name << " joint to " << joint_name.value << " enabled == " << (int) joint_enabled.value;
 
         if (!enabled.value || !joint_enabled.value) continue;
-
-        auto& panel_group        = outside_view.get<PanelGroup>(entity);
-        auto& panel_extrusion    = outside_view.get<PanelExtrusion>(entity);
-        auto& joint_orientation  = outside_view.get<JointOrientation>(entity);
-        auto& joint_group        = outside_view.get<JointGroup>(entity);
-        auto& joint_extrusion    = outside_view.get<JointExtrusion>(entity);
-        auto& joint_direction    = outside_view.get<JointDirection>(entity);
-        auto& joint_profile_group= outside_view.get<JointProfileGroup>(entity);
 
         PLOG_DEBUG << "Adding Panel " << panel.name << " with joint to " << joint_name.value << " for direct render";
         PLOG_DEBUG << "Joint direction is " << (int)joint_direction.value;
@@ -97,13 +85,17 @@ void ParametricRenderer::execute(DefaultModelingOrientations model_orientation, 
         group.names.insert(panel_extrusion.name);
         group.panels[panel_group.distance].insert(panel_extrusion);
 
-        if ((joint_group.profile.finger_type == FingerMode::None) || (joint_group.profile.joint_type == JointPatternType::None)) {
+        if ((joint_group.profile.finger_type == FingerPatternType::None) || (joint_group.profile.joint_type == JointPatternType::None)) {
             continue;
         }
 
         auto& joined_panel_group = group.joints[joint_group.profile.joint_type][joint_group.profile.joint_direction][joint_orientation.axis][joint_group.profile];
         joined_panel_group.names.insert(joint_name.value);
         joined_panel_group.extrusions.insert(joint_extrusion);
+    }
+
+    if (panel_groups.empty()) {
+        return;
     }
 
     for (auto& [axis, axis_data] : panel_groups) {

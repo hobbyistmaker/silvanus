@@ -13,5 +13,10 @@ namespace silvanus::generatebox::entities {
     struct JointPosition {
         Position value;
     };
+
+    struct JointPositions {
+        Position first;
+        Position second;
+    };
 }
 #endif //SILVANUSPRO_JOINTPOSITION_HPP

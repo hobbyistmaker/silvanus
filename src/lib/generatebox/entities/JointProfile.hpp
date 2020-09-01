@@ -6,7 +6,7 @@
 #define SILVANUSPRO_JOINTPROFILE_HPP
 
 #include "entities/AxisFlag.hpp"
-#include "entities/FingerMode.hpp"
+#include "entities/FingerPattern.hpp"
 #include "entities/JointDirection.hpp"
 #include "entities/JointPattern.hpp"
 #include "entities/PanelType.hpp"
@@ -19,9 +19,9 @@ namespace silvanus::generatebox::entities {
         Position           panel_position    = Position::Outside;
         Position           joint_position    = Position::Outside;
         JointDirectionType joint_direction   = JointDirectionType::Normal;
-        JointPatternType   joint_type        = JointPatternType::BoxJoint;
-        FingerMode         finger_type       = FingerMode::Automatic;
-        int                finger_count      = 0;
+        JointPatternType  joint_type   = JointPatternType::BoxJoint;
+        FingerPatternType finger_type  = FingerPatternType::Automatic;
+        int               finger_count = 0;
         double             finger_width      = 0;
         double             pattern_distance  = 0;
         double             pattern_offset    = 0;
@@ -88,7 +88,7 @@ namespace std {
                 using std::hash;
                 using std::string;
                 using silvanus::generatebox::entities::AxisFlag;
-                using silvanus::generatebox::entities::FingerMode;
+                using silvanus::generatebox::entities::FingerPatternType;
                 using silvanus::generatebox::entities::Position;
                 using silvanus::generatebox::entities::JointDirectionType;
                 using silvanus::generatebox::entities::JointPatternType;

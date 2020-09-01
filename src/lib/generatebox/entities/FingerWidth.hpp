@@ -7,7 +7,7 @@
 
 namespace silvanus::generatebox::entities {
     struct FingerWidth {
-        double value = 0 ;
+        double value = 0.0;
     };
 }
 

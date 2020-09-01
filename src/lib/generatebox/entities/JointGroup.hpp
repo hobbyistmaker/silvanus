@@ -6,7 +6,7 @@
 #define SILVANUSPRO_JOINTGROUP_HPP
 
 #include "AxisFlag.hpp"
-#include "FingerMode.hpp"
+#include "FingerPattern.hpp"
 #include "JointProfile.hpp"
 #include "JointThickness.hpp"
 #include "JointPattern.hpp"

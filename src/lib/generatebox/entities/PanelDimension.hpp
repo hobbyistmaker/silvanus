@@ -3,12 +3,18 @@
 // Copyright (c) 2020 Hobbyist Maker. All rights reserved.
 //
 
-#ifndef SILVANUSPRO_PANELDIMENSIONINPUTS_HPP
-#define SILVANUSPRO_PANELDIMENSIONINPUTS_HPP
+#ifndef SILVANUSPRO_PANELDIMENSION_HPP
+#define SILVANUSPRO_PANELDIMENSION_HPP
 
 #include <Core/CoreAll.h>
 
 namespace silvanus::generatebox::entities {
+
+    struct PanelDimensions {
+        double length;
+        double width;
+        double height;
+    };
 
     struct PanelDimensionInputs {
         adsk::core::Ptr<adsk::core::FloatSpinnerCommandInput> length;
@@ -18,4 +24,4 @@ namespace silvanus::generatebox::entities {
 
 }
 
-#endif //SILVANUSPRO_PANELDIMENSIONINPUTS_HPP
+#endif //SILVANUSPRO_PANELDIMENSION_HPP

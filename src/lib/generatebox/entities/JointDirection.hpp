@@ -18,8 +18,8 @@ namespace silvanus::generatebox::entities {
     };
 
     struct JointDirections {
-        JointDirection first;
-        JointDirection second;
+        JointDirectionType first;
+        JointDirectionType second;
     };
 
     struct JointDirectionInput {
