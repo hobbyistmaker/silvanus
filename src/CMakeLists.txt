@@ -48,6 +48,7 @@ endif()
 
 file(GLOB_RECURSE SOURCE_FILES
         LIST_DIRECTORIES true
+        CONFIGURE_DEPENDS
         lib/*.cpp
         lib/*.hpp
         lib/*.h

@@ -11,8 +11,10 @@
 #include <Core/CoreAll.h>
 #include <Fusion/FusionAll.h>
 
-#include "Dimensions.hpp"
 #include "entities/AxisFlag.hpp"
+#include "entities/Dimensions.hpp"
+#include "entities/ExtrusionDistance.hpp"
+#include "entities/PanelOffset.hpp"
 
 #include <functional>
 #include <map>

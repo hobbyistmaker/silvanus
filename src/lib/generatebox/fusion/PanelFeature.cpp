@@ -8,7 +8,7 @@
 #include "PanelFeature.hpp"
 
 #include "FusionSupport.hpp"
-#include "Dimensions.hpp"
+#include "entities/Dimensions.hpp"
 
 using namespace adsk::core;
 using namespace adsk::fusion;

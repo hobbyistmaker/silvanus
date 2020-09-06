@@ -16,7 +16,9 @@
 #include <Fusion/FusionAll.h>
 
 #include "entities/Dimensions.hpp"
+#include "entities/ExtrusionDistance.hpp"
 #include "entities/JointThickness.hpp"
+#include "entities/PanelOffset.hpp"
 
 using sketchPointTuple = std::tuple<adsk::core::Ptr<adsk::fusion::SketchPoint>, adsk::core::Ptr<adsk::fusion::SketchPoint>>;
 

@@ -5,6 +5,7 @@
 
 #include "entities/DialogInputs.hpp"
 #include "entities/JointDirection.hpp"
+#include "entities/StandardJoint.hpp"
 
 #include "DialogSystemManager.hpp"
 
@@ -14,8 +15,8 @@ using namespace silvanus::generatebox::entities;
 using namespace silvanus::generatebox::dialog;
 
 void updateJointDirectionImpl(entt::registry& registry) {
-    auto direction_view = registry.view<JointDirections, DialogJointDirectionInputs>().proxy();
-    for (auto &&[entity, directions, input]: direction_view) {
+    auto direction_view = registry.view<JointDirections, const DialogJointDirectionInputs, const StandardJoint>().proxy();
+    for (auto &&[entity, directions, input, standard]: direction_view) {
         auto result = (bool)input.first.control->selectedItem()->index();
         directions.first = static_cast<JointDirectionType>(result);
         directions.second = static_cast<JointDirectionType>(!result);

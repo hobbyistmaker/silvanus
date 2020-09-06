@@ -9,7 +9,6 @@
 #include <plog/Log.h>
 
 #include "DialogSystemManager.hpp"
-#include "FingerPattern.hpp"
 
 using namespace silvanus::generatebox::entities;
 using namespace silvanus::generatebox::dialog;

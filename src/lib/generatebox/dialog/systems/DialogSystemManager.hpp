@@ -19,6 +19,7 @@ using silvanus::generatebox::entities::DialogPanelJoint;
 
 void initializePanelDimensionInputsImpl(entt::registry& registry);
 void initializePanelOrientationsImpl(entt::registry& registry);
+void initializePanelsFromUserOptionsImpl(entt::registry& configuration, entt::registry& registry);
 
 void projectHeightPlanesImpl(entt::registry& registry);
 void projectLengthPlanesImpl(entt::registry& registry);
@@ -34,17 +35,24 @@ template <class T>
 void updateJointDirectionImpl(entt::registry& registry, Position panel_position, Position joint_position, JointDirectionType joint_direction) {
     auto view = registry.view<JointDirections, const PanelPositions, const JointPositions, const T>();
     PLOG_DEBUG << "Joint direction view size is " << view.size();
-    for (auto &&[entity, joint_directions, panels, joints, filter]: view.proxy()) {
-        auto directions = JointDirections{joint_directions};
+    for (auto &&[entity, directions, panels, joints, filter]: view.proxy()) {
+        PLOG_DEBUG << "Matching panel position " << (int)panel_position << " to == " << (int)panels.first << ":" << (int)panels.second;
+        PLOG_DEBUG << "Matching joint position " << (int)joint_position << " to == " << (int)joints.first << ":" << (int)joints.second;
 
-        PLOG_DEBUG << "Updating divider joint direction";
+        if (panels.first != panel_position || panels.second != joint_position) continue;
+
+        PLOG_DEBUG << "Updating divider joint direction for entity " << (int)entity << " with direction " << (int)joint_direction;
+
+        PLOG_DEBUG << "Starting directions == " << (int)directions.first << ":" << (int)directions.second;
+
         directions.first = (panels.first == panel_position && joints.first == joint_position) ? joint_direction : directions.first;
         directions.second = (panels.second == joint_position && joints.second == panel_position) ? static_cast<JointDirectionType>(!(bool)joint_direction) : directions.second;
+
+        PLOG_DEBUG << "Ending directions == " << (int)directions.first << ":" << (int)directions.second;
     }
 };
 
 void updateJointPatternImpl(entt::registry& registry);
-void updateJointPatternInputsImpl(entt::registry& registry);
 void updateJointPlanesImpl(entt::registry& registry);
 void updatePanelDimensionsImpl(entt::registry& registry);
 
@@ -63,7 +71,11 @@ namespace silvanus::generatebox::dialog {
             }
 
             template <class F1, class F2, class T>
-            void findJoints() { findJointsImpl<F1, F2, T>(m_registry); }
+            void findJoints(bool reverse=false) { findJointsImpl<F1, F2, T>(m_registry, reverse); }
+
+            void initializePanels(entt::registry& registry) {
+                initializePanelsFromUserOptionsImpl(m_registry, registry);
+            }
 
             void updateCollisions() {
                 updatePanelDimensionsImpl(m_registry);
@@ -73,7 +85,7 @@ namespace silvanus::generatebox::dialog {
             }
 
             template <class T, class P>
-            void updateJointPatternInputs() { updateJointPatternInputsImpl<T, P>(m_registry); }
+            void updateJointPatternInputs(AxisFlag orientation) { updateJointPatternInputsImpl<T, P>(m_registry, orientation); }
 
             template <class T>
             void updateJointDirection(Position panel, Position joint, JointDirectionType direction) {
@@ -81,7 +93,7 @@ namespace silvanus::generatebox::dialog {
             }
 
             template <class T, class P>
-            void updateJointDirectionInputs() { updateJointDirectionInputsImpl<T, P>(m_registry); }
+            void updateInsideJointDirectionInputs(bool reverse = false) { updateInsideJointDirectionInputsImpl<T, P>(m_registry, reverse); }
 
             void postUpdate() {
                 updateJointPlanesImpl(m_registry);

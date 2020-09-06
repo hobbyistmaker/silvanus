@@ -7,8 +7,8 @@
 
 #include "PanelProfileSketch.hpp"
 #include "FusionSupport.hpp"
-#include "Dimensions.hpp"
-#include "PanelProfile.hpp"
+#include "entities/Dimensions.hpp"
+#include "entities/PanelProfile.hpp"
 
 #include <utility>
 

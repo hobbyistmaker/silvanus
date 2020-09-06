@@ -17,14 +17,16 @@
 using namespace silvanus::generatebox::entities;
 
 template <class T, class P>
-void updateJointDirectionInputsImpl(entt::registry& registry) {
-    auto view = registry.view<T, PanelPosition, JointPosition>();
-    for (auto &&[entity, dest, panel, joint]: view.proxy()) {
-        if (!(panel.value == Position::Inside && joint.value == Position::Inside)) continue;
+void updateInsideJointDirectionInputsImpl(entt::registry& registry, bool reverse = false) {
+    PLOG_DEBUG << "starting updateInsideJointDirectionInputsImpl";
+    auto view = registry.view<T, Panel, PanelPositions>();
+    for (auto &&[entity, dest, panel, positions]: view.proxy()) {
+        PLOG_DEBUG << panel.name << " positions are: " << (int)positions.first << ":" << (int)positions.second;
+        if (positions.first == Position::Outside || positions.second == Position::Outside) continue;
 
         auto control = registry.ctx<P>().control;
         PLOG_DEBUG << "Adding Joint Direction Input to entity " << (int)entity << " with value: " << control->selectedItem()->index();
-        registry.emplace<DialogJointDirectionInputs>(entity, control);
+        registry.emplace<DialogJointDirectionInputs>(entity, DialogJointDirectionInput{control, reverse}, DialogJointDirectionInput{control, !reverse});
     }
 }
 

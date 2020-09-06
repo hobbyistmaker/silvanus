@@ -19,7 +19,7 @@
 #include <Core/CoreAll.h>
 #include <Fusion/FusionAll.h>
 
-#include "lib/generatebox/dialog/entities/InputConfig.hpp"
+#include "dialog/entities/InputConfig.hpp"
 #include "entities/AxisFlag.hpp"
 #include "entities/DialogInputs.hpp"
 #include "entities/FingerPattern.hpp"
@@ -88,9 +88,6 @@ namespace silvanus::generatebox::dialog {
 
     using jointTypes = std::vector<std::tuple<entities::JointPatternType, std::vector<entities::AxisFlag>>>;
     using jointPositions = std::map<entities::Position, jointTypes>;
-    using axisList = std::vector<entities::AxisFlag>;
-    using referenceMap = std::unordered_map<adsk::core::DefaultModelingOrientations, PanelReferencePointIds>;
-    using axisJointTypePositionMap = std::map<entities::AxisFlag, std::map<entities::JointPatternType, std::vector<entities::Position>>>;
 
     struct DimensionTableRow {
         const entities::Panels       id;
@@ -100,8 +97,6 @@ namespace silvanus::generatebox::dialog {
         const OverrideInputConfig    override;
         const PanelThicknessConfig   thickness;
         const entities::AxisFlag     orientation;
-        const referenceMap           reference;
-        jointPositions               fingers;
     };
 
     struct DimensionTable {
@@ -111,23 +106,6 @@ namespace silvanus::generatebox::dialog {
         const std::vector<DimensionTableTitle> titles;
         const std::vector<DimensionTableRow>   dimensions;
     };
-
-    struct EnableThicknessControl {
-        adsk::core::Ptr<adsk::core::BoolValueCommandInput>    is_enabled;
-        adsk::core::Ptr<adsk::core::BoolValueCommandInput>    is_overridden;
-        adsk::core::Ptr<adsk::core::FloatSpinnerCommandInput> use_override;
-        adsk::core::Ptr<adsk::core::FloatSpinnerCommandInput> use_default;
-    };
-
-//    template <class T, entities::AxisFlag A>
-//    void addPanelOrientation(entt::registry& registry) {
-//        registry.view<entities::DialogPanel>().each([&](
-//            auto entity, auto const& panel
-//        ){
-//            if (panel.orientation != A) return;
-//            registry.emplace<T>(entity);
-//        });
-//    }
 
     class CreateDialog {
 
@@ -183,81 +161,6 @@ namespace silvanus::generatebox::dialog {
             entt::registry m_configuration = entt::registry{};
             entt::registry &m_panel_registry;
 
-            std::unordered_map<entities::AxisFlag, std::function<void(entt::entity)>> panel_orientation_selector = {
-                { entities::AxisFlag::Length, [this](auto entity){
-                    this->m_panel_registry.emplace<entities::LengthOrientation>(entity);
-                }},
-                { entities::AxisFlag::Width, [this](auto entity) {
-                    this->m_panel_registry.emplace<entities::WidthOrientation>(entity);
-                }},
-                { entities::AxisFlag::Height, [this](auto entity) {
-                    this->m_panel_registry.emplace<entities::HeightOrientation>(entity);
-                }}
-            };
-
-//            std::unordered_map<entities::AxisFlag, std::function<void(entt::entity)>> finger_orientation_selector = {
-//                {
-//                    entities::AxisFlag::Length, [this](auto entity) {
-//                    this->m_panel_registry.emplace<entities::JointLengthOrientation>(entity);
-//                }},
-//                {
-//                    entities::AxisFlag::Width,  [this](auto entity) {
-//                    this->m_panel_registry.emplace<entities::JointWidthOrientation>(entity);
-//                }},
-//                {
-//                    entities::AxisFlag::Height, [this](auto entity) {
-//                    this->m_panel_registry.emplace<entities::JointHeightOrientation>(entity);
-//                }}
-//            };
-
-//            std::unordered_map<entities::JointPatternType, std::function<void(entities::Position, entt::entity)>> joint_type_selector = {
-//                {
-//                    entities::JointPatternType::Normal,
-//                    [this](entities::Position joint_pos, entt::entity entity) {
-//                        this->m_panel_registry.emplace<entities::BoxJointPattern>(entity, joint_pos);
-//                    }
-//                },
-//                {
-//                    entities::JointPatternType::Inverse,
-//                    [this](entities::Position joint_pos, entt::entity entity) {
-//                        this->m_panel_registry.emplace<entities::InverseJointPattern>(entity, joint_pos);
-//                    }
-//                },
-//                {
-//                    entities::JointPatternType::Corner,
-//                    [this](entities::Position joint_pos, entt::entity entity) {
-//                        this->m_panel_registry.emplace<entities::CornerJointPattern>(entity, joint_pos);
-//                    }
-//                },
-//                {
-//                    entities::JointPatternType::BottomLap,
-//                        [this](entities::Position joint_pos, entt::entity entity) {
-//                            this->m_panel_registry.emplace<entities::LapJointPattern>(entity, joint_pos);
-//                        }
-//                },
-//                {
-//                    entities::JointPatternType::TopLap,
-//                        [this](entities::Position joint_pos, entt::entity entity) {
-//                            this->m_panel_registry.emplace<entities::TopLapJointPattern>(entity, joint_pos);
-//                        }
-//                }
-//            };
-//
-//            std::unordered_map<entities::Position, std::function<void(entities::JointPatternType, entt::entity)>> joint_pos_selector = {
-//                {
-//                    entities::Position::Inside,
-//                    [this](entities::JointPatternType joint_type, entt::entity entity) {
-//                        this->m_panel_registry.emplace<entities::InsideJointPattern>(entity, joint_type);
-//                    }
-//                },
-//                {
-//                    entities::Position::Outside,
-//                    [this](entities::JointPatternType joint_type, entt::entity entity) {
-//                        this->m_panel_registry.emplace<entities::OutsideJointPattern>(entity, joint_type);
-//                    }
-//                }
-//            };
-
             using dimensionConfig = std::unordered_map<bool, InputConfig>;
             dimensionConfig length_defaults = {
                 {true, length_metric_defaults},
@@ -302,35 +205,7 @@ namespace silvanus::generatebox::dialog {
                         {false, {"in", 0.005, 48, 0.0625, .125}}
                     }
                 },
-                entities::AxisFlag::Height,
-                {{
-                     adsk::core::YUpModelingOrientation, {
-                        entities::DialogInputs::Length,
-                        entities::DialogInputs::Width,
-                        entities::DialogInputs::Height,
-                        entities::DialogInputs::TopThickness,
-                        entities::DialogInputs::Height
-                    }},{
-                     adsk::core::ZUpModelingOrientation, {
-                        entities::DialogInputs::Length,
-                        entities::DialogInputs::Width,
-                        entities::DialogInputs::Height,
-                        entities::DialogInputs::TopThickness,
-                        entities::DialogInputs::Height
-                    },
-                 }},
-                {
-                    {entities::Position::Outside, {
-                        {
-//                            std::make_tuple(entities::JointPatternType::Normal, axisList{entities::AxisFlag::Length, entities::AxisFlag::Width})
-                        }
-                    }},
-                    {entities::Position::Inside, {
-                        {
-//                            std::make_tuple(entities::JointPatternType::Normal, axisList{entities::AxisFlag::Length, entities::AxisFlag::Width})
-                        }
-                    }}
-                }
+                entities::AxisFlag::Height
             };
 
             DimensionTableRow m_bottom_row =                 {
@@ -346,40 +221,12 @@ namespace silvanus::generatebox::dialog {
                         {false, {"in", 0.005, 48, 0.0625, .125}}
                     }
                 },
-                entities::AxisFlag::Height,
-                {{
-                     adsk::core::YUpModelingOrientation, {
-                        entities::DialogInputs::Length,
-                        entities::DialogInputs::Width,
-                        entities::DialogInputs::BottomThickness,
-                        entities::DialogInputs::BottomThickness,
-                        entities::DialogInputs::Height
-                    }},{
-                     adsk::core::ZUpModelingOrientation, {
-                        entities::DialogInputs::Length,
-                        entities::DialogInputs::Width,
-                        entities::DialogInputs::BottomThickness,
-                        entities::DialogInputs::BottomThickness,
-                        entities::DialogInputs::Height
-                    },
-                 }},
-                {
-                    {entities::Position::Outside, {
-                        {
-//                            std::make_tuple(entities::JointPatternType::Normal, axisList{entities::AxisFlag::Length, entities::AxisFlag::Width})
-                        }
-                    }},
-                    {entities::Position::Inside, {
-                        {
-//                            std::make_tuple(entities::JointPatternType::Normal, axisList{entities::AxisFlag::Length, entities::AxisFlag::Width})
-                        }
-                    }}
-                }
+                entities::AxisFlag::Height
             };
 
             DimensionTableRow m_left_row =                 {
                 entities::Panels::Left,
-                1,
+                2,
                 {"leftPanelLabel", "Left"},
                 {entities::DialogInputs::LeftEnable, "leftEnableInput", "Left", true},
                 {entities::DialogInputs::LeftOverride, "leftOverrideInput", "Left"},
@@ -388,41 +235,12 @@ namespace silvanus::generatebox::dialog {
                     std::unordered_map<bool, InputDefaults>{{true,  {"mm", 0.01, 2540, .1, 3.2}},
                                                             {false, {"in", 0.005, 48, 0.0625, .125}}}
                 },
-                entities::AxisFlag::Length,
-                {{
-                     adsk::core::YUpModelingOrientation, {
-                        entities::DialogInputs::LeftThickness,
-                        entities::DialogInputs::Width,
-                        entities::DialogInputs::Height,
-                        entities::DialogInputs::LeftThickness,
-                        entities::DialogInputs::Length
-                    }},{
-                     adsk::core::ZUpModelingOrientation, {
-                        entities::DialogInputs::LeftThickness,
-                        entities::DialogInputs::Width,
-                        entities::DialogInputs::Height,
-                        entities::DialogInputs::LeftThickness,
-                        entities::DialogInputs::Length
-                    },
-                 }},
-                {
-                    {entities::Position::Outside, {
-                        {
-//                            std::make_tuple(entities::JointPatternType::Inverse, axisList{entities::AxisFlag::Height, entities::AxisFlag::Width}),
-//                            std::make_tuple(entities::JointPatternType::Corner, axisList{entities::AxisFlag::Height, entities::AxisFlag::Width})
-                        }
-                    }},
-                    {entities::Position::Inside, {
-                        {
-//                            std::make_tuple(entities::JointPatternType::Normal, axisList{entities::AxisFlag::Height, entities::AxisFlag::Width})
-                        }
-                    }}
-                }
+                entities::AxisFlag::Length
             };
 
             DimensionTableRow m_right_row = {
                 entities::Panels::Right,
-                1,
+                2,
                 {"rightPanelLabel", "Right"},
                 {entities::DialogInputs::RightEnable, "rightEnableInput", "Right", true},
                 {entities::DialogInputs::RightOverride, "rightOverrideInput", "Right"},
@@ -431,41 +249,12 @@ namespace silvanus::generatebox::dialog {
                     std::unordered_map<bool, InputDefaults>{{true,  {"mm", 0.01, 2540, .1, 3.2}},
                                                             {false, {"in", 0.005, 48, 0.0625, .125}}}
                 },
-                entities::AxisFlag::Length,
-                {{
-                     adsk::core::YUpModelingOrientation, {
-                        entities::DialogInputs::Length,
-                        entities::DialogInputs::Width,
-                        entities::DialogInputs::Height,
-                        entities::DialogInputs::RightThickness,
-                        entities::DialogInputs::Length
-                    }},{
-                     adsk::core::ZUpModelingOrientation, {
-                        entities::DialogInputs::Length,
-                        entities::DialogInputs::Width,
-                        entities::DialogInputs::Height,
-                        entities::DialogInputs::RightThickness,
-                        entities::DialogInputs::Length
-                    },
-                 }},
-                {
-                    {entities::Position::Outside, {
-                        {
-//                            std::make_tuple(entities::JointPatternType::Inverse, axisList{entities::AxisFlag::Height, entities::AxisFlag::Width}),
-//                            std::make_tuple(entities::JointPatternType::Corner, axisList{entities::AxisFlag::Height, entities::AxisFlag::Width})
-                        }
-                    }},
-                    {entities::Position::Inside, {
-                        {
-//                            std::make_tuple(entities::JointPatternType::Normal, axisList{entities::AxisFlag::Height, entities::AxisFlag::Width})
-                        }
-                    }}
-                }
+                entities::AxisFlag::Length
             };
 
             DimensionTableRow m_front_row = {
                 entities::Panels::Front,
-                2,
+                1,
                 {"frontPanelLabel", "Front"},
                 {entities::DialogInputs::FrontEnable, "frontEnableInput", "Front", true},
                 {entities::DialogInputs::FrontOverride, "frontOverrideInput", "Front"},
@@ -474,42 +263,12 @@ namespace silvanus::generatebox::dialog {
                     std::unordered_map<bool, InputDefaults>{{true,  {"mm", 0.01, 2540, .1, 3.2}},
                                                             {false, {"in", 0.005, 48, 0.0625, .125}}}
                 },
-                entities::AxisFlag::Width,
-                {{
-                     adsk::core::YUpModelingOrientation, {
-                        entities::DialogInputs::Length,
-                        entities::DialogInputs::Width,
-                        entities::DialogInputs::Height,
-                        entities::DialogInputs::FrontThickness,
-                        entities::DialogInputs::Width
-                    }},{
-                     adsk::core::ZUpModelingOrientation, {
-                        entities::DialogInputs::Length,
-                        entities::DialogInputs::FrontThickness,
-                        entities::DialogInputs::Height,
-                        entities::DialogInputs::FrontThickness,
-                        entities::DialogInputs::Width
-                    },
-                 }},
-                {
-                    {entities::Position::Outside, {
-                        {
-//                            std::make_tuple(entities::JointPatternType::Normal, axisList{entities::AxisFlag::Length}),
-//                            std::make_tuple(entities::JointPatternType::Corner, axisList{entities::AxisFlag::Height}),
-//                            std::make_tuple(entities::JointPatternType::Inverse, axisList{entities::AxisFlag::Height})
-                        }
-                    }},
-                    {entities::Position::Inside, {
-                        {
-//                            std::make_tuple(entities::JointPatternType::Normal, axisList{entities::AxisFlag::Height, entities::AxisFlag::Length})
-                        }
-                    }}
-                }
+                entities::AxisFlag::Width
             };
 
             DimensionTableRow m_back_row = {
                 entities::Panels::Back,
-                2,
+                1,
                 {"backPanelLabel", "Back"},
                 {entities::DialogInputs::BackEnable, "backEnableInput", "Back", true},
                 {entities::DialogInputs::BackOverride, "backOverrideInput", "Back"},
@@ -518,37 +277,7 @@ namespace silvanus::generatebox::dialog {
                     std::unordered_map<bool, InputDefaults>{{true,  {"mm", 0.01, 2540, .1, 3.2}},
                                                             {false, {"in", 0.005, 48, 0.0625, .125}}}
                 },
-                entities::AxisFlag::Width,
-                {{
-                     adsk::core::YUpModelingOrientation, {
-                        entities::DialogInputs::Length,
-                        entities::DialogInputs::BackThickness,
-                        entities::DialogInputs::Height,
-                        entities::DialogInputs::BackThickness,
-                        entities::DialogInputs::Width
-                    }},{
-                     adsk::core::ZUpModelingOrientation, {
-                        entities::DialogInputs::Length,
-                        entities::DialogInputs::Width,
-                        entities::DialogInputs::Height,
-                        entities::DialogInputs::BackThickness,
-                        entities::DialogInputs::Width
-                    },
-                 }},
-                {
-                    {entities::Position::Outside, {
-                        {
-//                            std::make_tuple(entities::JointPatternType::Normal, axisList{entities::AxisFlag::Length}),
-//                            std::make_tuple(entities::JointPatternType::Corner, axisList{entities::AxisFlag::Height}),
-//                            std::make_tuple(entities::JointPatternType::Inverse, axisList{entities::AxisFlag::Height})
-                        }
-                    }},
-                    {entities::Position::Inside, {
-                        {
-//                            std::make_tuple(entities::JointPatternType::Normal, axisList{entities::AxisFlag::Height, entities::AxisFlag::Length})
-                        }
-                    }}
-                }
+                entities::AxisFlag::Width
             };
 
             DimensionTable m_dimensions_table = {
@@ -590,20 +319,14 @@ namespace silvanus::generatebox::dialog {
             ) -> adsk::core::Ptr<adsk::core::FloatSpinnerCommandInput>;
             void createDividerInputs(const adsk::core::Ptr<adsk::core::CommandInputs>& inputs);
             void createFingerModeSelectionDropDown(const adsk::core::Ptr<adsk::core::CommandInputs>& inputs);
-            static auto createStandardJointTable(
+            auto createStandardJointTable(
                 const adsk::core::Ptr<adsk::core::CommandInputs>& inputs
             ) -> adsk::core::Ptr<adsk::core::TableCommandInput>;
-            void createOffsetInputs(const adsk::core::Ptr<adsk::core::CommandInputs>& inputs);
             void createPanelTable(
                 const adsk::core::Ptr<adsk::core::CommandInputs>& inputs
             );
             void createPreviewTable(const adsk::core::Ptr<adsk::core::CommandInputs>& inputs);
             void createModelSelectionDropDown(const adsk::core::Ptr<adsk::core::CommandInputs>& inputs);
-
-//            static auto detectPanelCollision(
-//                const entities::DialogPanelJoint &first,
-//                const entities::DialogPanelJoint &second
-//            ) -> entities::DialogPanelCollisionPair;
 
             [[nodiscard]] adsk::core::Ptr<adsk::core::TableCommandInput> initializePanelTable(const adsk::core::Ptr<adsk::core::CommandInputs> &inputs) const;
 
@@ -617,46 +340,7 @@ namespace silvanus::generatebox::dialog {
                 const adsk::core::Ptr<adsk::core::CommandInputs> &inputs, const DimensionTableRow &row
             ) -> adsk::core::Ptr<adsk::core::BoolValueCommandInput>;
 
-            void updateJoints();
-            void updateJointPlanes();
-
-            // Pre-dialog ECS systems
-
-            template <class L, class W, class H>
-            void addPanelDimensions(entt::entity);
-
-            template <class T, class J>
-            auto addPanelJoint() -> entt::entity;
-
-            template <class M>
-            void addPanelJoints(entt::entity entity, entt::entity first, entt::entity second);
-
-            template <class M>
-            void addMaxOffset(entt::entity entity);
-            void addDimensionsInputsToPanels();
-            void addJointProfilesAndPatterns();
-            void addOrientationAndPositionToPanels();
-
-            void createPanelDimensions();
-            void createPanelJoints();
-
-            template <class F1, class F2, class T>
-            void findJoints();
-            template <class F2, class T>
-            void findSecondaryPanels(
-                    entities::DialogPanelJoint first
-            );
-
             void populateJointTable(adsk::core::Ptr<adsk::core::TableCommandInput>& table);
-            void projectPlanes();
-            void projectLengthPlane();
-            void projectWidthPlane();
-            void projectHeightPlane();
-
-            void separatePanelsByOrientation();
-            void separateJointsByOrientation();
-
-            void updatePanelOrientations();
 
             // Post-dialog ECS systems
 
@@ -677,7 +361,6 @@ namespace silvanus::generatebox::dialog {
             );
 
             void initializePanels();
-            void postUpdate();
 
             bool update(const adsk::core::Ptr<adsk::core::CommandInput> &cmd_input);
             bool validate(const adsk::core::Ptr<adsk::core::CommandInputs> &inputs);
@@ -685,7 +368,7 @@ namespace silvanus::generatebox::dialog {
             bool fast_preview() { return m_configuration.ctx<entities::DialogFastPreviewMode>().control->value(); };
             bool is_parametric() { return m_configuration.ctx<entities::DialogCreationMode>().control->selectedItem()->index() == 0; };
 
-            void addInputControl(entities::DialogInputs reference, const adsk::core::Ptr<adsk::core::CommandInput> &input);
+            void addInputControl(entities::DialogInputs reference, const adsk::core::Ptr<adsk::core::CommandInput>& input);
             void addInputControl(
                 entities::DialogInputs reference,
                 const adsk::core::Ptr<adsk::core::CommandInput>& input,
@@ -697,14 +380,14 @@ namespace silvanus::generatebox::dialog {
                 const std::function<void()>& handler
             );
             void addInputHandler(entities::DialogInputs reference, const std::function<void()>& handler);
-            void addInputHandler(adsk::core::Ptr<adsk::core::CommandInput>& input, const std::function<void()> &handler);
-            static axisJointTypePositionMap addInsideJoints(
-                entities::AxisFlag orientation,
-                entities::JointPatternType inside_joint_type,
-                int outside_joint_type
-            );
-
             void addCollisionHandler(entities::DialogInputs reference);
+            static void addJointTypes(adsk::core::Ptr<adsk::core::DropDownCommandInput> &type_dropdown) ;
+
+            void createDividerOrientationsInput(const adsk::core::Ptr<adsk::core::CommandInputs> &inputs);
+            void createDividerJointDirectionInput(const adsk::core::Ptr<adsk::core::CommandInputs> &inputs);
+            void createLengthDividerInputs(const adsk::core::Ptr<adsk::core::CommandInputs> &inputs);
+            void createWidthDividerInputs(const adsk::core::Ptr<adsk::core::CommandInputs> &inputs);
+            void createHeightDividerInputs(const adsk::core::Ptr<adsk::core::CommandInputs> &inputs);
     };
 
 }

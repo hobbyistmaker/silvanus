@@ -14,9 +14,9 @@
 #include <Fusion/FusionAll.h>
 
 #include "FusionSketch.hpp"
-#include "lib/generatebox/dialog/entities/DialogInputs.hpp"
-#include "Dimensions.hpp"
-#include "PanelProfile.hpp"
+#include "entities/DialogInputs.hpp"
+#include "entities/Dimensions.hpp"
+#include "entities/PanelProfile.hpp"
 
 namespace silvanus::generatebox::fusion {
 

@@ -42,7 +42,6 @@ auto detectPanelCollisionsImpl(const DialogPanelJoint &first, const DialogPanelJ
     auto const length_width_pos   = length_width_joint * (second_length.min_x - first_length.min_x);
     auto const length_width_jos   = length_width_joint * (second_length.min_y - first_length.min_y);
     auto const length_width_jd    = length_width_joint * (first_length.max_y - second_length.min_y);
-//    auto const length_width_outside = (collision_detected && length_width_joint) && (length_width_pos == 0 || (first_width.max_x >= second_width.min_x && first_width.min_x <= second_width.max_x));
     auto length_width_outside = (collision_detected && length_width_joint) && (first_width.max_x >= second_width.max_x || first_width.min_x <= second_width.min_x);
     PLOG_DEBUG << first.panel.name << " length_width plane is outside " << second.panel.name << " == " << length_width_outside;
 
@@ -58,7 +57,6 @@ auto detectPanelCollisionsImpl(const DialogPanelJoint &first, const DialogPanelJ
     auto const width_length_pos   = width_length_joint * (second_width.min_x - first_width.min_x);
     auto const width_length_jos   = width_length_joint * (second_width.min_y - first_width.min_y);
     auto const width_length_jd    = width_length_joint * (first_width.max_y - second_width.min_y);
-//    auto const width_length_outside = (collision_detected && width_length_joint) && (width_length_pos == 0 || (first_width.max_x >= second_width.min_x && first_width.min_x <= second_width.max_x));
     auto const width_length_outside = (collision_detected && width_length_joint) && (first_length.max_x >= second_length.max_x || first_length.min_x <= second_length.min_x);
     PLOG_DEBUG << first.panel.name << " width_length plane is outside " << second.panel.name << " == " << width_length_outside;
 
@@ -67,22 +65,21 @@ auto detectPanelCollisionsImpl(const DialogPanelJoint &first, const DialogPanelJ
     auto const width_height_jos   = width_height_joint * (second_width.min_x - first_width.min_x);
     auto const width_height_jd    = width_height_joint * (first_width.max_x - second_width.min_x);
 //    auto const width_height_outside = (collision_detected && width_height_joint) && (width_height_pos == 0 || (first_width.max_y >= second_width.min_y && first_width.min_y <= second_width.max_y));
-    auto const width_height_outside = (collision_detected && width_height_joint) && (first_height.max_x >= second_height.max_x || first_height.min_x <= second_height.min_x);
+    auto const width_height_outside = (collision_detected && width_height_joint) && (first_height.max_y >= second_height.max_y || first_height.min_y <= second_height.min_y);
     PLOG_DEBUG << first.panel.name << " width_height plane is outside " << second.panel.name << " == " << width_height_outside;
 
     const auto height_width_joint = first_orientation == AxisFlag::Height && orientation == AxisFlag::Width;
     auto const height_width_pos   = height_width_joint * (second_height.min_y - first_height.min_y);
     auto const height_width_jos   = height_width_joint * (second_height.min_x - first_height.min_x);
     auto const height_width_jd    = height_width_joint * (first_height.max_x - second_height.min_x);
-//    auto const height_width_outside = (collision_detected && height_width_joint) && (height_width_pos == 0 || (first_height.max_y >= second_height.min_y && first_height.min_y <= second_height.max_y));
-    auto const height_width_outside = (collision_detected && height_width_joint) && (first_width.max_x >= second_width.max_x || first_width.min_x <= second_width.min_x);
+    auto const height_width_outside = (collision_detected && height_width_joint) && (first_width.max_y >= second_width.max_y || first_width.min_y <= second_width.min_y);
     PLOG_DEBUG << first.panel.name << " height_width plane is outside " << second.panel.name << " == " << height_width_outside;
 
     const auto height_length_joint = first_orientation == AxisFlag::Height && orientation == AxisFlag::Length;
     auto const height_length_pos   = height_length_joint * (second_height.min_x - first_height.min_x);
     auto const height_length_jos   = height_length_joint * (second_height.min_y - first_height.min_y);
     auto const height_length_jd    = height_length_joint * (first_height.max_y - second_height.min_y);
-    auto const height_length_outside = (collision_detected && height_length_joint) && (first_length.max_x >= second_length.max_x || first_length.min_x <= second_length.min_x);
+    auto const height_length_outside = (collision_detected && height_length_joint) && (first_length.max_y >= second_length.max_y || first_length.min_y <= second_length.min_y);
     PLOG_DEBUG << first.panel.name << " height_length plane is outside " << second.panel.name << " == " << height_length_outside;
 
     auto panel_offset     = std::max({length_width_pos, length_height_pos, width_length_pos, width_height_pos, height_width_pos, height_length_pos});

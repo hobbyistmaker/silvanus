@@ -24,8 +24,9 @@ namespace silvanus::generatebox::entities
         TopEnable, BottomEnable, LeftEnable, RightEnable, FrontEnable, BackEnable,
         TopOverride, BottomOverride, LeftOverride, RightOverride, FrontOverride, BackOverride,
         Length, Width, Height, Kerf, FingerWidth, Thickness, FullPreview, FastPreview, ModelSelection,
-        FullPreviewLabel, FastPreviewLabel, LengthDividerCount, WidthDividerCount, HeightDividerCount,
-        FingerMode, DividerLapInput, LengthDividerJointInput, WidthDividerJointInput
+        FullPreviewLabel, FastPreviewLabel, DividerOrientations, LengthDividerCount, WidthDividerCount,
+        HeightDividerCount, FingerMode, DividerLapInput, LengthDividerFBJointInput, LengthDividerTBJointInput,
+        WidthDividerLRJointInput, WidthDividerTBJointInput, HeightDividerFBJointInput, HeightDividerLRJointInput
     };
 
     struct DialogLengthInput {
@@ -76,15 +77,51 @@ namespace silvanus::generatebox::entities
         adsk::core::Ptr<adsk::core::TextBoxCommandInput> control;
     };
 
+    struct DialogLengthDividerGroupInput {
+        adsk::core::Ptr<adsk::core::GroupCommandInput> control;
+    };
+
+    struct DialogWidthDividerGroupInput {
+        adsk::core::Ptr<adsk::core::GroupCommandInput> control;
+    };
+
+    struct DialogHeightDividerGroupInput {
+        adsk::core::Ptr<adsk::core::GroupCommandInput> control;
+    };
+
+    struct DialogStandardJointGroupInput {
+        adsk::core::Ptr<adsk::core::GroupCommandInput> control;
+    };
+
+    struct DialogDividerOrientationsInput {
+        adsk::core::Ptr<adsk::core::DropDownCommandInput> control;
+    };
+
     struct DialogDividerJointInput {
         adsk::core::Ptr<adsk::core::DropDownCommandInput> control;
     };
 
-    struct DialogLengthDividerJointInput {
+    struct DialogLengthDividerFrontBackJointInput {
         adsk::core::Ptr<adsk::core::DropDownCommandInput> control;
     };
 
-    struct DialogWidthDividerJointInput {
+    struct DialogLengthDividerTopBottomJointInput {
+        adsk::core::Ptr<adsk::core::DropDownCommandInput> control;
+    };
+
+    struct DialogWidthDividerLeftRightJointInput {
+        adsk::core::Ptr<adsk::core::DropDownCommandInput> control;
+    };
+
+    struct DialogWidthDividerTopBottomJointInput {
+        adsk::core::Ptr<adsk::core::DropDownCommandInput> control;
+    };
+
+    struct DialogHeightDividerFrontBackJointInput {
+        adsk::core::Ptr<adsk::core::DropDownCommandInput> control;
+    };
+
+    struct DialogHeightDividerLeftRightJointInput {
         adsk::core::Ptr<adsk::core::DropDownCommandInput> control;
     };
 

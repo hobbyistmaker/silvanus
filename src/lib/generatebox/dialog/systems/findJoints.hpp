@@ -13,9 +13,11 @@
 #include "entities/FingerWidth.hpp"
 #include "entities/FingerWidthInput.hpp"
 #include "entities/JointDirection.hpp"
+#include "entities/JointOrientation.hpp"
 #include "entities/JointPattern.hpp"
 #include "entities/JointPosition.hpp"
 #include "entities/Panel.hpp"
+#include "entities/PanelOrientation.hpp"
 #include "entities/PanelPosition.hpp"
 #include "entities/Position.hpp"
 
@@ -41,10 +43,13 @@ using silvanus::generatebox::entities::Enabled;
 using silvanus::generatebox::entities::FingerPattern;
 using silvanus::generatebox::entities::FingerWidthInput;
 using silvanus::generatebox::entities::FingerWidth;
+using silvanus::generatebox::entities::JointDirections;
+using silvanus::generatebox::entities::JointDirectionType;
+using silvanus::generatebox::entities::JointOrientation;
 using silvanus::generatebox::entities::JointPattern;
 using silvanus::generatebox::entities::JointPositions;
-using silvanus::generatebox::entities::JointDirections;
 using silvanus::generatebox::entities::Panel;
+using silvanus::generatebox::entities::PanelOrientation;
 using silvanus::generatebox::entities::PanelPositions;
 using silvanus::generatebox::entities::Position;
 
@@ -53,7 +58,8 @@ auto detectPanelCollisionsImpl(const DialogPanelJoint &first, const DialogPanelJ
 template <class F2, class T>
 void findSecondaryPanelsImpl(
     entt::registry& registry,
-    const DialogPanelJoint first
+    const DialogPanelJoint& first,
+    bool reverse = false
 ) {
     PLOG_DEBUG << "starting findSecondaryPanels";
     auto &index = registry.ctx<DialogJointIndex>();
@@ -71,7 +77,7 @@ void findSecondaryPanelsImpl(
         auto enabled = first_result.collision_detected;
 
         PLOG_DEBUG << "Checking if " << panel.name << " panel is the primary.";
-        if (!first_result.first_is_primary) continue;
+        if (!first_result.first_is_primary && !reverse)  continue;
 
         auto second_result = detectPanelCollisionsImpl(second, first);
 
@@ -87,10 +93,12 @@ void findSecondaryPanelsImpl(
         registry.emplace<DialogFingerMode>(joint_entity, finger_mode);
         registry.emplace<FingerPattern>(joint_entity);
         registry.emplace<JointPattern>(joint_entity);
-        registry.emplace<JointDirections>(joint_entity);
+        registry.emplace<JointDirections>(joint_entity, JointDirectionType::Normal, JointDirectionType::Inverted);
         registry.emplace<FingerWidthInput>(joint_entity, finger_width.control);
         registry.emplace<FingerWidth>(joint_entity);
-        registry.emplace<Panel>(joint_entity, panel.name, panel.priority, panel.orientation);
+        registry.emplace<Panel>(joint_entity, first.panel.name, first.panel.priority, first.panel.orientation);
+        registry.emplace<PanelOrientation>(joint_entity, first.panel.orientation);
+        registry.emplace<JointOrientation>(joint_entity, second.panel.orientation);
 
         auto panels = DialogPanels{first.entity, second.entity};
         registry.emplace<DialogPanels>(joint_entity, panels);
@@ -107,7 +115,7 @@ void findSecondaryPanelsImpl(
 }
 
 template <class F1, class F2, class T>
-void findJointsImpl(entt::registry& registry) {
+void findJointsImpl(entt::registry& registry, bool reverse=false) {
     PLOG_DEBUG << "starting findJoints";
     auto first_entities = std::map<entt::entity, std::set<entt::entity>>{};
     auto second_entities = std::map<entt::entity, std::set<entt::entity>>{};
@@ -126,7 +134,7 @@ void findJointsImpl(entt::registry& registry) {
         PLOG_DEBUG << name << " width plane :  (" << planes.width.min_x << ", " << planes.width.min_y << ") to (" << planes.width.max_x << ", " << planes.width.max_y << ")";
         PLOG_DEBUG << name << " height plane:  (" << planes.height.min_x << ", " << planes.height.min_y << ") to (" << planes.height.max_x << ", " << planes.height.max_y << ")";
 
-        findSecondaryPanelsImpl<F2, T>(registry, {entity, panel, planes});
+        findSecondaryPanelsImpl<F2, T>(registry, {entity, panel, planes}, reverse);
     }
     PLOG_DEBUG << "finished findJoints";
 }

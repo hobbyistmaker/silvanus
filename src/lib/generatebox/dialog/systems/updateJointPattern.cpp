@@ -20,4 +20,11 @@ void updateJointPatternImpl(entt::registry& registry)
         pattern.value = static_cast<JointPatternType>((int)input.control->selectedItem()->index());
         PLOG_DEBUG << "Updating JointPattern for entity " << (int)entity << " == " << (int)pattern.value;
     }
+
+    auto inside_pattern_view = registry.view<JointPattern, PanelPositions>();
+    for (auto &&[entity, pattern, panels]: inside_pattern_view.proxy()) {
+        if (panels.first != Position::Inside || panels.second != Position::Inside) continue;
+        PLOG_DEBUG << "Updating inside JointPattern for entity " << (int)entity;
+        pattern.value = JointPatternType::LapJoint;
+    }
 }

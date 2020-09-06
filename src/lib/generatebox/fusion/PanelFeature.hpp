@@ -11,7 +11,9 @@
 #include <Core/CoreAll.h>
 #include <Fusion/FusionAll.h>
 
-#include "Dimensions.hpp"
+#include "entities/Dimensions.hpp"
+#include "entities/ExtrusionDistance.hpp"
+#include "entities/PanelOffset.hpp"
 
 namespace silvanus::generatebox::fusion {
 

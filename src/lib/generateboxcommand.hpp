@@ -12,8 +12,8 @@
 #include <Fusion/FusionAll.h>
 
 #include "common/common.h"
-#include "lib/generatebox/dialog/presentation/dialog.hpp"
-#include "generatebox/systems/SilvanusCore.hpp"
+#include "presentation/dialog.hpp"
+#include "systems/SilvanusCore.hpp"
 
 namespace silvanus {
 
