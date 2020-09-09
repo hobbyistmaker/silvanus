@@ -293,7 +293,7 @@ auto CreateFusionDialog::addPanelTableRow(
     table->addCommandInput(override_control, row_num, 5, 0, 0);
     table->addCommandInput(thickness_control, row_num, 7, 0, 0);
 
-    auto override_row = CreatePanelOverrideRow(m_configuration, row.label.name, row.priority, row.orientation);
+    auto override_row = CreatePanelOverrideRow(&m_configuration, row.label.name, row.priority, row.orientation);
     auto thickness_swap = override_row.createRow<T, U>(default_thickness, label_control, enable_control, override_control, thickness_control);
 
     auto thickness_toggle = [override_control, thickness_control] {

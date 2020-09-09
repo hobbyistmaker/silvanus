@@ -19,6 +19,7 @@
 #include <Fusion/FusionAll.h>
 
 #include <entt/entt.hpp>
+#include <utility>
 
 namespace silvanus::generatebox::dialog {
 
@@ -52,7 +53,7 @@ namespace silvanus::generatebox::dialog {
 
     class CreatePanelOverrideRow {
 
-            entt::registry& m_registry;
+            entt::registry* m_registry;
             entt::entity    m_entity;
 
             const std::string& m_name;
@@ -60,7 +61,7 @@ namespace silvanus::generatebox::dialog {
             const AxisFlag     m_orientation;
 
         public:
-            CreatePanelOverrideRow(entt::registry& registry, const std::string& name, const int priority, const AxisFlag orientation)
+            CreatePanelOverrideRow(entt::registry* registry, const std::string& name, const int priority, const AxisFlag orientation)
             : m_registry{registry},
               m_name{name},
               m_priority{priority},
@@ -80,40 +81,41 @@ namespace silvanus::generatebox::dialog {
 
                 PLOG_DEBUG << "Creating new row entity";
 
-                m_entity = m_registry.create();
-                m_registry.emplace<DialogPanelEnable>(m_entity, enabled);
-                m_registry.emplace<DialogPanelInputs>(m_entity, label, enabled, override, thickness);
-                m_registry.emplace<DialogPanelLabel>(m_entity, label);
-                m_registry.emplace<DialogPanelOverride>(m_entity, override);
-                m_registry.emplace<DialogPanelOverrideThickness>(m_entity, thickness);
-                m_registry.emplace<DialogPanelThickness>(m_entity, parent);
-                m_registry.emplace<OutsidePanel>(m_entity);
-                m_registry.emplace<PanelPosition>(m_entity, Position::Outside);
-                m_registry.emplace<DialogPanel>(m_entity, m_name, m_priority, m_orientation);
-                m_registry.emplace<DialogPanelPlanes>(m_entity);
-                m_registry.emplace<PanelDimensions>(m_entity);
-                m_registry.emplace<DialogPanelEnableValue>(m_entity);
-                m_registry.emplace<Panel>(m_entity, m_name, m_priority, m_orientation);
+                m_entity = m_registry->create();
+                m_registry->emplace<DialogPanelEnable>(m_entity, enabled);
+                m_registry->emplace<DialogPanelInputs>(m_entity, label, enabled, override, thickness);
+                m_registry->emplace<DialogPanelLabel>(m_entity, label);
+                m_registry->emplace<DialogPanelOverride>(m_entity, override);
+                m_registry->emplace<DialogPanelOverrideThickness>(m_entity, thickness);
+                m_registry->emplace<DialogPanelThickness>(m_entity, parent);
+                m_registry->emplace<OutsidePanel>(m_entity);
+                m_registry->emplace<PanelPosition>(m_entity, Position::Outside);
+                m_registry->emplace<DialogPanel>(m_entity, m_name, m_priority, m_orientation);
+                m_registry->emplace<DialogPanelPlanes>(m_entity);
+                m_registry->emplace<PanelDimensions>(m_entity);
+                m_registry->emplace<DialogPanelEnableValue>(m_entity);
+                m_registry->emplace<Panel>(m_entity, m_name, m_priority, m_orientation);
 
-                m_registry.set<T>(label, enabled, override, thickness);
-                m_registry.set<U>(thickness);
+                m_registry->set<T>(label, enabled, override, thickness);
+                m_registry->set<U>(thickness);
 
-                return [this, override, thickness]() {
-                    auto const default_thickness = m_registry.ctx<DialogThicknessInput>().control;
+                auto registry = m_registry;
+                auto entity = m_entity;
 
+                return [entity, registry, parent, override, thickness]() {
                     auto t_control = commandInputPtr{thickness};
-                    auto d_control = commandInputPtr{default_thickness};
+                    auto d_control = commandInputPtr{parent};
 
                     auto toggle = override->value() ? t_control : d_control;
 
-                    m_registry.replace<DialogPanelThickness>(m_entity, toggle);
-                    m_registry.set<U>(toggle);
+                    registry->replace<DialogPanelThickness>(entity, toggle);
+                    registry->set<U>(toggle);
                 };
             }
 
             template <class T>
             void save() {
-                m_registry.set<T>(m_entity);
+                m_registry->set<T>(m_entity);
             }
     };
 
