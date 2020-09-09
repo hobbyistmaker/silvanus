@@ -7,7 +7,7 @@
 #define SILVANUSPRO_CREATEPANELOVERRIDEROW_HPP
 
 #include "entities/AxisFlag.hpp"
-#include "entities/DialogInputs.hpp"
+#include "lib/generatebox/dialog/entities/DialogInputs.hpp"
 #include "entities/OutsidePanel.hpp"
 #include "entities/Panel.hpp"
 #include "entities/PanelDimension.hpp"

@@ -6,7 +6,7 @@
 #ifndef SILVANUSPRO_UPDATEJOINTDIRECTIONINPUTS_HPP
 #define SILVANUSPRO_UPDATEJOINTDIRECTIONINPUTS_HPP
 
-#include "entities/DialogInputs.hpp"
+#include "lib/generatebox/dialog/entities/DialogInputs.hpp"
 #include "entities/JointDirection.hpp"
 #include "entities/JointPosition.hpp"
 #include "entities/PanelPosition.hpp"

@@ -83,8 +83,8 @@ void GenerateBoxCommand::onCreate(const adsk::core::Ptr<CommandCreatedEventArgs>
     auto product = adsk::core::Ptr<Product>{m_app->activeProduct()};
     auto design = adsk::core::Ptr<Design>{product};
 
-//    command->setDialogMinimumSize(200, 200);
-//    command->setDialogInitialSize(200, 200);
+    command->setDialogMinimumSize(620, 620);
+    command->setDialogInitialSize(620, 620);
     command->isRepeatable(false);
     command->okButtonText("Create");
 

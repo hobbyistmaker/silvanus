@@ -13,7 +13,6 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 #set(CMAKE_CXX_FLAGS "-Wall -Wextra")
-set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum Fusion 360 supported version of MacOS/OSX.")
@@ -23,13 +22,15 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 configure_file(${PROJECT_NAME}.h.in ${PROJECT_NAME}.h)
 
 if(APPLE)
+    set(CMAKE_CXX_FLAGS_DEBUG "-g")
     set(AUTODESK_API_FOLDER "$ENV{HOME}/Library/Application\ Support/Autodesk/Autodesk\ Fusion\ 360/API")
     set(SILVANUS_LIB "${PROJECT_NAME}.dylib")
     set(LOCAL_INCLUDES "/usr/local/include")
     set(LOCAL_LIB "/usr/local/lib")
 elseif(WIN32)
+    string(REPLACE "\\" "/" USER_HOME "$ENV{APPDATA}")
     set(AUTODESK_HASH d2d901e2ef5ae5c384b4ac001a48c4e37589dc43) # Pulled from the Autodesk folder name under your APPDATA folder
-    set(AUTODESK_API_FOLDER "$ENV{APPDATA}/Autodesk/Autodesk Fusion 360/API")
+    set(AUTODESK_API_FOLDER "${USER_HOME}/Autodesk/Autodesk Fusion 360/API")
     set(SILVANUS_LIB "${PROJECT_NAME}.dll")
 endif(APPLE)
 
@@ -68,11 +69,21 @@ link_directories("${F360_LIBS}")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
-set_target_properties(
-        ${PROJECT_NAME} PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}"
-        RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}"
-)
+
+if(APPLE)
+    set_target_properties(
+            ${PROJECT_NAME} PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}"
+            RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}"
+    )
+elseif(WIN32)
+    set_target_properties(
+            ${PROJECT_NAME} PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_CURRENT_BINARY_DIR}"
+            RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_BINARY_DIR}"
+    )
+endif()
+
 target_sources(${PROJECT_NAME}
         PRIVATE ${SOURCE_FILES}
         PUBLIC ${PROJECT_NAME}.cpp
@@ -91,10 +102,11 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src/lib/g
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src/lib/generatebox/dialog/entities)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src/lib/generatebox/dialog/presentation)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src/lib/generatebox/dialog/systems)
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src/lib/generatebox/entities)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src/lib/generatebox/fusion)
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src/lib/generatebox/systems)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src/lib/generatebox/render)
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src/lib/generatebox/render/systems)
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src/lib/generatebox/render/entities)
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src/lib/generatebox/render/presentation)
 target_include_directories(${PROJECT_NAME} PRIVATE ${F360_INCLUDES})
 
 target_include_directories(${PROJECT_NAME} PRIVATE "${F360_INCLUDES}/Core")
@@ -103,6 +115,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE "${F360_INCLUDES}/Core/UserIn
 if(APPLE)
     target_include_directories(${PROJECT_NAME} PRIVATE "${LOCAL_INCLUDES}")
     target_include_directories(${PROJECT_NAME} PRIVATE "${LOCAL_INCLUDES}/entt")
+    target_include_directories(${PROJECT_NAME} PRIVATE "${LOCAL_INCLUDES}/plog-1.1.5")
     find_library(ADSK_CORE core.dylib PATHS "${F360_LIBS}/")
     find_library(ADSK_FUSION fusion.dylib PATHS "${F360_LIBS}/")
     find_library(ADSK_CAM cam.dylib PATHS "${F360_LIBS}/")
@@ -110,9 +123,14 @@ if(APPLE)
 elseif(WIN32)
     find_package(EnTT CONFIG REQUIRED) # Assumes EnTT installed through vcpkg with Visual Studio
     target_link_libraries(${PROJECT_NAME} PRIVATE EnTT::EnTT)
+    find_path(PLOG_INCLUDE_DIRS "plog/Appenders/AndroidAppender.h")
+    target_include_directories(${PROJECT_NAME} PRIVATE ${PLOG_INCLUDE_DIRS})
     find_library(ADSK_CORE core.lib PATHS "${F360_LIBS}/")
     find_library(ADSK_FUSION fusion.lib PATHS "${F360_LIBS}/")
     find_library(ADSK_CAM cam.lib PATHS "${F360_LIBS}/")
+#    find_library(BOOST_FILE boost_filesystem-vc140-mt.lib PATHS "${LOCAL_LIB}")
+    find_package(Boost 1.73.0 REQUIRED COMPONENTS filesystem)
+    message(STATUS "Boost Filesystem: ${BOOST_FILE}")
 endif()
 
 target_link_libraries(${PROJECT_NAME} PUBLIC ${ADSK_CORE} ${ADSK_FUSION} ${ADSK_CAM})

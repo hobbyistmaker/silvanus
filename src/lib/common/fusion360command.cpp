@@ -7,7 +7,7 @@
 #include <Core/CoreAll.h>
 #include "fusion360command.hpp"
 
-#include "plog/Log.h"
+#include <plog/Log.h>
 
 using namespace adsk::core;
 using namespace adsk::fusion;

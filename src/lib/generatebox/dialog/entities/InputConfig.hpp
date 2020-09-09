@@ -8,7 +8,7 @@
 
 #include <string>
 
-#include "entities/DialogInputs.hpp"
+#include "DialogInputs.hpp"
 
 namespace silvanus::generatebox::dialog {
     struct InputConfig {

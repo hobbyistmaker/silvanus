@@ -15,6 +15,7 @@
 #include <Fusion/FusionAll.h>
 #include <entt/entt.hpp>
 #include <map>
+#include <set>
 
 namespace silvanus::generatebox::entities
 {

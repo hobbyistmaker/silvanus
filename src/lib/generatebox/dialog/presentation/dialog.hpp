@@ -21,7 +21,7 @@
 
 #include "dialog/entities/InputConfig.hpp"
 #include "entities/AxisFlag.hpp"
-#include "entities/DialogInputs.hpp"
+#include "lib/generatebox/dialog/entities/DialogInputs.hpp"
 #include "entities/FingerPattern.hpp"
 #include "entities/JointPatternTags.hpp"
 #include "entities/JointDirection.hpp"
@@ -32,7 +32,7 @@
 #include "entities/Position.hpp"
 #include "createpaneloverriderow.hpp"
 
-#include "systems/DialogSystemManager.hpp"
+#include "lib/generatebox/dialog/systems/DialogSystemManager.hpp"
 
 namespace silvanus::generatebox::dialog {
 
@@ -107,7 +107,7 @@ namespace silvanus::generatebox::dialog {
         const std::vector<DimensionTableRow>   dimensions;
     };
 
-    class CreateDialog {
+    class CreateFusionDialog {
 
             InputConfig const length_metric_defaults = {
                 entities::DialogInputs::Length, "length", "lengthSpinnerInput", "Length", "mm", 0.01, 2540, .1, 285
@@ -345,7 +345,7 @@ namespace silvanus::generatebox::dialog {
             // Post-dialog ECS systems
 
         public:
-            explicit CreateDialog(entt::registry &registry) : m_panel_registry(registry) {
+            explicit CreateFusionDialog(entt::registry& registry) : m_panel_registry{ registry } {
                 m_systems = std::make_unique<DialogSystemManager>(m_configuration);
                 m_configuration.set<entities::DialogErrorMessage>("");
             };

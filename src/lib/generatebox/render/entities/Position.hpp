@@ -6,6 +6,7 @@
 #define SILVANUSPRO_POSITION_HPP
 
 #include <cstddef>
+#include <functional>
 
 namespace silvanus::generatebox::entities {
 

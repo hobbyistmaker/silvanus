@@ -12,7 +12,7 @@
 #include "updateJointDirectionInputs.hpp"
 #include "updateJointPatternInputs.hpp"
 
-#include "DialogInputs.hpp"
+#include "lib/generatebox/dialog/entities/DialogInputs.hpp"
 
 using silvanus::generatebox::entities::DialogPanelCollisionPair;
 using silvanus::generatebox::entities::DialogPanelJoint;

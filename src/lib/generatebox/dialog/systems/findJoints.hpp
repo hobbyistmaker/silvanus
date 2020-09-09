@@ -7,7 +7,7 @@
 #define SILVANUSPRO_FINDJOINTS_HPP
 
 #include "entities/AxisFlag.hpp"
-#include "entities/DialogInputs.hpp"
+#include "lib/generatebox/dialog/entities/DialogInputs.hpp"
 #include "entities/Enabled.hpp"
 #include "entities/FingerPattern.hpp"
 #include "entities/FingerWidth.hpp"

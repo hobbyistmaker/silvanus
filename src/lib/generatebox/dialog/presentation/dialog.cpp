@@ -28,7 +28,8 @@
 
 #include <numeric>
 
-#include "plog/Log.h"
+#include <plog/Log.h>
+#include <Core/CoreAll.h>
 
 using std::accumulate;
 using std::all_of;
@@ -47,8 +48,6 @@ using adsk::core::IntegerSpinnerCommandInput;
 using adsk::core::TabCommandInput;
 using adsk::core::TableCommandInput;
 using adsk::core::TablePresentationStyles;
-using adsk::core::TablePresentationStyles::itemBorderTablePresentationStyle;
-using adsk::core::TablePresentationStyles::transparentBackgroundTablePresentationStyle;
 using adsk::core::TextListDropDownStyle;
 using adsk::core::TextBoxCommandInput;
 using adsk::fusion::Component;
@@ -58,7 +57,7 @@ using namespace silvanus::generatebox::dialog;
 
 using silvanus::generatebox::entities::JointDirections;
 
-void CreateDialog::clear() {
+void CreateFusionDialog::clear() {
     m_validators.clear();
     m_handlers.clear();
     m_results.clear();
@@ -68,7 +67,7 @@ void CreateDialog::clear() {
     m_panel_registry.clear();
 }
 
-void CreateDialog::create(
+void CreateFusionDialog::create(
     const adsk::core::Ptr<Application> &app,
     const adsk::core::Ptr<CommandInputs> &inputs,
     const adsk::core::Ptr<Component> &root,
@@ -121,17 +120,17 @@ void CreateDialog::create(
     m_systems->postUpdate();
 }
 
-void CreateDialog::addInputControl(DialogInputs reference, const adsk::core::Ptr<CommandInput>& input) {
+void CreateFusionDialog::addInputControl(DialogInputs reference, const adsk::core::Ptr<CommandInput>& input) {
     m_inputs[reference] = input->id();
 }
 
-void CreateDialog::addInputControl(DialogInputs reference, const adsk::core::Ptr<CommandInput>& input, const std::function<void()> &handler) {
+void CreateFusionDialog::addInputControl(DialogInputs reference, const adsk::core::Ptr<CommandInput>& input, const std::function<void()> &handler) {
     addInputControl(reference, input);
     m_handlers[input->id()].emplace_back(handler);
     m_inputs[reference] = input->id();
 }
 
-void CreateDialog::addInputControl(
+void CreateFusionDialog::addInputControl(
     const DialogInputs reference,
     const adsk::core::Ptr<CommandInput> &input,
     const std::vector<std::function<void()>> &handlers
@@ -142,11 +141,11 @@ void CreateDialog::addInputControl(
     }
 }
 
-void CreateDialog::addInputHandler(const DialogInputs reference, const std::function<void()> &handler) {
+void CreateFusionDialog::addInputHandler(const DialogInputs reference, const std::function<void()> &handler) {
     m_handlers[m_inputs[reference]].emplace_back(handler);
 }
 
-void CreateDialog::createModelSelectionDropDown(const Ptr<CommandInputs> &inputs) {
+void CreateFusionDialog::createModelSelectionDropDown(const Ptr<CommandInputs> &inputs) {
     auto creation_mode = inputs->addDropDownCommandInput("creationTypeCommandInput", "Type of Model", TextListDropDownStyle);
     m_configuration.set<DialogCreationMode>(creation_mode);
 
@@ -171,7 +170,7 @@ void CreateDialog::createModelSelectionDropDown(const Ptr<CommandInputs> &inputs
     );
 }
 
-void CreateDialog::createFingerModeSelectionDropDown(const Ptr<CommandInputs> &inputs) {
+void CreateFusionDialog::createFingerModeSelectionDropDown(const Ptr<CommandInputs> &inputs) {
     auto finger_mode = inputs->addDropDownCommandInput("fingerTypeCommandInput", "Finger Size", TextListDropDownStyle);
     m_configuration.set<DialogFingerMode>(finger_mode);
 
@@ -184,7 +183,7 @@ void CreateDialog::createFingerModeSelectionDropDown(const Ptr<CommandInputs> &i
     addInputControl(DialogInputs::FingerMode, finger_mode);
 }
 
-auto CreateDialog::createDimensionGroup(const adsk::core::Ptr<CommandInputs> &inputs) -> adsk::core::Ptr<GroupCommandInput> {
+auto CreateFusionDialog::createDimensionGroup(const adsk::core::Ptr<CommandInputs> &inputs) -> adsk::core::Ptr<GroupCommandInput> {
     auto group     = inputs->addGroupCommandInput("dimensionsGroupInput", "Dimensions");
     auto is_metric = m_configuration.ctx<DialogModelingUnits>().value;
     auto children  = group->children();
@@ -199,7 +198,7 @@ auto CreateDialog::createDimensionGroup(const adsk::core::Ptr<CommandInputs> &in
     return group;
 }
 
-auto CreateDialog::createDimensionInput(Ptr<CommandInputs> &children, const InputConfig &config) -> Ptr<FloatSpinnerCommandInput> {
+auto CreateFusionDialog::createDimensionInput(Ptr<CommandInputs> &children, const InputConfig &config) -> Ptr<FloatSpinnerCommandInput> {
 
     auto spinner = Ptr<FloatSpinnerCommandInput>{
         children->addFloatSpinnerCommandInput(
@@ -218,7 +217,7 @@ auto CreateDialog::createDimensionInput(Ptr<CommandInputs> &children, const Inpu
     return spinner;
 }
 
-void CreateDialog::createPanelTable(
+void CreateFusionDialog::createPanelTable(
     const Ptr<CommandInputs> &inputs
 ) {
     auto table = initializePanelTable(inputs);
@@ -242,7 +241,7 @@ void CreateDialog::createPanelTable(
     back.save<DialogBackPanel>();
 }
 
-auto CreateDialog::initializePanelTable(const adsk::core::Ptr<CommandInputs> &inputs) const -> adsk::core::Ptr<TableCommandInput> {
+auto CreateFusionDialog::initializePanelTable(const adsk::core::Ptr<CommandInputs> &inputs) const -> adsk::core::Ptr<TableCommandInput> {
     auto table = inputs->addTableCommandInput(
         m_dimensions_table.id, m_dimensions_table.name, 0, m_dimensions_table.column_ratio
     );
@@ -251,13 +250,13 @@ auto CreateDialog::initializePanelTable(const adsk::core::Ptr<CommandInputs> &in
     table->maximumVisibleRows((int) num_rows);
     table->minimumVisibleRows((int) num_rows);
     table->isEnabled(false);
-    table->tablePresentationStyle(transparentBackgroundTablePresentationStyle);
+    table->tablePresentationStyle(TablePresentationStyles::transparentBackgroundTablePresentationStyle);
 
     addTableTitles(table);
     return table;
 }
 
-void CreateDialog::addTableTitles(adsk::core::Ptr<TableCommandInput> &table) const {
+void CreateFusionDialog::addTableTitles(adsk::core::Ptr<TableCommandInput> &table) const {
     for (const auto &title: m_dimensions_table.titles) {
         auto title_input = table->commandInputs()->addTextBoxCommandInput(
             title.id, title.name, "<b>" + title.label + "</b>", 1, true
@@ -267,7 +266,7 @@ void CreateDialog::addTableTitles(adsk::core::Ptr<TableCommandInput> &table) con
 }
 
 template<class T, class U>
-auto CreateDialog::addPanelTableRow(
+auto CreateFusionDialog::addPanelTableRow(
     const Ptr<CommandInputs> &inputs,
     Ptr<adsk::core::TableCommandInput> &table,
     const DimensionTableRow &row
@@ -326,28 +325,28 @@ auto CreateDialog::addPanelTableRow(
     return override_row;
 }
 
-auto CreateDialog::addPanelLabelControl(const Ptr<CommandInputs> &inputs, const DimensionTableRow &row) -> Ptr<TextBoxCommandInput> {
+auto CreateFusionDialog::addPanelLabelControl(const Ptr<CommandInputs> &inputs, const DimensionTableRow &row) -> Ptr<TextBoxCommandInput> {
     auto label_control = inputs->addTextBoxCommandInput(
         row.label.id, row.label.name, "<b>" + row.label.name + "</b>", 1, true
     );
     return label_control;
 }
 
-auto CreateDialog::addPanelEnableControl(const Ptr<CommandInputs> &inputs, const DimensionTableRow &row) -> Ptr<BoolValueCommandInput> {
+auto CreateFusionDialog::addPanelEnableControl(const Ptr<CommandInputs> &inputs, const DimensionTableRow &row) -> Ptr<BoolValueCommandInput> {
     auto enable_control = inputs->addBoolValueInput(
         row.enable.id, row.enable.name, true, "", row.enable.default_value
     );
     return enable_control;
 }
 
-auto CreateDialog::addPanelOverrideControl(const Ptr<CommandInputs> &inputs, const DimensionTableRow &row) -> Ptr<BoolValueCommandInput> {
+auto CreateFusionDialog::addPanelOverrideControl(const Ptr<CommandInputs> &inputs, const DimensionTableRow &row) -> Ptr<BoolValueCommandInput> {
     auto override_control = inputs->addBoolValueInput(
         row.override.id, row.override.name, true, "", false
     );
     return override_control;
 }
 
-void CreateDialog::createDividerInputs(const Ptr<CommandInputs> &inputs) {
+void CreateFusionDialog::createDividerInputs(const Ptr<CommandInputs> &inputs) {
     createDividerOrientationsInput(inputs);
     createDividerJointDirectionInput(inputs);
 
@@ -356,7 +355,7 @@ void CreateDialog::createDividerInputs(const Ptr<CommandInputs> &inputs) {
     createHeightDividerInputs(inputs);
 }
 
-void CreateDialog::createHeightDividerInputs(const Ptr<CommandInputs> &inputs) {
+void CreateFusionDialog::createHeightDividerInputs(const Ptr<CommandInputs> &inputs) {
     auto height_group    = inputs->addGroupCommandInput("heightDividerGroupInput", "Height Dividers");
     auto height_children = height_group->children();
     height_group->isVisible(false);
@@ -428,7 +427,7 @@ void CreateDialog::createHeightDividerInputs(const Ptr<CommandInputs> &inputs) {
     );
 }
 
-void CreateDialog::createWidthDividerInputs(const Ptr<CommandInputs> &inputs) {
+void CreateFusionDialog::createWidthDividerInputs(const Ptr<CommandInputs> &inputs) {
     auto width_group    = inputs->addGroupCommandInput("widthDividerGroupInput", "Width Dividers");
     auto width_children = width_group->children();
     m_configuration.set<DialogWidthDividerGroupInput>(width_group);
@@ -497,7 +496,7 @@ void CreateDialog::createWidthDividerInputs(const Ptr<CommandInputs> &inputs) {
     );
 }
 
-void CreateDialog::createLengthDividerInputs(const Ptr<CommandInputs> &inputs) {
+void CreateFusionDialog::createLengthDividerInputs(const Ptr<CommandInputs> &inputs) {
     auto length_group    = inputs->addGroupCommandInput("lengthDividerGroupInput", "Length Dividers");
     auto length_children = length_group->children();
     m_configuration.set<DialogLengthDividerGroupInput>(length_group);
@@ -568,7 +567,7 @@ void CreateDialog::createLengthDividerInputs(const Ptr<CommandInputs> &inputs) {
     );
 }
 
-void CreateDialog::createDividerJointDirectionInput(const Ptr<CommandInputs> &inputs) {
+void CreateFusionDialog::createDividerJointDirectionInput(const Ptr<CommandInputs> &inputs) {
     auto divider_joint = inputs->addDropDownCommandInput("dividerLapCommandInput", "Divider Joint", TextListDropDownStyle);
     m_configuration.set<DialogDividerJointInput>(divider_joint);
     auto const joint_items = divider_joint->listItems();
@@ -585,7 +584,7 @@ void CreateDialog::createDividerJointDirectionInput(const Ptr<CommandInputs> &in
     );
 }
 
-void CreateDialog::createDividerOrientationsInput(const Ptr<CommandInputs> &inputs) {
+void CreateFusionDialog::createDividerOrientationsInput(const Ptr<CommandInputs> &inputs) {
     auto divider_orientations = inputs->addDropDownCommandInput("dividerOrientationCommandInput", "Divider Orientations", TextListDropDownStyle);
     m_configuration.set<DialogDividerOrientationsInput>(divider_orientations);
     auto const type_items = divider_orientations->listItems();
@@ -605,18 +604,30 @@ void CreateDialog::createDividerOrientationsInput(const Ptr<CommandInputs> &inpu
             auto height_group_input = m_configuration.ctx<DialogHeightDividerGroupInput>().control;
             auto height_count_input = m_configuration.ctx<DialogHeightDividerCountInput>().control;
 
-            auto selector = std::__1::map<int, std::function<void()>>{
+            auto selector = std::map<int, std::function<void()>>{
                 {0, [&, this](){
                     height_count_input->value(0);
-                    update(height_count_input);
-                }},
+                    auto old_view = m_configuration.view<HeightDivider>();
+                    m_configuration.destroy(old_view.begin(), old_view.end());
+
+                    auto static_view = m_configuration.view<HeightDividerJoint>();
+                    //if (static_view.size()) m_configuration.destroy(static_view.begin(), static_view.end());
+            }},
                 {1, [&, this](){
                     width_count_input->value(0);
-                    update(width_count_input);
-                }},
+                    auto old_view = m_configuration.view<WidthDivider>();
+                    m_configuration.destroy(old_view.begin(), old_view.end());
+
+                    auto static_view = m_configuration.view<WidthDividerJoint>();
+                    //if (static_view.size()) m_configuration.destroy(static_view.begin(), static_view.end());
+            }},
                 {2, [&, this](){
                     length_count_input->value(0);
-                    update(length_count_input);
+                    auto old_view = m_configuration.view<LengthDivider>();
+                    m_configuration.destroy(old_view.begin(), old_view.end());
+
+                    auto static_view = m_configuration.view<LengthDividerJoint>();
+                    //if (static_view.size()) m_configuration.destroy(static_view.begin(), static_view.end());
                 }}
             };
 
@@ -633,7 +644,7 @@ void CreateDialog::createDividerOrientationsInput(const Ptr<CommandInputs> &inpu
     );
 }
 
-auto CreateDialog::createStandardJointTable(const adsk::core::Ptr<CommandInputs> &inputs) -> adsk::core::Ptr<TableCommandInput> {
+auto CreateFusionDialog::createStandardJointTable(const adsk::core::Ptr<CommandInputs> &inputs) -> adsk::core::Ptr<TableCommandInput> {
     auto joint_group = inputs->addGroupCommandInput("standardJointsGroupCommandInput", "Standard");
     auto group_children = joint_group->children();
     m_configuration.set<DialogStandardJointGroupInput>(joint_group);
@@ -643,7 +654,7 @@ auto CreateDialog::createStandardJointTable(const adsk::core::Ptr<CommandInputs>
     );
     table->maximumVisibleRows(17);
     table->minimumVisibleRows(17);
-    table->tablePresentationStyle(itemBorderTablePresentationStyle);
+    table->tablePresentationStyle(TablePresentationStyles::itemBorderTablePresentationStyle);
 
     auto const first_label    = table->commandInputs()->addTextBoxCommandInput("firstJointLabelInput", "First", "<b>First</b>", 1, true);
     auto const second_label   = table->commandInputs()->addTextBoxCommandInput("secondJointLabelInput", "Second", "<b>Second</b>", 1, true);
@@ -663,7 +674,7 @@ auto CreateDialog::createStandardJointTable(const adsk::core::Ptr<CommandInputs>
     return table;
 }
 
-void CreateDialog::createPreviewTable(const adsk::core::Ptr<CommandInputs> &inputs) {
+void CreateFusionDialog::createPreviewTable(const adsk::core::Ptr<CommandInputs> &inputs) {
     auto table = inputs->addTableCommandInput(
         "previewTableCommandInput", "Preview", 0, "1:5:1:5"
     );
@@ -671,7 +682,7 @@ void CreateDialog::createPreviewTable(const adsk::core::Ptr<CommandInputs> &inpu
     table->maximumVisibleRows((int) 1);
     table->minimumVisibleRows((int) 1);
     table->isEnabled(false);
-    table->tablePresentationStyle(transparentBackgroundTablePresentationStyle);
+    table->tablePresentationStyle(TablePresentationStyles::transparentBackgroundTablePresentationStyle);
 
     auto const fast_preview = table->commandInputs()->addBoolValueInput("fastPreviewCommandInput", "Fast Preview", true, "", true);
     auto const fast_label   = table->commandInputs()->addTextBoxCommandInput("fastPreviewLabelInput", "Fast Preview", "Fast Preview", 1, true);
@@ -738,7 +749,7 @@ bool validateDimension(entt::registry &m_configuration, AxisFlag axis_flag) {
     return false;
 }
 
-void CreateDialog::addMinimumAxisDimensionChecks() {
+void CreateFusionDialog::addMinimumAxisDimensionChecks() {
     auto validator = [this]() {
         auto length_ok = validateDimension<DialogLengthInput, LengthOrientation>(m_configuration, AxisFlag::Length);
         auto width_ok  = validateDimension<DialogWidthInput, WidthOrientation>(m_configuration, AxisFlag::Width);
@@ -749,7 +760,7 @@ void CreateDialog::addMinimumAxisDimensionChecks() {
     m_validators.emplace_back(validator);
 }
 
-void CreateDialog::addMaximumKerfCheck() {
+void CreateFusionDialog::addMaximumKerfCheck() {
     auto validator = [this]() {
         auto kerf = m_configuration.ctx<DialogKerfInput>().control->value();
 
@@ -771,7 +782,7 @@ void CreateDialog::addMaximumKerfCheck() {
     m_validators.emplace_back(validator);
 }
 
-void CreateDialog::addMinimumFingerWidthCheck() {
+void CreateFusionDialog::addMinimumFingerWidthCheck() {
     auto validator = [this]() {
         auto finger_width = m_configuration.ctx<DialogFingerWidthInput>().control->value();
 
@@ -793,7 +804,7 @@ void CreateDialog::addMinimumFingerWidthCheck() {
     m_validators.emplace_back(validator);
 }
 
-void CreateDialog::addMinimumPanelCountCheck() {
+void CreateFusionDialog::addMinimumPanelCountCheck() {
     auto validator = [this]() {
         int thickness_count = 0;
 
@@ -814,7 +825,7 @@ void CreateDialog::addMinimumPanelCountCheck() {
     m_validators.emplace_back(validator);
 }
 
-void CreateDialog::populateJointTable(Ptr<TableCommandInput> &table) {
+void CreateFusionDialog::populateJointTable(Ptr<TableCommandInput> &table) {
 
     auto inputs  = table->commandInputs();
     auto row_num = 1;
@@ -863,7 +874,7 @@ void CreateDialog::populateJointTable(Ptr<TableCommandInput> &table) {
 
 }
 
-void CreateDialog::addJointTypes(Ptr<DropDownCommandInput> &dropdown) {
+void CreateFusionDialog::addJointTypes(Ptr<DropDownCommandInput> &dropdown) {
     auto const &items = dropdown->listItems();
     items->add("Box Joint", true);
     items->add("Lap Joint", false);
@@ -877,7 +888,7 @@ void CreateDialog::addJointTypes(Ptr<DropDownCommandInput> &dropdown) {
     dropdown->maxVisibleItems(7);
 }
 
-void CreateDialog::addCollisionHandler(DialogInputs reference) {
+void CreateFusionDialog::addCollisionHandler(DialogInputs reference) {
     auto handler = [this]() {
         m_systems->updateCollisions();
         m_systems->postUpdate();
@@ -886,7 +897,7 @@ void CreateDialog::addCollisionHandler(DialogInputs reference) {
     addInputHandler(reference, handler);
 }
 
-bool CreateDialog::validate(const adsk::core::Ptr<CommandInputs> &inputs) {
+bool CreateFusionDialog::validate(const adsk::core::Ptr<CommandInputs> &inputs) {
     auto m_error_message = m_configuration.ctx<DialogErrorMessage>().value;
     m_error->formattedText(m_error_message);
 
@@ -897,7 +908,7 @@ bool CreateDialog::validate(const adsk::core::Ptr<CommandInputs> &inputs) {
     return results;
 }
 
-bool CreateDialog::update(const adsk::core::Ptr<CommandInput> &cmd_input) {
+bool CreateFusionDialog::update(const adsk::core::Ptr<CommandInput> &cmd_input) {
     auto exists = std::find(m_ignore_updates.begin(), m_ignore_updates.end(), cmd_input->id()) != m_ignore_updates.end();
     if (exists) { return false; }
 
@@ -912,7 +923,7 @@ bool CreateDialog::update(const adsk::core::Ptr<CommandInput> &cmd_input) {
     return true;
 }
 
-void CreateDialog::initializePanels() {
+void CreateFusionDialog::initializePanels() {
     m_panel_registry.clear();
     m_systems->initializePanels(m_panel_registry);
 }
