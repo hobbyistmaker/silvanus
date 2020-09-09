@@ -55,7 +55,7 @@ namespace silvanus::generatebox::render {
             };
             jointTransformVectorPanelAxisMap joint_zup_vectors = {
                 {AxisFlag::Length, {
-                    {AxisFlag::Height, {Vector3D::create(0.0, 1.0, 0.0), Vector3D::create(1.0, 0.0, 0.0)} },
+                    {AxisFlag::Height, {Vector3D::create(0.0, 1.0, 0.0), Vector3D::create(0.0, 0.0, 1.0)} },
                     {AxisFlag::Width, {Vector3D::create(0.0, 0.0, 1.0), Vector3D::create(0.0, 1.0, 0.0)} }
                 }},
                 {AxisFlag::Width, {
