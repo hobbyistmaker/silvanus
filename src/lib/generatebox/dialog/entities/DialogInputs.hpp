@@ -210,6 +210,18 @@ namespace silvanus::generatebox::entities
         adsk::core::Ptr<adsk::core::DropDownCommandInput> control;
     };
 
+    struct DialogPanelLength {
+        adsk::core::Ptr<adsk::core::FloatSpinnerCommandInput> control;
+    };
+
+    struct DialogPanelWidth {
+        adsk::core::Ptr<adsk::core::FloatSpinnerCommandInput> control;
+    };
+
+    struct DialogPanelHeight {
+        adsk::core::Ptr<adsk::core::FloatSpinnerCommandInput> control;
+    };
+
     struct DialogTopThickness : public DialogPanelThickness {};
     struct DialogBottomThickness : public DialogPanelThickness {};
     struct DialogLeftThickness : public DialogPanelThickness {};

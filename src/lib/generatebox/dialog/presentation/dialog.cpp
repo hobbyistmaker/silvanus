@@ -321,6 +321,7 @@ auto CreateFusionDialog::addPanelTableRow(
     addInputControl(row.thickness.lookup, thickness_control);
     addInputHandler(DialogInputs::Thickness, follow_thickness);
     addCollisionHandler(row.thickness.lookup);
+    addCollisionHandler(row.override.lookup);
 
     return override_row;
 }

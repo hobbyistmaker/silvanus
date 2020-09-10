@@ -114,11 +114,12 @@ void initializePanelsFromUserOptionsImpl(entt::registry& configuration, entt::re
         }
 
         for (auto const &panel: second_panels) {
-            PLOG_DEBUG << "Adding joint name for " << panel_data.name;
+            auto joint_thickness = thickness.control->value();
+            PLOG_DEBUG << "Adding joint name for " << panel_data.name << " with thickness of " << joint_thickness;
             panel_registry.emplace<JointEnabled>(panel, enable.value);
             panel_registry.emplace<JointName>(panel, panel_data.name);
             panel_registry.emplace<JointOrientation>(panel, panel_data.orientation);
-            panel_registry.emplace<JointThickness>(panel, thickness.control->value());
+            panel_registry.emplace<JointThickness>(panel, joint_thickness);
         }
     }
 }

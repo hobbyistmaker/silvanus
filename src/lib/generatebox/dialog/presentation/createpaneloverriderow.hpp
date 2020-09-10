@@ -96,19 +96,21 @@ namespace silvanus::generatebox::dialog {
                 m_registry->emplace<DialogPanelEnableValue>(m_entity);
                 m_registry->emplace<Panel>(m_entity, m_name, m_priority, m_orientation);
 
-                m_registry->set<T>(label, enabled, override, thickness);
-                m_registry->set<U>(thickness);
+                m_registry->set<T>(label, enabled, override, parent);
+                m_registry->set<U>(parent);
 
                 auto registry = m_registry;
                 auto entity = m_entity;
 
-                return [entity, registry, parent, override, thickness]() {
+                return [entity, registry, parent, label, enabled, override, thickness]() {
                     auto t_control = commandInputPtr{thickness};
                     auto d_control = commandInputPtr{parent};
 
                     auto toggle = override->value() ? t_control : d_control;
 
+                    registry->replace<DialogPanelInputs>(entity, label, enabled, override, toggle);
                     registry->replace<DialogPanelThickness>(entity, toggle);
+                    registry->set<T>(label, enabled, override, toggle);
                     registry->set<U>(toggle);
                 };
             }

@@ -30,6 +30,7 @@ void updateFingerPatternTypeImpl(entt::registry& registry);
 void updateFingerWidthImpl(entt::registry& registry);
 void updateJointCollisionDataImpl(entt::registry& registry);
 void updateJointDirectionImpl(entt::registry& registry);
+void updatePanelDimensionInputsImpl(entt::registry& registry);
 
 template <class T>
 void updateJointDirectionImpl(entt::registry& registry, Position panel_position, Position joint_position, JointDirectionType joint_direction) {
@@ -78,6 +79,7 @@ namespace silvanus::generatebox::dialog {
             }
 
             void updateCollisions() {
+                updatePanelDimensionInputsImpl(m_registry);
                 updatePanelDimensionsImpl(m_registry);
                 projectLengthPlanesImpl(m_registry);
                 projectWidthPlanesImpl(m_registry);
