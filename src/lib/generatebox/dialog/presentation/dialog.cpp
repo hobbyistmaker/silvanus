@@ -10,28 +10,11 @@
 #include "presentation/createdialogpanels.hpp"
 #include "presentation/createpaneloverriderow.hpp"
 
-#include "entities/AxisFlag.hpp"
-#include "entities/ChildPanels.hpp"
-#include "entities/Dimensions.hpp"
-#include "entities/DividerTags.hpp"
-#include "entities/FingerPattern.hpp"
-#include "entities/JointDirection.hpp"
-#include "entities/JointName.hpp"
-#include "entities/Kerf.hpp"
-#include "entities/OrientationTags.hpp"
-#include "entities/OutsidePanel.hpp"
-#include "entities/OverrideInput.hpp"
-#include "entities/Panel.hpp"
-#include "entities/PanelDimension.hpp"
-#include "entities/Position.hpp"
-#include "entities/StandardJoint.hpp"
-
-#include <numeric>
+#include "entities/EntitiesAll.hpp"
 
 #include <plog/Log.h>
 #include <Core/CoreAll.h>
 
-using std::accumulate;
 using std::all_of;
 using std::get;
 using std::vector;
@@ -124,7 +107,7 @@ void CreateFusionDialog::addInputControl(DialogInputs reference, const adsk::cor
     m_inputs[reference] = input->id();
 }
 
-void CreateFusionDialog::addInputControl(DialogInputs reference, const adsk::core::Ptr<CommandInput>& input, const std::function<void()> &handler) {
+void CreateFusionDialog::addInputControl(DialogInputs reference, const adsk::core::Ptr<CommandInput>& input, const std::function<void(entt::registry&)> &handler) {
     addInputControl(reference, input);
     m_handlers[input->id()].emplace_back(handler);
     m_inputs[reference] = input->id();
@@ -133,7 +116,7 @@ void CreateFusionDialog::addInputControl(DialogInputs reference, const adsk::cor
 void CreateFusionDialog::addInputControl(
     const DialogInputs reference,
     const adsk::core::Ptr<CommandInput> &input,
-    const std::vector<std::function<void()>> &handlers
+    const std::vector<std::function<void(entt::registry& registry)>> &handlers
 ) {
     addInputControl(reference, input);
     for (auto const &handler: handlers) {
@@ -141,7 +124,7 @@ void CreateFusionDialog::addInputControl(
     }
 }
 
-void CreateFusionDialog::addInputHandler(const DialogInputs reference, const std::function<void()> &handler) {
+void CreateFusionDialog::addInputHandler(const DialogInputs reference, const std::function<void(entt::registry&)> &handler) {
     m_handlers[m_inputs[reference]].emplace_back(handler);
 }
 
@@ -155,9 +138,9 @@ void CreateFusionDialog::createModelSelectionDropDown(const Ptr<CommandInputs> &
     creation_mode->maxVisibleItems(2);
 
     addInputControl(
-        DialogInputs::ModelSelection, creation_mode, [this, creation_mode]() {
-            auto const &full  = m_configuration.ctx<DialogFullPreviewMode>().control;
-            auto const &label = m_configuration.ctx<DialogFullPreviewLabel>().control;
+        DialogInputs::ModelSelection, creation_mode, [creation_mode](entt::registry& registry) {
+            auto const &full  = registry.ctx<DialogFullPreviewMode>().control;
+            auto const &label = registry.ctx<DialogFullPreviewLabel>().control;
 
             if (full->value()) {
                 full->value(false);
@@ -207,7 +190,7 @@ auto CreateFusionDialog::createDimensionInput(Ptr<CommandInputs> &children, cons
         )
     };
 
-    auto validator = [spinner] {
+    auto validator = [spinner](entt::registry& registry) {
         return spinner->value() >= spinner->minimumValue();
     };
     m_validators.emplace_back(validator);
@@ -222,22 +205,22 @@ void CreateFusionDialog::createPanelTable(
 ) {
     auto table = initializePanelTable(inputs);
 
-    auto top = addPanelTableRow<DialogTopInputs, DialogTopThickness>(inputs, table, m_top_row);
+    auto top = addPanelTableRow<DialogTopInputs, DialogTopThickness, HeightThicknessInput>(inputs, table, m_top_row);
     top.save<DialogTopPanel>();
 
-    auto bottom = addPanelTableRow<DialogBottomInputs, DialogBottomThickness>(inputs, table, m_bottom_row);
+    auto bottom = addPanelTableRow<DialogBottomInputs, DialogBottomThickness, HeightThicknessInput>(inputs, table, m_bottom_row);
     bottom.save<DialogBottomPanel>();
 
-    auto left = addPanelTableRow<DialogLeftInputs, DialogLeftThickness>(inputs, table, m_left_row);
+    auto left = addPanelTableRow<DialogLeftInputs, DialogLeftThickness, LengthThicknessInput>(inputs, table, m_left_row);
     left.save<DialogLeftPanel>();
 
-    auto right = addPanelTableRow<DialogRightInputs, DialogRightThickness>(inputs, table, m_right_row);
+    auto right = addPanelTableRow<DialogRightInputs, DialogRightThickness, LengthThicknessInput>(inputs, table, m_right_row);
     right.save<DialogRightPanel>();
 
-    auto front = addPanelTableRow<DialogFrontInputs, DialogFrontThickness>(inputs, table, m_front_row);
+    auto front = addPanelTableRow<DialogFrontInputs, DialogFrontThickness, WidthThicknessInput>(inputs, table, m_front_row);
     front.save<DialogFrontPanel>();
 
-    auto back = addPanelTableRow<DialogBackInputs, DialogBackThickness>(inputs, table, m_back_row);
+    auto back = addPanelTableRow<DialogBackInputs, DialogBackThickness, WidthThicknessInput>(inputs, table, m_back_row);
     back.save<DialogBackPanel>();
 }
 
@@ -265,7 +248,7 @@ void CreateFusionDialog::addTableTitles(adsk::core::Ptr<TableCommandInput> &tabl
     }
 }
 
-template<class T, class U>
+template<class T, class U, class V>
 auto CreateFusionDialog::addPanelTableRow(
     const Ptr<CommandInputs> &inputs,
     Ptr<adsk::core::TableCommandInput> &table,
@@ -294,18 +277,18 @@ auto CreateFusionDialog::addPanelTableRow(
     table->addCommandInput(thickness_control, row_num, 7, 0, 0);
 
     auto override_row = CreatePanelOverrideRow(&m_configuration, row.label.name, row.priority, row.orientation);
-    auto thickness_swap = override_row.createRow<T, U>(default_thickness, label_control, enable_control, override_control, thickness_control);
+    auto thickness_swap = override_row.createRow<T, U, V>(default_thickness, label_control, enable_control, override_control, thickness_control);
 
-    auto thickness_toggle = [override_control, thickness_control] {
+    auto thickness_toggle = [override_control, thickness_control](entt::registry& registry) {
         thickness_control->isEnabled(override_control->value() && override_control->isEnabled());
     };
 
-    auto override_toggle = [override_control, enable_control] {
+    auto override_toggle = [override_control, enable_control](entt::registry& registry) {
         override_control->isEnabled(enable_control->value());
     };
 
-    auto follow_thickness = [this, override_control, thickness_control] {
-        auto const &default_thickness = m_configuration.ctx<DialogThicknessInput>().control;
+    auto follow_thickness = [override_control, thickness_control](entt::registry& registry) {
+        auto const &default_thickness = registry.ctx<DialogThicknessInput>().control;
 
         auto thickness_enabled = override_control->value();
 
@@ -368,10 +351,10 @@ void CreateFusionDialog::createHeightDividerInputs(const Ptr<CommandInputs> &inp
     m_configuration.set<DialogHeightDividerFrontBackJointInput>(height_divider_fb_outside_joint);
     addJointTypes(height_divider_fb_outside_joint);
     addInputControl(
-        DialogInputs::HeightDividerFBJointInput, height_divider_fb_outside_joint, [this]() {
-            update(m_configuration.ctx<DialogLengthDividerCountInput>().control);
-            update(m_configuration.ctx<DialogWidthDividerCountInput>().control);
-            update(m_configuration.ctx<DialogHeightDividerCountInput>().control);
+        DialogInputs::HeightDividerFBJointInput, height_divider_fb_outside_joint, [this](entt::registry& registry) {
+            update(registry.ctx<DialogLengthDividerCountInput>().control);
+            update(registry.ctx<DialogWidthDividerCountInput>().control);
+            update(registry.ctx<DialogHeightDividerCountInput>().control);
         }
     );
 
@@ -381,10 +364,10 @@ void CreateFusionDialog::createHeightDividerInputs(const Ptr<CommandInputs> &inp
     m_configuration.set<DialogHeightDividerLeftRightJointInput>(height_divider_lr_outside_joint);
     addJointTypes(height_divider_lr_outside_joint);
     addInputControl(
-        DialogInputs::HeightDividerLRJointInput, height_divider_lr_outside_joint, [this]() {
-            update(m_configuration.ctx<DialogLengthDividerCountInput>().control);
-            update(m_configuration.ctx<DialogWidthDividerCountInput>().control);
-            update(m_configuration.ctx<DialogHeightDividerCountInput>().control);
+        DialogInputs::HeightDividerLRJointInput, height_divider_lr_outside_joint, [this](entt::registry& registry) {
+            update(registry.ctx<DialogLengthDividerCountInput>().control);
+            update(registry.ctx<DialogWidthDividerCountInput>().control);
+            update(registry.ctx<DialogHeightDividerCountInput>().control);
         }
     );
 
@@ -396,22 +379,22 @@ void CreateFusionDialog::createHeightDividerInputs(const Ptr<CommandInputs> &inp
     m_configuration.set<DialogHeightDividerCountInput>(height);
 
     addInputControl(
-        DialogInputs::HeightDividerCount, height, [this]() {
-            auto orientations = m_configuration.ctx<DialogDividerOrientationsInput>().control->selectedItem()->index();
+        DialogInputs::HeightDividerCount, height, [this](entt::registry& registry) {
+            auto orientations = registry.ctx<DialogDividerOrientationsInput>().control->selectedItem()->index();
             if (orientations == 0) return;
 
-            auto const divider_height    = m_configuration.ctx<DialogHeightInput>().control->value();
-            auto const divider_inverted = m_configuration.ctx<DialogDividerJointInput>().control->selectedItem()->index() == 0 ;
+            auto const divider_height    = registry.ctx<DialogHeightInput>().control->value();
+            auto const divider_inverted = registry.ctx<DialogDividerJointInput>().control->selectedItem()->index() == 0 ;
 
-            auto old_view = m_configuration.view<HeightDivider>();
-            m_configuration.destroy(old_view.begin(), old_view.end());
+            auto old_view = registry.view<HeightDivider>();
+            registry.destroy(old_view.begin(), old_view.end());
 
-            auto static_view = m_configuration.view<HeightDividerJoint>();
-            m_configuration.destroy(static_view.begin(), static_view.end());
+            auto static_view = registry.view<HeightDividerJoint>();
+            registry.destroy(static_view.begin(), static_view.end());
 
             PLOG_DEBUG << "Updating Height Divider information";
 
-            auto dividers = Dividers<HeightDivider, DialogHeightDividerCountInput>(m_configuration, m_app);
+            auto dividers = Dividers<HeightDivider, DialogHeightDividerCountInput>(registry, m_app);
             dividers.create(AxisFlag::Height, "Height", divider_height, 5);
             dividers.addOrientation<HeightOrientation>();
             dividers.addMaxOffset<DialogHeightInput>();
@@ -439,10 +422,10 @@ void CreateFusionDialog::createWidthDividerInputs(const Ptr<CommandInputs> &inpu
     m_configuration.set<DialogWidthDividerLeftRightJointInput>(width_divider_lr_outside_joint);
     addJointTypes(width_divider_lr_outside_joint);
     addInputControl(
-        DialogInputs::WidthDividerLRJointInput, width_divider_lr_outside_joint, [this]() {
-            update(m_configuration.ctx<DialogLengthDividerCountInput>().control);
-            update(m_configuration.ctx<DialogWidthDividerCountInput>().control);
-            update(m_configuration.ctx<DialogHeightDividerCountInput>().control);
+        DialogInputs::WidthDividerLRJointInput, width_divider_lr_outside_joint, [this](entt::registry& registry) {
+            update(registry.ctx<DialogLengthDividerCountInput>().control);
+            update(registry.ctx<DialogWidthDividerCountInput>().control);
+            update(registry.ctx<DialogHeightDividerCountInput>().control);
         }
     );
 
@@ -452,10 +435,10 @@ void CreateFusionDialog::createWidthDividerInputs(const Ptr<CommandInputs> &inpu
     m_configuration.set<DialogWidthDividerTopBottomJointInput>(width_divider_tb_outside_joint);
     addJointTypes(width_divider_tb_outside_joint);
     addInputControl(
-        DialogInputs::WidthDividerTBJointInput, width_divider_tb_outside_joint, [this]() {
-            update(m_configuration.ctx<DialogLengthDividerCountInput>().control);
-            update(m_configuration.ctx<DialogWidthDividerCountInput>().control);
-            update(m_configuration.ctx<DialogHeightDividerCountInput>().control);
+        DialogInputs::WidthDividerTBJointInput, width_divider_tb_outside_joint, [this](entt::registry& registry) {
+            update(registry.ctx<DialogLengthDividerCountInput>().control);
+            update(registry.ctx<DialogWidthDividerCountInput>().control);
+            update(registry.ctx<DialogHeightDividerCountInput>().control);
         }
     );
 
@@ -467,20 +450,20 @@ void CreateFusionDialog::createWidthDividerInputs(const Ptr<CommandInputs> &inpu
     m_configuration.set<DialogWidthDividerCountInput>(width);
 
     addInputControl(
-        DialogInputs::WidthDividerCount, width, [this]() {
-            auto orientations = m_configuration.ctx<DialogDividerOrientationsInput>().control->selectedItem()->index();
+        DialogInputs::WidthDividerCount, width, [this](entt::registry& registry) {
+            auto orientations = registry.ctx<DialogDividerOrientationsInput>().control->selectedItem()->index();
             if (orientations == 1) return;
 
-            auto const divider_length    = m_configuration.ctx<DialogWidthInput>().control->value();
-            auto const divider_inverted = m_configuration.ctx<DialogDividerJointInput>().control->selectedItem()->index() == 1;
+            auto const divider_length    = registry.ctx<DialogWidthInput>().control->value();
+            auto const divider_inverted = registry.ctx<DialogDividerJointInput>().control->selectedItem()->index() == 1;
 
-            auto old_view = m_configuration.view<WidthDivider>();
-            m_configuration.destroy(old_view.begin(), old_view.end());
+            auto old_view = registry.view<WidthDivider>();
+            registry.destroy(old_view.begin(), old_view.end());
 
-            auto static_view = m_configuration.view<WidthDividerJoint>();
-            m_configuration.destroy(static_view.begin(), static_view.end());
+            auto static_view = registry.view<WidthDividerJoint>();
+            registry.destroy(static_view.begin(), static_view.end());
 
-            auto dividers = Dividers<WidthDivider, DialogWidthDividerCountInput>(m_configuration, m_app);
+            auto dividers = Dividers<WidthDivider, DialogWidthDividerCountInput>(registry, m_app);
             dividers.create(AxisFlag::Width, "Width", divider_length, 4);
             dividers.addOrientation<WidthOrientation>();
             dividers.addMaxOffset<DialogWidthInput>();
@@ -508,10 +491,10 @@ void CreateFusionDialog::createLengthDividerInputs(const Ptr<CommandInputs> &inp
     m_configuration.set<DialogLengthDividerFrontBackJointInput>(length_divider_fb_outside_joint);
     addJointTypes(length_divider_fb_outside_joint);
     addInputControl(
-        DialogInputs::LengthDividerFBJointInput, length_divider_fb_outside_joint, [this]() {
-            update(m_configuration.ctx<DialogLengthDividerCountInput>().control);
-            update(m_configuration.ctx<DialogWidthDividerCountInput>().control);
-            update(m_configuration.ctx<DialogHeightDividerCountInput>().control);
+        DialogInputs::LengthDividerFBJointInput, length_divider_fb_outside_joint, [this](entt::registry& registry) {
+            update(registry.ctx<DialogLengthDividerCountInput>().control);
+            update(registry.ctx<DialogWidthDividerCountInput>().control);
+            update(registry.ctx<DialogHeightDividerCountInput>().control);
         }
     );
 
@@ -521,10 +504,10 @@ void CreateFusionDialog::createLengthDividerInputs(const Ptr<CommandInputs> &inp
     m_configuration.set<DialogLengthDividerTopBottomJointInput>(length_divider_tb_outside_joint);
     addJointTypes(length_divider_tb_outside_joint);
     addInputControl(
-        DialogInputs::LengthDividerTBJointInput, length_divider_tb_outside_joint, [this]() {
-            update(m_configuration.ctx<DialogLengthDividerCountInput>().control);
-            update(m_configuration.ctx<DialogWidthDividerCountInput>().control);
-            update(m_configuration.ctx<DialogHeightDividerCountInput>().control);
+        DialogInputs::LengthDividerTBJointInput, length_divider_tb_outside_joint, [this](entt::registry& registry) {
+            update(registry.ctx<DialogLengthDividerCountInput>().control);
+            update(registry.ctx<DialogWidthDividerCountInput>().control);
+            update(registry.ctx<DialogHeightDividerCountInput>().control);
         }
     );
 
@@ -536,22 +519,22 @@ void CreateFusionDialog::createLengthDividerInputs(const Ptr<CommandInputs> &inp
     m_configuration.set<DialogLengthDividerCountInput>(length);
 
     addInputControl(
-        DialogInputs::LengthDividerCount, length, [this]() {
-            auto orientations = m_configuration.ctx<DialogDividerOrientationsInput>().control->selectedItem()->index();
+        DialogInputs::LengthDividerCount, length, [this](entt::registry& registry) {
+            auto orientations = registry.ctx<DialogDividerOrientationsInput>().control->selectedItem()->index();
             if (orientations == 2) return;
 
-            auto const divider_length   = m_configuration.ctx<DialogLengthInput>().control->value();
-            auto const divider_inverted = m_configuration.ctx<DialogDividerJointInput>().control->selectedItem()->index() == 1;
+            auto const divider_length   = registry.ctx<DialogLengthInput>().control->value();
+            auto const divider_inverted = registry.ctx<DialogDividerJointInput>().control->selectedItem()->index() == 1;
 
-            auto old_view = m_configuration.view<LengthDivider>();
-            m_configuration.destroy(old_view.begin(), old_view.end());
+            auto old_view = registry.view<LengthDivider>();
+            registry.destroy(old_view.begin(), old_view.end());
 
-            auto static_view = m_configuration.view<LengthDividerJoint>();
-            m_configuration.destroy(static_view.begin(), static_view.end());
+            auto static_view = registry.view<LengthDividerJoint>();
+            registry.destroy(static_view.begin(), static_view.end());
 
             PLOG_DEBUG << "Updating Length Divider information";
 
-            auto dividers = Dividers<LengthDivider, DialogLengthDividerCountInput>(m_configuration, m_app);
+            auto dividers = Dividers<LengthDivider, DialogLengthDividerCountInput>(registry, m_app);
             dividers.create(AxisFlag::Length, "Length", divider_length, 3);
             dividers.addOrientation<LengthOrientation>();
             dividers.addMaxOffset<DialogLengthInput>();
@@ -577,10 +560,10 @@ void CreateFusionDialog::createDividerJointDirectionInput(const Ptr<CommandInput
     divider_joint->maxVisibleItems(2);
 
     addInputControl(
-        DialogInputs::DividerLapInput, divider_joint, [this]() {
-            update(m_configuration.ctx<DialogLengthDividerCountInput>().control);
-            update(m_configuration.ctx<DialogWidthDividerCountInput>().control);
-            update(m_configuration.ctx<DialogHeightDividerCountInput>().control);
+        DialogInputs::DividerLapInput, divider_joint, [this](entt::registry& registry) {
+            update(registry.ctx<DialogLengthDividerCountInput>().control);
+            update(registry.ctx<DialogWidthDividerCountInput>().control);
+            update(registry.ctx<DialogHeightDividerCountInput>().control);
         }
     );
 }
@@ -595,40 +578,31 @@ void CreateFusionDialog::createDividerOrientationsInput(const Ptr<CommandInputs>
     divider_orientations->maxVisibleItems(3);
 
     addInputControl(
-        DialogInputs::DividerOrientations, divider_orientations, [this]() {
-            auto orientations = m_configuration.ctx<DialogDividerOrientationsInput>().control->selectedItem()->index();
+        DialogInputs::DividerOrientations, divider_orientations, [](entt::registry& registry) {
+            auto orientations = registry.ctx<DialogDividerOrientationsInput>().control->selectedItem()->index();
 
-            auto length_group_input = m_configuration.ctx<DialogLengthDividerGroupInput>().control;
-            auto length_count_input = m_configuration.ctx<DialogLengthDividerCountInput>().control;
-            auto width_group_input = m_configuration.ctx<DialogWidthDividerGroupInput>().control;
-            auto width_count_input = m_configuration.ctx<DialogWidthDividerCountInput>().control;
-            auto height_group_input = m_configuration.ctx<DialogHeightDividerGroupInput>().control;
-            auto height_count_input = m_configuration.ctx<DialogHeightDividerCountInput>().control;
+            auto length_group_input = registry.ctx<DialogLengthDividerGroupInput>().control;
+            auto length_count_input = registry.ctx<DialogLengthDividerCountInput>().control;
+            auto width_group_input = registry.ctx<DialogWidthDividerGroupInput>().control;
+            auto width_count_input = registry.ctx<DialogWidthDividerCountInput>().control;
+            auto height_group_input = registry.ctx<DialogHeightDividerGroupInput>().control;
+            auto height_count_input = registry.ctx<DialogHeightDividerCountInput>().control;
 
-            auto selector = std::map<int, std::function<void()>>{
-                {0, [&, this](){
+            auto selector = std::map<int, std::function<void(entt::registry& registry)>>{
+                {0, [&](entt::registry& registry){
                     height_count_input->value(0);
-                    auto old_view = m_configuration.view<HeightDivider>();
-                    m_configuration.destroy(old_view.begin(), old_view.end());
-
-                    auto static_view = m_configuration.view<HeightDividerJoint>();
-                    //if (static_view.size()) m_configuration.destroy(static_view.begin(), static_view.end());
+                    auto old_view = registry.view<HeightDivider>();
+                    registry.destroy(old_view.begin(), old_view.end());
             }},
-                {1, [&, this](){
+                {1, [&](entt::registry& registry){
                     width_count_input->value(0);
-                    auto old_view = m_configuration.view<WidthDivider>();
-                    m_configuration.destroy(old_view.begin(), old_view.end());
-
-                    auto static_view = m_configuration.view<WidthDividerJoint>();
-                    //if (static_view.size()) m_configuration.destroy(static_view.begin(), static_view.end());
+                    auto old_view = registry.view<WidthDivider>();
+                    registry.destroy(old_view.begin(), old_view.end());
             }},
-                {2, [&, this](){
+                {2, [&](entt::registry& registry){
                     length_count_input->value(0);
-                    auto old_view = m_configuration.view<LengthDivider>();
-                    m_configuration.destroy(old_view.begin(), old_view.end());
-
-                    auto static_view = m_configuration.view<LengthDividerJoint>();
-                    //if (static_view.size()) m_configuration.destroy(static_view.begin(), static_view.end());
+                    auto old_view = registry.view<LengthDivider>();
+                    registry.destroy(old_view.begin(), old_view.end());
                 }}
             };
 
@@ -640,7 +614,7 @@ void CreateFusionDialog::createDividerOrientationsInput(const Ptr<CommandInputs>
             width_group_input->isVisible(width_is_valid);
             height_group_input->isVisible(height_is_valid);
 
-            selector[orientations]();
+            selector[orientations](registry);
         }
     );
 }
@@ -661,17 +635,11 @@ auto CreateFusionDialog::createStandardJointTable(const adsk::core::Ptr<CommandI
     auto const second_label   = table->commandInputs()->addTextBoxCommandInput("secondJointLabelInput", "Second", "<b>Second</b>", 1, true);
     auto const pattern_label  = table->commandInputs()->addTextBoxCommandInput("jointPatternLabelInput", "Pattern", "<b>Pattern</b>", 1, true);
     auto const type_label     = table->commandInputs()->addTextBoxCommandInput("jointPatternLabelInput", "Joint Type", "<b>Joint Type</b>", 1, true);
-//    auto const pos_label      = table->commandInputs()->addTextBoxCommandInput("posLabelInput", "Panel Offset", "<b>Panel Offset</b>", 1, true);
-//    auto const jos_label      = table->commandInputs()->addTextBoxCommandInput("josLabelInput", "Joint Offset", "<b>Joint Offset</b>", 1, true);
-//    auto const distance_label = table->commandInputs()->addTextBoxCommandInput("distanceLabelInput", "Distance", "<b>Distance</b>", 1, true);
 
     table->addCommandInput(first_label, 0, 0);
     table->addCommandInput(second_label, 0, 1);
     table->addCommandInput(pattern_label, 0, 2);
     table->addCommandInput(type_label, 0, 3);
-//    table->addCommandInput(pos_label, 0, 4);
-//    table->addCommandInput(jos_label, 0, 5);
-//    table->addCommandInput(distance_label, 0, 6);
     return table;
 }
 
@@ -702,9 +670,9 @@ void CreateFusionDialog::createPreviewTable(const adsk::core::Ptr<CommandInputs>
 
     addInputControl(DialogInputs::FastPreviewLabel, fast_label);
     addInputControl(
-        DialogInputs::FastPreview, fast_preview, [this]() {
-            auto const &fast_preview = m_configuration.ctx<DialogFastPreviewMode>().control;
-            auto const &full_preview = m_configuration.ctx<DialogFullPreviewMode>().control;
+        DialogInputs::FastPreview, fast_preview, [](entt::registry& registry) {
+            auto const &fast_preview = registry.ctx<DialogFastPreviewMode>().control;
+            auto const &full_preview = registry.ctx<DialogFullPreviewMode>().control;
 
             if (fast_preview->value()) {
                 full_preview->value(false);
@@ -714,9 +682,9 @@ void CreateFusionDialog::createPreviewTable(const adsk::core::Ptr<CommandInputs>
 
     addInputControl(DialogInputs::FullPreviewLabel, full_label);
     addInputControl(
-        DialogInputs::FullPreview, full_preview, [this]() {
-            auto const &fast_preview = m_configuration.ctx<DialogFastPreviewMode>().control;
-            auto const &full_preview = m_configuration.ctx<DialogFullPreviewMode>().control;
+        DialogInputs::FullPreview, full_preview, [](entt::registry& registry) {
+            auto const &fast_preview = registry.ctx<DialogFastPreviewMode>().control;
+            auto const &full_preview = registry.ctx<DialogFullPreviewMode>().control;
 
             if (full_preview->value()) {
                 fast_preview->value(false);
@@ -751,10 +719,10 @@ bool validateDimension(entt::registry &m_configuration, AxisFlag axis_flag) {
 }
 
 void CreateFusionDialog::addMinimumAxisDimensionChecks() {
-    auto validator = [this]() {
-        auto length_ok = validateDimension<DialogLengthInput, LengthOrientation>(m_configuration, AxisFlag::Length);
-        auto width_ok  = validateDimension<DialogWidthInput, WidthOrientation>(m_configuration, AxisFlag::Width);
-        auto height_ok = validateDimension<DialogHeightInput, HeightOrientation>(m_configuration, AxisFlag::Height);
+    auto validator = [](entt::registry& registry) {
+        auto length_ok = validateDimension<DialogLengthInput, LengthOrientation>(registry, AxisFlag::Length);
+        auto width_ok  = validateDimension<DialogWidthInput, WidthOrientation>(registry, AxisFlag::Width);
+        auto height_ok = validateDimension<DialogHeightInput, HeightOrientation>(registry, AxisFlag::Height);
 
         return length_ok && width_ok && height_ok;
     };
@@ -762,19 +730,19 @@ void CreateFusionDialog::addMinimumAxisDimensionChecks() {
 }
 
 void CreateFusionDialog::addMaximumKerfCheck() {
-    auto validator = [this]() {
-        auto kerf = m_configuration.ctx<DialogKerfInput>().control->value();
+    auto validator = [](entt::registry& registry) {
+        auto kerf = registry.ctx<DialogKerfInput>().control->value();
 
         bool kerf_ok = true;
 
-        auto view = m_configuration.view<const DialogPanelThickness>().proxy();
+        auto view = registry.view<const DialogPanelThickness>().proxy();
         for (auto &&[entity, thickness]: view) {
             kerf_ok = kerf_ok && (thickness.control->value() > kerf);
         }
 
         if (kerf_ok) { return true; }
 
-        m_configuration.set<DialogErrorMessage>(
+        registry.set<DialogErrorMessage>(
             "<span style=\" font-weight:600; color:#ff0000;\">Kerf</span> is larger than the smallest panel thickness."
         );
 
@@ -784,19 +752,19 @@ void CreateFusionDialog::addMaximumKerfCheck() {
 }
 
 void CreateFusionDialog::addMinimumFingerWidthCheck() {
-    auto validator = [this]() {
-        auto finger_width = m_configuration.ctx<DialogFingerWidthInput>().control->value();
+    auto validator = [](entt::registry& registry) {
+        auto finger_width = registry.ctx<DialogFingerWidthInput>().control->value();
 
         bool finger_ok = true;
 
-        auto view = m_configuration.view<const DialogPanelThickness>().proxy();
+        auto view = registry.view<const DialogPanelThickness>().proxy();
         for (auto &&[entity, thickness]: view) {
             finger_ok = finger_ok && (thickness.control->value() < finger_width);
         }
 
         if (finger_ok) { return true; }
 
-        m_configuration.set<DialogErrorMessage>(
+        registry.set<DialogErrorMessage>(
             "<span style=\" font-weight:600; color:#ff0000;\">Finger width</span> should be larger than the largest panel thickness."
         );
 
@@ -806,16 +774,16 @@ void CreateFusionDialog::addMinimumFingerWidthCheck() {
 }
 
 void CreateFusionDialog::addMinimumPanelCountCheck() {
-    auto validator = [this]() {
+    auto validator = [](entt::registry& registry) {
         int thickness_count = 0;
 
-        auto view = m_configuration.view<const DialogPanelEnable>().proxy();
+        auto view = registry.view<const DialogPanelEnable>().proxy();
         for (auto &&[entity, enable]: view) {
             thickness_count += enable.control->value();
         }
 
         if (thickness_count < 2) {
-            m_configuration.set<DialogErrorMessage>(
+            registry.set<DialogErrorMessage>(
                 "<span style=\" font-weight:600; color:#ff0000;\">A minimum of two panels must be selected."
             );
             return false;
@@ -884,13 +852,12 @@ void CreateFusionDialog::addJointTypes(Ptr<DropDownCommandInput> &dropdown) {
     items->add("Triple Tenon", false);
     items->add("Quad Tenon", false);
     items->add("Trim", false);
-//            items->add("Pattern", false);
     items->add("None", false);
     dropdown->maxVisibleItems(7);
 }
 
 void CreateFusionDialog::addCollisionHandler(DialogInputs reference) {
-    auto handler = [this]() {
+    auto handler = [this](entt::registry& registry) {
         m_systems->updateCollisions();
         m_systems->postUpdate();
     };
@@ -902,7 +869,7 @@ bool CreateFusionDialog::validate(const adsk::core::Ptr<CommandInputs> &inputs) 
     auto m_error_message = m_configuration.ctx<DialogErrorMessage>().value;
     m_error->formattedText(m_error_message);
 
-    auto results = all_of(m_validators.begin(), m_validators.end(), [](const std::function<bool()> &v) { return v(); });
+    auto results = all_of(m_validators.begin(), m_validators.end(), [this](const std::function<bool(entt::registry&)> &v) { return v(m_configuration); });
 
     m_error->isVisible(!results);
 
@@ -916,7 +883,7 @@ bool CreateFusionDialog::update(const adsk::core::Ptr<CommandInput> &cmd_input) 
     auto handlers = m_handlers[cmd_input->id()];
 
     for (auto &handler: handlers) {
-        handler();
+        handler(m_configuration);
     }
 
     m_systems->postUpdate();

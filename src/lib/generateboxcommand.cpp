@@ -16,13 +16,11 @@
 #include "entities/JointPatternTags.hpp"
 #include "entities/JointThickness.hpp"
 #include "entities/MaxOffset.hpp"
-#include "entities/MaxOffsetInput.hpp"
 #include "entities/OutsidePanel.hpp"
 #include "entities/PanelPosition.hpp"
 #include "entities/PanelProfile.hpp"
 #include "entities/Position.hpp"
 #include "entities/StartReferencePoint.hpp"
-#include "entities/ToggleableThicknessInput.hpp"
 
 #include <Core/CoreAll.h>
 #include <Fusion/FusionAll.h>

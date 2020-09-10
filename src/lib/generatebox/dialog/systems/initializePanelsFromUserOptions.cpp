@@ -22,7 +22,6 @@
 #include "entities/JointThickness.hpp"
 #include "entities/Kerf.hpp"
 #include "entities/MaxOffset.hpp"
-#include "entities/MaxOffsetInput.hpp"
 #include "entities/Panel.hpp"
 #include "entities/PanelDimension.hpp"
 #include "entities/PanelOffset.hpp"
@@ -44,13 +43,16 @@ void initializePanelsFromUserOptionsImpl(entt::registry& configuration, entt::re
 
     auto kerf = configuration.ctx<DialogKerfInput>().control->value();
 
-    auto master_view = configuration.view<Enabled, FingerPattern, FingerWidth, DialogJoints, DialogPanelCollisionData, DialogPanels, JointPattern, PanelPositions, JointDirections>().proxy();
+    auto master_view = configuration
+        .view<Enabled, FingerPattern, FingerWidth, DialogJoints, DialogPanelCollisionData, DialogPanels, JointPattern, PanelPositions, JointDirections>()
+        .proxy();
     for (auto &&[entity, enabled, fm, fw, joints, collision_data, panels, pt, pp, jd]: master_view) {
-        PLOG_DEBUG << "Joint Directions are " << (int)jd.first << ":" << (int)jd.second;
+        PLOG_DEBUG << "Joint Directions are " << (int) jd.first << ":" << (int) jd.second;
         auto create_panel = [&, finger_mode = fm, finger_width = fw, pattern_type = pt](
-            const DialogPanelJoint& joint, const DialogPanelJointData collision, const entt::entity& second_panel, const PanelPositions& positions, const JointDirectionType& joint_direction
+            const DialogPanelJoint &joint, const DialogPanelJointData collision, const entt::entity &second_panel, const PanelPositions &positions,
+            const JointDirectionType &joint_direction
         ) {
-            auto panel_offset = static_cast<int>(collision.panel_offset) == 0 ? 0.0 : collision.panel_offset;
+            auto panel_offset   = static_cast<int>(collision.panel_offset) == 0 ? 0.0 : collision.panel_offset;
             auto joint_distance = collision.distance;
             auto panel_position = positions.first;
             auto joint_position = positions.second;
@@ -66,7 +68,8 @@ void initializePanelsFromUserOptionsImpl(entt::registry& configuration, entt::re
             panel_registry.emplace<PanelPosition>(panel, panel_position);
             panel_registry.emplace<JointPosition>(panel, joint_position);
             panel_registry.emplace<JointProfile>(
-                panel, panel_position, joint_position, joint_direction, JointPatternType::BoxJoint, FingerPatternType::AutomaticWidth, 0, 0.0, 0.0, 0.0, 0.0, AxisFlag::Length, AxisFlag::Length
+                panel, panel_position, joint_position, joint_direction, JointPatternType::BoxJoint, FingerPatternType::AutomaticWidth, 0, 0.0, 0.0, 0.0, 0.0,
+                AxisFlag::Length, AxisFlag::Length
             );
             panel_registry.emplace<JointPatternPosition>(
                 panel, panel_position, AxisFlag::Length, JointPatternType::BoxJoint, AxisFlag::Length, joint_position
@@ -80,7 +83,7 @@ void initializePanelsFromUserOptionsImpl(entt::registry& configuration, entt::re
             panel_registry.emplace<StartReferencePoint>(panel);
 
             PLOG_DEBUG << "Adding panel registry entity for " << joint.panel.name;
-            PLOG_DEBUG << joint.panel.name << " direction is " << (int)joint_direction;
+            PLOG_DEBUG << joint.panel.name << " direction is " << (int) joint_direction;
             first_index[joint.entity].insert(panel);
             PLOG_DEBUG << joint.panel.name << " now has " << first_index[joint.entity].size() << " elements.";
             second_index[second_panel].insert(panel);
@@ -91,11 +94,11 @@ void initializePanelsFromUserOptionsImpl(entt::registry& configuration, entt::re
     }
 
     auto process_view = configuration.view<
-        const DialogPanelEnableValue, const DialogPanel, const PanelDimensions, const DialogPanelThickness, const MaxOffsetInput
+        const DialogPanelEnableValue, const DialogPanel, const PanelDimensions, const DialogPanelThickness
     >().proxy();
-    for (auto &&[entity, enable, panel_data, dimensions, thickness, max_offset]: process_view) {
+    for (auto &&[entity, enable, panel_data, dimensions, thickness]: process_view) {
         PLOG_DEBUG << "Generating panel configuration";
-        auto first_panels = first_index[entity];
+        auto first_panels  = first_index[entity];
         auto second_panels = second_index[entity];
 
         auto parent_panel = panel_registry.create();
@@ -106,7 +109,6 @@ void initializePanelsFromUserOptionsImpl(entt::registry& configuration, entt::re
             PLOG_DEBUG << "Adding enable, panel and dimension data to panel " << panel_data.name;
             PLOG_DEBUG << "Setting thickness to " << std::to_string(thickness.control->value());
             panel_registry.emplace<Dimensions>(panel, dimensions.length, dimensions.width, dimensions.height, thickness.control->value());
-            panel_registry.emplace<MaxOffset>(panel, max_offset.control->value());
             panel_registry.emplace<Enabled>(panel, enable.value);
             panel_registry.emplace<Panel>(panel, panel_data.name, panel_data.priority, panel_data.orientation);
             panel_registry.emplace<Thickness>(panel, thickness.control->value());
@@ -122,4 +124,28 @@ void initializePanelsFromUserOptionsImpl(entt::registry& configuration, entt::re
             panel_registry.emplace<JointThickness>(panel, joint_thickness);
         }
     }
+
+    auto length_offset_view = configuration.view<const LengthMaxOffsetInput>();
+    for (auto &&[entity, max_offset]: length_offset_view.proxy()) {
+        auto first_panels  = first_index[entity];
+        for (auto const &panel: first_panels) {
+            panel_registry.emplace<MaxOffset>(panel, max_offset.control->value());
+        }
+    };
+
+    auto width_offset_view = configuration.view<const WidthMaxOffsetInput>();
+    for (auto &&[entity, max_offset]: width_offset_view.proxy()) {
+        auto first_panels  = first_index[entity];
+        for (auto const &panel: first_panels) {
+            panel_registry.emplace<MaxOffset>(panel, max_offset.control->value());
+        }
+    };
+
+    auto height_offset_view = configuration.view<const HeightMaxOffsetInput>();
+    for (auto &&[entity, max_offset]: height_offset_view.proxy()) {
+        auto first_panels  = first_index[entity];
+        for (auto const &panel: first_panels) {
+            panel_registry.emplace<MaxOffset>(panel, max_offset.control->value());
+        }
+    };
 }

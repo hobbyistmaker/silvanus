@@ -20,16 +20,8 @@
 #include <Fusion/FusionAll.h>
 
 #include "dialog/entities/InputConfig.hpp"
-#include "entities/AxisFlag.hpp"
 #include "lib/generatebox/dialog/entities/DialogInputs.hpp"
-#include "entities/FingerPattern.hpp"
-#include "entities/JointPatternTags.hpp"
-#include "entities/JointDirection.hpp"
-#include "entities/JointPattern.hpp"
-#include "entities/OrientationTags.hpp"
-#include "entities/Panel.hpp"
-#include "entities/Panels.hpp"
-#include "entities/Position.hpp"
+#include "entities/EntitiesAll.hpp"
 #include "createpaneloverriderow.hpp"
 
 #include "lib/generatebox/dialog/systems/DialogSystemManager.hpp"
@@ -151,9 +143,9 @@ namespace silvanus::generatebox::dialog {
 
             adsk::core::Ptr<adsk::core::TextBoxCommandInput> m_error;
 
-            std::unordered_map<std::string, std::vector<std::function<void()>>>                           m_handlers;
+            std::unordered_map<std::string, std::vector<std::function<void(entt::registry&)>> >           m_handlers;
             std::unordered_map<entities::DialogInputs, std::string>                                       m_inputs;
-            std::vector<std::function<bool()> >                                                           m_validators;
+            std::vector<std::function<bool(entt::registry&)> >                                            m_validators;
             std::vector<std::string>                                                                      m_ignore_updates;
             std::vector<bool>                                                                             m_results;
             std::unique_ptr<DialogSystemManager>                                                          m_systems;
@@ -303,7 +295,7 @@ namespace silvanus::generatebox::dialog {
             void addMinimumFingerWidthCheck();
             void addMinimumPanelCountCheck();
 
-            template <class T, class U>
+            template <class T, class U, class V>
             auto addPanelTableRow(
                 const adsk::core::Ptr<adsk::core::CommandInputs> &inputs,
                 adsk::core::Ptr<adsk::core::TableCommandInput> &table,
@@ -372,14 +364,14 @@ namespace silvanus::generatebox::dialog {
             void addInputControl(
                 entities::DialogInputs reference,
                 const adsk::core::Ptr<adsk::core::CommandInput>& input,
-                const std::vector<std::function<void()>>& handlers
+                const std::vector<std::function<void(entt::registry& registry)>>& handlers
             );
             void addInputControl(
                 entities::DialogInputs reference,
                 const adsk::core::Ptr<adsk::core::CommandInput>& input,
-                const std::function<void()>& handler
+                const std::function<void(entt::registry&)>& handler
             );
-            void addInputHandler(entities::DialogInputs reference, const std::function<void()>& handler);
+            void addInputHandler(entities::DialogInputs reference, const std::function<void(entt::registry&)>& handler);
             void addCollisionHandler(entities::DialogInputs reference);
             static void addJointTypes(adsk::core::Ptr<adsk::core::DropDownCommandInput> &type_dropdown) ;
 

@@ -1,6 +1,6 @@
 cmake_policy(SET CMP0048 NEW)
 cmake_minimum_required(VERSION 3.17)
-project (SilvanusPro VERSION 0.6.0.0)
+project (SilvanusPro VERSION 0.7.0.0)
 
 if (CMAKE_BINARY_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     message(FATAL_ERROR "Building in-source is not supported!")

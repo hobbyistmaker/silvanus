@@ -41,17 +41,17 @@ void updatePanelDimensionInputsImpl(entt::registry& registry) {
     PLOG_DEBUG << "Front Panel ID: " + std::to_string((int) front);
     PLOG_DEBUG << "Back Panel ID: " + std::to_string((int) back);
 
-    updatePanelDimensions<DialogLengthInput, DialogWidthInput, DialogHeightInput>(registry, top);
+    updatePanelDimensions<DialogLengthInput, DialogWidthInput, DialogTopThickness>(registry, top);
     updatePanelDimensions<DialogLengthInput, DialogWidthInput, DialogBottomThickness>(registry, bottom);
     updatePanelDimensions<DialogLeftThickness, DialogWidthInput, DialogHeightInput>(registry, left);
-    updatePanelDimensions<DialogLengthInput, DialogWidthInput, DialogHeightInput>(registry, right);
+    updatePanelDimensions<DialogRightThickness, DialogWidthInput, DialogHeightInput>(registry, right);
 
     if (orientation.value == YUpModelingOrientation) {
-        updatePanelDimensions<DialogLengthInput, DialogWidthInput, DialogHeightInput>(registry, front);
+        updatePanelDimensions<DialogLengthInput, DialogFrontThickness, DialogHeightInput>(registry, front);
         updatePanelDimensions<DialogLengthInput, DialogBackThickness, DialogHeightInput>(registry, back);
     } else {
         updatePanelDimensions<DialogLengthInput, DialogFrontThickness, DialogHeightInput>(registry, front);
-        updatePanelDimensions<DialogLengthInput, DialogWidthInput, DialogHeightInput>(registry, back);
+        updatePanelDimensions<DialogLengthInput, DialogBackThickness, DialogHeightInput>(registry, back);
     }
 }
 

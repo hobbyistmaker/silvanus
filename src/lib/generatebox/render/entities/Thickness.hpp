@@ -17,6 +17,10 @@ namespace silvanus::generatebox::entities {
     {
         adsk::core::Ptr<adsk::core::FloatSpinnerCommandInput> control;
     };
+
+    struct HeightThicknessInput : public ThicknessInput {};
+    struct WidthThicknessInput : public ThicknessInput {};
+    struct LengthThicknessInput : public ThicknessInput {};
 }
 
 #endif //SILVANUSPRO_THICKNESS_HPP

@@ -25,7 +25,6 @@
 #include "entities/Kerf.hpp"
 #include "entities/InsidePanel.hpp"
 #include "entities/MaxOffset.hpp"
-#include "entities/MaxOffsetInput.hpp"
 #include "entities/OrientationGroup.hpp"
 #include "entities/OrientationTags.hpp"
 #include "entities/Panel.hpp"
@@ -38,7 +37,7 @@
 
 #include "entities/DialogInputs.hpp"
 #include "entities/InsidePanel.hpp"
-#include "entities/MaxOffsetInput.hpp"
+#include "entities/MaxOffset.hpp"
 #include "entities/PanelDimension.hpp"
 #include "entities/PanelOrientation.hpp"
 #include "entities/PanelPosition.hpp"
@@ -54,13 +53,7 @@
 
 namespace silvanus::generatebox::dialog {
 
-
-    using controlsDef = std::unordered_map<entities::DialogInputs, adsk::core::Ptr<adsk::core::CommandInput> >;
-    using jointsDef = std::map<entities::AxisFlag, std::map<entities::JointPatternType, std::vector<entities::Position>>>;
-
     using applicationPtr = adsk::core::Ptr<adsk::core::Application>;
-    using floatSpinnerPtr = adsk::core::Ptr<adsk::core::FloatSpinnerCommandInput>;
-    using floatSpinnerPtrVec = std::vector<floatSpinnerPtr>;
     using floatSpinnerValueVec = std::vector<double>;
 
     using entities::AxisFlag;
@@ -162,7 +155,6 @@ namespace silvanus::generatebox::dialog {
             void addOrientation() {
                 for (auto const& entity: m_dividers) {
                     m_configuration.emplace<O>(entity);
-//                    m_configuration.emplace<PanelOrientation>(entity, orientation);
                 }
             }
 
@@ -172,14 +164,6 @@ namespace silvanus::generatebox::dialog {
 
                 for (auto const& entity: m_dividers) {
                     m_configuration.emplace<MaxOffsetInput>(entity, offset);
-                }
-            }
-
-            template <class D>
-            void addDividerInput() {
-                for (auto const& entity: m_dividers) {
-                    auto const &length_divider_outside_joint = m_configuration.ctx<D>().control;
-                    m_configuration.emplace<DialogJointPatternInput>(entity, length_divider_outside_joint);
                 }
             }
     };

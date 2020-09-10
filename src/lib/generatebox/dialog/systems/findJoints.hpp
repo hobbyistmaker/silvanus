@@ -6,20 +6,8 @@
 #ifndef SILVANUSPRO_FINDJOINTS_HPP
 #define SILVANUSPRO_FINDJOINTS_HPP
 
-#include "entities/AxisFlag.hpp"
+#include "entities/EntitiesAll.hpp"
 #include "lib/generatebox/dialog/entities/DialogInputs.hpp"
-#include "entities/Enabled.hpp"
-#include "entities/FingerPattern.hpp"
-#include "entities/FingerWidth.hpp"
-#include "entities/FingerWidthInput.hpp"
-#include "entities/JointDirection.hpp"
-#include "entities/JointOrientation.hpp"
-#include "entities/JointPattern.hpp"
-#include "entities/JointPosition.hpp"
-#include "entities/Panel.hpp"
-#include "entities/PanelOrientation.hpp"
-#include "entities/PanelPosition.hpp"
-#include "entities/Position.hpp"
 
 #include <entt/entt.hpp>
 #include <plog/Log.h>

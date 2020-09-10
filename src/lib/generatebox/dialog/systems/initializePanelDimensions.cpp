@@ -33,23 +33,27 @@ void initializePanelDimensionInputsImpl(entt::registry& registry) {
     PLOG_DEBUG << "Front Panel ID: " + std::to_string((int) front);
     PLOG_DEBUG << "Back Panel ID: " + std::to_string((int) back);
 
-    addPanelDimensions<DialogLengthInput, DialogWidthInput, DialogHeightInput>(registry, top);
+    addPanelDimensions<DialogLengthInput, DialogWidthInput, DialogTopThickness>(registry, top);
     addPanelDimensions<DialogLengthInput, DialogWidthInput, DialogBottomThickness>(registry, bottom);
     addPanelDimensions<DialogLeftThickness, DialogWidthInput, DialogHeightInput>(registry, left);
-    addPanelDimensions<DialogLengthInput, DialogWidthInput, DialogHeightInput>(registry, right);
+    addPanelDimensions<DialogRightThickness, DialogWidthInput, DialogHeightInput>(registry, right);
+
+    addHeightMaxOffset<DialogHeightInput>(registry, top);
+    addHeightMaxOffset<DialogBottomThickness>(registry, bottom);
+    addLengthMaxOffset<DialogLeftThickness>(registry, left);
+    addLengthMaxOffset<DialogLengthInput>(registry, right);
 
     if (orientation.value == YUpModelingOrientation) {
-        addPanelDimensions<DialogLengthInput, DialogWidthInput, DialogHeightInput>(registry, front);
+        addPanelDimensions<DialogLengthInput, DialogFrontThickness, DialogHeightInput>(registry, front);
         addPanelDimensions<DialogLengthInput, DialogBackThickness, DialogHeightInput>(registry, back);
+
+        addWidthMaxOffset<DialogWidthInput>(registry, front);
+        addWidthMaxOffset<DialogBackThickness>(registry, back);
     } else {
         addPanelDimensions<DialogLengthInput, DialogFrontThickness, DialogHeightInput>(registry, front);
-        addPanelDimensions<DialogLengthInput, DialogWidthInput, DialogHeightInput>(registry, back);
-    }
+        addPanelDimensions<DialogLengthInput, DialogBackThickness, DialogHeightInput>(registry, back);
 
-    addMaxOffset<DialogHeightInput>(registry, top);
-    addMaxOffset<DialogHeightInput>(registry, bottom);
-    addMaxOffset<DialogLengthInput>(registry, left);
-    addMaxOffset<DialogLengthInput>(registry, right);
-    addMaxOffset<DialogWidthInput>(registry, front);
-    addMaxOffset<DialogWidthInput>(registry, back);
+        addWidthMaxOffset<DialogFrontThickness>(registry, front);
+        addWidthMaxOffset<DialogWidthInput>(registry, back);
+    }
 }

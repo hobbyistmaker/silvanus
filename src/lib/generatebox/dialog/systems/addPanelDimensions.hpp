@@ -6,13 +6,14 @@
 #ifndef SILVANUSPRO_ADDPANELDIMENSIONS_HPP
 #define SILVANUSPRO_ADDPANELDIMENSIONS_HPP
 
+#include "entities/MaxOffset.hpp"
 #include "entities/PanelDimension.hpp"
 
 #include <entt/entt.hpp>
 
 #include <plog/Log.h>
 
-using silvanus::generatebox::entities::PanelDimensionInputs;
+using namespace silvanus::generatebox::entities;
 
 template<class L, class W, class H>
 void addPanelDimensions(entt::registry& registry, entt::entity entity) {

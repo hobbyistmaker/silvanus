@@ -8,10 +8,7 @@
 
 #include "entities/AxisFlag.hpp"
 #include "lib/generatebox/dialog/entities/DialogInputs.hpp"
-#include "entities/OutsidePanel.hpp"
-#include "entities/Panel.hpp"
-#include "entities/PanelDimension.hpp"
-#include "entities/PanelPosition.hpp"
+#include "entities/EntitiesAll.hpp"
 
 #include <plog/Log.h>
 
@@ -70,20 +67,20 @@ namespace silvanus::generatebox::dialog {
                 m_entity = entt::null;
             };
 
-            template <class T, class U>
+            template <class T, class U, class V>
             auto createRow(
                 const floatCommandInputPtr& parent, // NOLINT(performance-unnecessary-value-param)
                 const textCommandInputPtr& label,
                 const boolCommandInputPtr& enabled,
                 const boolCommandInputPtr& override,
                 const floatCommandInputPtr& thickness
-            ) -> std::function<void()> {
+            ) -> std::function<void(entt::registry&)> {
 
                 PLOG_DEBUG << "Creating new row entity";
 
                 m_entity = m_registry->create();
                 m_registry->emplace<DialogPanelEnable>(m_entity, enabled);
-                m_registry->emplace<DialogPanelInputs>(m_entity, label, enabled, override, thickness);
+                m_registry->emplace<DialogPanelInputs>(m_entity, label, enabled, override, parent);
                 m_registry->emplace<DialogPanelLabel>(m_entity, label);
                 m_registry->emplace<DialogPanelOverride>(m_entity, override);
                 m_registry->emplace<DialogPanelOverrideThickness>(m_entity, thickness);
@@ -95,23 +92,22 @@ namespace silvanus::generatebox::dialog {
                 m_registry->emplace<PanelDimensions>(m_entity);
                 m_registry->emplace<DialogPanelEnableValue>(m_entity);
                 m_registry->emplace<Panel>(m_entity, m_name, m_priority, m_orientation);
+                m_registry->emplace<V>(m_entity, parent);
 
                 m_registry->set<T>(label, enabled, override, parent);
                 m_registry->set<U>(parent);
 
-                auto registry = m_registry;
-                auto entity = m_entity;
-
-                return [entity, registry, parent, label, enabled, override, thickness]() {
+                return [entity = this->m_entity, parent, label, enabled, override, thickness](entt::registry& registry) {
                     auto t_control = commandInputPtr{thickness};
                     auto d_control = commandInputPtr{parent};
 
                     auto toggle = override->value() ? t_control : d_control;
 
-                    registry->replace<DialogPanelInputs>(entity, label, enabled, override, toggle);
-                    registry->replace<DialogPanelThickness>(entity, toggle);
-                    registry->set<T>(label, enabled, override, toggle);
-                    registry->set<U>(toggle);
+                    registry.replace<DialogPanelInputs>(entity, label, enabled, override, toggle);
+                    registry.replace<DialogPanelThickness>(entity, toggle);
+                    registry.replace<V>(entity, toggle);
+                    registry.set<T>(label, enabled, override, toggle);
+                    registry.set<U>(toggle);
                 };
             }
 

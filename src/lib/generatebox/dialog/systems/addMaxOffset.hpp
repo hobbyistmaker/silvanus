@@ -6,17 +6,31 @@
 #ifndef SILVANUSPRO_ADDMAXOFFSET_HPP
 #define SILVANUSPRO_ADDMAXOFFSET_HPP
 
-#include "entities/MaxOffsetInput.hpp"
+#include "entities/MaxOffset.hpp"
 
 #include <entt/entt.hpp>
 
 using silvanus::generatebox::entities::MaxOffsetInput;
 
-template<class M>
-void addMaxOffset(entt::registry& registry, entt::entity entity) {
-    auto offset = registry.ctx<M>().control;
+template<class H>
+void addHeightMaxOffset(entt::registry& registry, entt::entity entity) {
+    auto offset = registry.ctx<H>().control;
 
-    registry.emplace<MaxOffsetInput>(entity, offset);
+    registry.emplace<HeightMaxOffsetInput>(entity, offset);
+}
+
+template<class L>
+void addLengthMaxOffset(entt::registry& registry, entt::entity entity) {
+    auto offset = registry.ctx<L>().control;
+
+    registry.emplace<LengthMaxOffsetInput>(entity, offset);
+}
+
+template<class W>
+void addWidthMaxOffset(entt::registry& registry, entt::entity entity) {
+    auto offset = registry.ctx<W>().control;
+
+    registry.emplace<WidthMaxOffsetInput>(entity, offset);
 }
 
 #endif //SILVANUSPRO_ADDMAXOFFSET_HPP
