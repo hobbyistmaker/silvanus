@@ -9,7 +9,7 @@
 #define SILVANUSPRO_SILVANUSPRO_H
 
 #define SilvanusPro_VERSION_MAJOR 0
-#define SilvanusPro_VERSION_MINOR 1
+#define SilvanusPro_VERSION_MINOR 6
 
 
 #endif /* silvanuspro_silvanuspro_h */
