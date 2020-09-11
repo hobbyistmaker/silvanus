@@ -26,6 +26,9 @@ namespace silvanus::generatebox::fusion {
             std::function<std::tuple<double, double, double>(double, double, double)> m_transform;
             entities::PanelProfile m_profile;
 
+            adsk::core::Ptr<adsk::fusion::SketchLinearDimension> m_profile_length;
+            adsk::core::Ptr<adsk::fusion::SketchLinearDimension> m_profile_width;
+
             void initialize_profile();
             auto draw_profile() -> adsk::core::Ptr<adsk::fusion::SketchLineList>;
             void addProfileDimensions();
@@ -35,20 +38,27 @@ namespace silvanus::generatebox::fusion {
                     const std::string& name,
                     const adsk::core::Ptr<adsk::fusion::BRepFace>& source,
                     std::function<std::tuple<double, double, double>(double, double, double)>  transform,
-                    const entities::PanelProfile& profile
+                    entities::PanelProfile profile
             );
 
             PanelProfileSketch(
                         const std::string& name,
                         const adsk::core::Ptr<adsk::fusion::ConstructionPlane>& source,
                         std::function<std::tuple<double, double, double>(double, double, double)>  transform,
-                        const entities::PanelProfile& profile
-                );
+                        entities::PanelProfile profile
+            );
 
             [[nodiscard]] adsk::core::Ptr<adsk::fusion::ExtrudeFeature> extrudeProfile(
-                    entities::ExtrusionDistance distance,
-                    entities::PanelOffset offset
+                    const entities::ExtrusionDistance& distance,
+                    const entities::PanelOffset& offset
             ) const;
+
+            auto lengthDimension() -> adsk::core::Ptr<adsk::fusion::SketchLinearDimension> {
+                return m_profile_length;
+            }
+            auto widthDimension() -> adsk::core::Ptr<adsk::fusion::SketchLinearDimension> {
+                return m_profile_width;
+            }
     };
 
 }

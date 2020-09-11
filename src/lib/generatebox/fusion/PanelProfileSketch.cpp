@@ -23,8 +23,8 @@ PanelProfileSketch::PanelProfileSketch(
         const string& name,
         const Ptr<BRepFace>& source,
         std::function<std::tuple<double, double, double>(double, double, double)> transform,
-        const PanelProfile& profile
-) : FusionSketch{name, source, true}, m_transform{std::move(transform)}, m_profile{profile} {
+        PanelProfile profile
+) : FusionSketch{name, source, true}, m_transform{std::move(transform)}, m_profile{std::move(profile)} {
     initialize_profile();
 }
 
@@ -32,8 +32,8 @@ PanelProfileSketch::PanelProfileSketch(
         const string& name,
         const Ptr<ConstructionPlane>& source,
         std::function<std::tuple<double, double, double>(double, double, double)>  transform,
-        const PanelProfile& profile
-) : FusionSketch{name, source, true}, m_transform{std::move(transform)}, m_profile{profile} {
+        PanelProfile profile
+) : FusionSketch{name, source, true}, m_transform{std::move(transform)}, m_profile{std::move(profile)} {
     initialize_profile();
 }
 
@@ -43,6 +43,9 @@ void PanelProfileSketch::initialize_profile() {
     addGeometricConstraints(m_profile_lines);
     addOriginConstraint(m_profile_lines);
     addProfileDimensions();
+
+    m_profile_length->parameter()->expression(m_profile.length.expression);
+    m_profile_width->parameter()->expression(m_profile.width.expression);
 }
 
 auto PanelProfileSketch::draw_profile() -> Ptr<SketchLineList> {
@@ -56,13 +59,18 @@ auto PanelProfileSketch::draw_profile() -> Ptr<SketchLineList> {
 }
 
 void PanelProfileSketch::addProfileDimensions() {
-    for (int n : {0, 1}) {
-        addDistanceDimension(m_profile_lines->item(n));
-    }
+    m_profile_length = addDistanceDimension(m_profile_lines->item(0));
+    m_profile_width = addDistanceDimension(m_profile_lines->item(1));
 }
 
-auto PanelProfileSketch::extrudeProfile(const ExtrusionDistance distance, const PanelOffset offset) const -> Ptr<ExtrudeFeature> {
+auto PanelProfileSketch::extrudeProfile(const ExtrusionDistance& distance, const PanelOffset& offset) const -> Ptr<ExtrudeFeature> {
     const auto& input = silvanus::generatebox::fusion::createSimpleExtrusion(m_sketch, m_sketch->profiles()->item(0), distance, offset);
 
-    return m_sketch->parentComponent()->features()->extrudeFeatures()->add(input);
+    auto feature = m_sketch->parentComponent()->features()->extrudeFeatures()->add(input);
+
+    auto has_distance_expression = distance.expression.length() > 0;
+    auto distance_param = Ptr<DistanceExtentDefinition>{feature->extentOne()}->distance();
+    if (has_distance_expression) distance_param->expression(distance.expression); // Reassign since Fusion appears to throw away the string expression
+
+    return feature;
 }

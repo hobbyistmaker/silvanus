@@ -13,14 +13,23 @@
 
 using namespace silvanus::generatebox::entities;
 
-void addJointGroups(entt::registry& registry) {
+void addJointGroupExpressions(entt::registry& registry) {
+    // TODO
+}
+
+void addJointGroupValues(entt::registry &registry) {
     PLOG_DEBUG << "Started addJointGroups";
-    auto joint_group_view = registry.view<const JointThickness, const JointProfile, const JointPatternPosition>().proxy();
-    for (auto &&[entity, thickness, profile, pattern]: joint_group_view) {
+    auto joint_group_view = registry.view<const JointThickness, const JointProfile, const JointPatternPosition, const JointGroupTag>().proxy();
+    for (auto &&[entity, thickness, profile, pattern, tag]: joint_group_view) {
         PLOG_DEBUG << "adding Joint Group";
         registry.emplace_or_replace<JointGroup>(
-            entity, profile, thickness, pattern.panel_position, pattern.joint_position
+            entity, tag, profile, thickness, pattern.panel_position, pattern.joint_position
         );
     }
     PLOG_DEBUG << "Finished addJointGroups";
+}
+
+void addJointGroups(entt::registry& registry) {
+    addJointGroupValues(registry);
+    addJointGroupExpressions(registry);
 }

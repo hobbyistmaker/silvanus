@@ -36,27 +36,18 @@ namespace silvanus::generatebox::render {
         std::set<entities::JointExtrusion, CompareExtrusion> extrusions;
     };
 
-//    struct JointRenderProfileGroup {
-//        std::map<entities::JointProfile, JointRenderGroup, entities::CompareJointProfile> outside;
-//        std::map<entities::JointProfile, JointRenderGroup, entities::CompareJointProfile> inside;
-//    };
-
     using profileRenderGroupMap = std::map<entities::JointProfile, JointRenderGroup, entities::CompareJointProfile>;
     using renderJointTypeMap = std::map<entities::AxisFlag, profileRenderGroupMap>;
     using jointDirectionTypeMap = std::map<entities::JointDirectionType, renderJointTypeMap>;
     using jointPatternTypeMap = std::map<entities::JointPatternType, jointDirectionTypeMap>;
-
-//    struct JointRenderData {
-//        jointDirectionTypeMap box_joint;
-//        jointDirectionTypeMap lap_joint;
-//        jointDirectionTypeMap trim;
-//        jointDirectionTypeMap tenon;
-//    };
+    using panelExtrusionSet = std::set<entities::PanelExtrusion, CompareExtrusion>;
+    using distanceExtrusionMap = std::map<entities::ExtrusionDistance, panelExtrusionSet, entities::CompareExtrusionDistance>;
 
     struct PanelRenderData {
-        std::set<std::string>                                                                                                          names;
-        std::map<entities::ExtrusionDistance, std::set<entities::PanelExtrusion, CompareExtrusion>, entities::CompareDimension>        panels;
-        jointPatternTypeMap                                                                                                            joints;
+        std::set<std::string> names;
+        distanceExtrusionMap  panels;
+        jointPatternTypeMap   joints;
+        entt::entity          parent = entt::null;
     };
 
     struct CutProfile {

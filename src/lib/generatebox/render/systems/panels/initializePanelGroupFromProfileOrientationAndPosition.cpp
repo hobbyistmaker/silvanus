@@ -14,7 +14,7 @@ using namespace silvanus::generatebox::entities;
 
 void initializePanelGroupFromProfileOrientationAndPosition(entt::registry& registry) {
     PLOG_DEBUG << "Started addPanelGroups";
-    auto view = registry.view<Panel, PanelProfile, ExtrusionDistance, PanelPosition>().proxy();
+    auto view = registry.view<const Panel, const PanelProfile, const ExtrusionDistance, const PanelPosition>().proxy();
     for (auto &&[entity, panel, profile, distance, position]: view) {
         PLOG_DEBUG << "Creating panel group";
         registry.emplace_or_replace<PanelGroup>(

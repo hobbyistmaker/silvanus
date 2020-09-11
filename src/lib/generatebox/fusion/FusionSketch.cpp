@@ -131,18 +131,18 @@ bool FusionSketch::positiveSketch() {
     return sketch_min == world_min;
 }
 
-void FusionSketch::addDistanceDimension(const Ptr<SketchLine>& line) {
+auto FusionSketch::addDistanceDimension(const Ptr<SketchLine>& line) -> Ptr<SketchLinearDimension> {
     auto lhs = line->startSketchPoint();
     auto text_point = Point3D::create(lhs->geometry()->x(), lhs->geometry()->y(), lhs->geometry()->z());
     text_point->x(text_point->x() - 1);
     text_point->y(text_point->y() - 1);
 
-    m_sketch->sketchDimensions()->addDistanceDimension(
+    return m_sketch->sketchDimensions()->addDistanceDimension(
             line->startSketchPoint(), line->endSketchPoint(), AlignedDimensionOrientation, text_point
     );
 }
 
-void FusionSketch::addDistanceDimension(const Ptr<SketchLine>& line, const Ptr<SketchLine>& normal) {
+auto FusionSketch::addDistanceDimension(const Ptr<SketchLine>& line, const Ptr<SketchLine>& normal) -> Ptr<SketchLinearDimension> {
     auto text_x = (normal->startSketchPoint()->geometry()->x() - line->startSketchPoint()->geometry()->x())/2;
     auto text_y = normal->startSketchPoint()->geometry()->y() - normal->endSketchPoint()->geometry()->y();
 
@@ -152,22 +152,22 @@ void FusionSketch::addDistanceDimension(const Ptr<SketchLine>& line, const Ptr<S
 
     auto text_point = Point3D::create(lhs_x + text_x, lhs_y + text_y, lhs->geometry()->z());
 
-    m_sketch->sketchDimensions()->addDistanceDimension(
+    return m_sketch->sketchDimensions()->addDistanceDimension(
         line->startSketchPoint(), line->endSketchPoint(), AlignedDimensionOrientation, text_point
     );
 }
 
-void FusionSketch::addDistanceDimension(const Ptr<SketchPoint>& lhs, const Ptr<SketchPoint>& rhs) {
+auto FusionSketch::addDistanceDimension(const Ptr<SketchPoint>& lhs, const Ptr<SketchPoint>& rhs) -> Ptr<SketchLinearDimension> {
     auto text_point = Point3D::create(lhs->geometry()->x(), lhs->geometry()->y(), lhs->geometry()->z());
     text_point->x(text_point->x() - 1);
     text_point->y(text_point->y() - 1);
 
-    m_sketch->sketchDimensions()->addDistanceDimension(
+    return m_sketch->sketchDimensions()->addDistanceDimension(
         lhs, rhs, AlignedDimensionOrientation, text_point
     );
 }
 
-void FusionSketch::addDistanceDimension(const Ptr<SketchPoint>& lhs, const Ptr<SketchPoint>& rhs, const Ptr<SketchLine>& normal) {
+auto FusionSketch::addDistanceDimension(const Ptr<SketchPoint>& lhs, const Ptr<SketchPoint>& rhs, const Ptr<SketchLine>& normal) -> Ptr<SketchLinearDimension> {
     auto text_x = (rhs->geometry()->x() - lhs->geometry()->x())/2;
     auto text_y = normal->startSketchPoint()->geometry()->y() - normal->endSketchPoint()->geometry()->y();
 
@@ -176,7 +176,7 @@ void FusionSketch::addDistanceDimension(const Ptr<SketchPoint>& lhs, const Ptr<S
 
     auto text_point = Point3D::create(lhs_x + text_x, lhs_y + text_y, lhs->geometry()->z());
 
-    m_sketch->sketchDimensions()->addDistanceDimension(
+    return m_sketch->sketchDimensions()->addDistanceDimension(
         lhs, rhs, AlignedDimensionOrientation, text_point
     );
 }
@@ -206,7 +206,7 @@ Ptr<Point3D> FusionSketch::offsetPoint3D(const Ptr<Point3D>& start, const Ptr<Po
     return Point3D::create(start_x + end->x() * factor_x, start_y + end->y(), start_z + end->z());
 }
 
-Ptr<ExtrudeFeature> FusionSketch::cut(const PanelOffset& offset, const ExtrusionDistance& depth, Ptr<BRepBody> body) const {
+Ptr<ExtrudeFeature> FusionSketch::cutJoint(const JointPanelOffset& offset, const JointThickness& depth, Ptr<BRepBody> body) const {
     return cutSimpleExtrusion(m_sketch, m_sketch->profiles()->item(0), depth.value, offset.value, body);
 }
 

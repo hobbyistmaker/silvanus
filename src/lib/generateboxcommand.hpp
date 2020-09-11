@@ -12,7 +12,7 @@
 #include <Fusion/FusionAll.h>
 
 #include "common/common.h"
-#include "generatebox/dialog/presentation/dialog.hpp"
+#include "generatebox/dialog/presentation/GenerateBoxDialog.hpp"
 #include "systems/SilvanusCore.hpp"
 
 namespace silvanus {
@@ -25,9 +25,9 @@ namespace silvanus {
 
         adsk::core::Ptr<adsk::core::UserInterface> m_ui;
 
-        entt::registry m_registry;
-        generatebox::dialog::CreateFusionDialog command_dialog = generatebox::dialog::CreateFusionDialog(m_registry);
-        generatebox::systems::SilvanusCore m_core = generatebox::systems::SilvanusCore(m_app, m_registry);
+        entt::registry                         m_registry;
+        generatebox::dialog::GenerateBoxDialog command_dialog = generatebox::dialog::GenerateBoxDialog(m_registry);
+        generatebox::systems::SilvanusCore     m_core         = generatebox::systems::SilvanusCore(m_app, m_registry);
 
         bool updated = false;
 

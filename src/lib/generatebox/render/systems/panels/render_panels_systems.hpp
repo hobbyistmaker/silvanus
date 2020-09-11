@@ -36,15 +36,14 @@ void tagDoubleTenonPatternJoints(entt::registry& registry);
 void tagTripleTenonPatternJoints(entt::registry& registry);
 void tagQuadTenonPatternJoints(entt::registry& registry);
 void tagTrimPatternJoints(entt::registry& registry);
-void updateEndReferencePointsFromDimensions(entt::registry& registry);
 void updateExtrusionDistancesFromDimensions(entt::registry& registry);
+void updateJointPanelOffsetsFromExpressions(entt::registry& registry);
 void updateJointPatternPositionsFromPanelAndJointPositions(entt::registry& registry);
 void updateJointProfilesFromJointDirections(entt::registry &registry);
 void updateJointProfilesFromJointPatterns(entt::registry& registry);
 void updateJointProfilesFromPanelAndJointOrientations(entt::registry &registry);
 void updateJointProfilesFromPanelAndJointPositions(entt::registry &registry);
-void updatePanelOffsetsFromEndReferencePoints(entt::registry& registry);
-void updatePanelProfilesFromEndReferencePoints(entt::registry& registry);
-void updateStartReferencePointsFromEndReferencePoints(entt::registry& registry);
+void updatePanelOffsetsFromPanelMinPoints(entt::registry& registry);
+void updatePanelProfilesFromPanelMinPoints(entt::registry& registry);
 
 #endif //SILVANUSPRO_RENDER_PANELS_SYSTEMS_HPP

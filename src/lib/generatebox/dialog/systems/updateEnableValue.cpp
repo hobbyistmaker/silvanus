@@ -20,9 +20,9 @@ using namespace silvanus::generatebox::entities;
 using namespace silvanus::generatebox::dialog;
 
 void updateEnableValueImpl(entt::registry& registry) {
-    auto view = registry.view<DialogPanelEnableValue, const DialogPanelEnable>().proxy();
+    auto view = registry.view<PanelEnabled, const PanelEnableInput>().proxy();
     for (auto &&[entity, enable, input]: view) {
-        enable.value = input.control->value();
-        PLOG_DEBUG << "Updating panel enable value for entity " << (int)entity << " == " << (int)enable.value;
+        enable.is_true = input.control->value();
+        PLOG_DEBUG << "Updating panel enable value for entity " << (int)entity << " == " << (int)enable.is_true;
     }
 }

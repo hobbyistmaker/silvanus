@@ -6,19 +6,22 @@
 #include <entt/entt.hpp>
 #include <plog/Log.h>
 
-#include "entities/Dimensions.hpp"
 #include "entities/ExtrusionDistance.hpp"
-#include "entities/JointName.hpp"
+#include "entities/Thickness.hpp"
 
 using namespace silvanus::generatebox::entities;
 
+void updateExtrusionDistanceValues(entt::registry& registry) {
+    auto value_view = registry.view<ExtrusionDistance, const Thickness, const PanelThicknessParameter>();
+    for (auto &&[entity, distance, thickness, param]: value_view.proxy()) {
+        PLOG_DEBUG << "Updating extrusion distance to " << thickness.value << " and " << param.expression;
+        distance.value = thickness.value;
+        distance.expression = param.expression;
+    }
+}
+
 void updateExtrusionDistancesFromDimensions(entt::registry& registry) {
     PLOG_DEBUG << "Started updateExtrusionDistances";
-    auto view = registry.view<ExtrusionDistance, const Dimensions>().proxy();
-
-    for (auto &&[entity, distance, dimensions]: view) {
-        PLOG_DEBUG << "Updating extrusion distance to " << std::to_string(dimensions.thickness);
-        distance.value = dimensions.thickness;
-    }
+    updateExtrusionDistanceValues(registry);
     PLOG_DEBUG << "Finished updateExtrusionDistances";
 }

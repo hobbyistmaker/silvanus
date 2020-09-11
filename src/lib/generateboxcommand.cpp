@@ -8,10 +8,9 @@
 #include "generateboxcommand.hpp"
 
 #include "entities/Dimensions.hpp"
-#include "entities/EndReferencePoint.hpp"
+#include "entities/PanelMaxPoint.hpp"
 #include "entities/FingerPattern.hpp"
 #include "entities/FingerWidth.hpp"
-#include "entities/FingerWidthInput.hpp"
 #include "entities/InsidePanel.hpp"
 #include "entities/JointPatternTags.hpp"
 #include "entities/JointThickness.hpp"
@@ -20,7 +19,7 @@
 #include "entities/PanelPosition.hpp"
 #include "entities/PanelProfile.hpp"
 #include "entities/Position.hpp"
-#include "entities/StartReferencePoint.hpp"
+#include "entities/PanelMinPoint.hpp"
 
 #include <Core/CoreAll.h>
 #include <Fusion/FusionAll.h>
@@ -108,6 +107,15 @@ void GenerateBoxCommand::onDestroy(const adsk::core::Ptr<CommandEventArgs>& args
 }
 
 void GenerateBoxCommand::onExecute(const adsk::core::Ptr<CommandEventArgs>& args) {
+    auto progress = m_app->userInterface()->createProgressDialog();
+    progress->show("Generating Parametric Box Design", "Starting rendering process...", 0, 1, 1);
+    progress->reset();
+    progress->message("Starting rendering process...");
+//    progress->isCancelButtonShown(false);
+    progress->progressValue(1);
+
+    m_registry.set<ProgressDialogControl>(progress);
+
     auto preferences = adsk::core::Ptr<Preferences>{m_app->preferences()};
     auto product = adsk::core::Ptr<Product>{m_app->activeProduct()};
     auto design = adsk::core::Ptr<Design>{product};
@@ -117,10 +125,12 @@ void GenerateBoxCommand::onExecute(const adsk::core::Ptr<CommandEventArgs>& args
     command_dialog.initializePanels();
 
     m_core.execute(orientation, root_component, command_dialog.is_parametric());
+
+    m_registry.unset<ProgressDialogControl>();
 }
 
 void GenerateBoxCommand::onPreview(const adsk::core::Ptr<CommandEventArgs>& args) {
-    if (!command_dialog.full_preview() && !command_dialog.fast_preview()) return;
+    if (!command_dialog.fast_preview()) return;
 
     command_dialog.initializePanels();
 
@@ -130,11 +140,7 @@ void GenerateBoxCommand::onPreview(const adsk::core::Ptr<CommandEventArgs>& args
     auto root_component = design->rootComponent();
     auto orientation = preferences->generalPreferences()->defaultModelingOrientation();
 
-    if (command_dialog.full_preview()) {
-        m_core.full_preview(orientation, root_component);
-    } else {
-        m_core.fast_preview(orientation, root_component);
-    }
+    m_core.fast_preview(orientation, root_component);
 }
 
 bool GenerateBoxCommand::onValidate(const adsk::core::Ptr<ValidateInputsEventArgs>& args) {

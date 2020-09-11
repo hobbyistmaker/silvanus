@@ -12,7 +12,7 @@
 #include "entities/JointEnabled.hpp"
 #include "entities/JointName.hpp"
 #include "entities/JointOrientation.hpp"
-#include "entities/JointProfileGroup.hpp"
+#include "entities/JointGroupTag.hpp"
 #include "entities/JoinedPanels.hpp"
 #include "entities/Panel.hpp"
 
@@ -37,8 +37,8 @@ void DirectRenderer::execute(DefaultModelingOrientations model_orientation, cons
 
     auto panel_groups = axisProfileGroup{};
 
-    auto      view = m_registry.view<Enabled, JointProfileGroup, JointEnabled, Panel, PanelGroup, JointGroup, PanelExtrusion, JointOrientation, JointName, JointExtrusion, JointDirection>().proxy();
-    for (auto &&[entity, enabled, joint_profile_group, joint_enabled, panel, panel_group, joint_group, panel_extrusion, joint_orientation, joint_name, joint_extrusion, joint_direction]: view) {
+    auto      view = m_registry.view<Enabled, JointEnabled, Panel, PanelGroup, JointGroup, PanelExtrusion, JointOrientation, JointName, JointExtrusion, JointDirection>().proxy();
+    for (auto &&[entity, enabled, joint_enabled, panel, panel_group, joint_group, panel_extrusion, joint_orientation, joint_name, joint_extrusion, joint_direction]: view) {
 
         PLOG_DEBUG << panel.name << " enabled == " << (int) enabled.value;
         PLOG_DEBUG << panel.name << " joint to " << joint_name.value << " enabled == " << (int) joint_enabled.value;
@@ -50,7 +50,7 @@ void DirectRenderer::execute(DefaultModelingOrientations model_orientation, cons
         PLOG_DEBUG << "Joint thickness is " << joint_group.joint_thickness.value;
         PLOG_DEBUG << "Joint pattern type is " << (int)joint_group.profile.joint_type;
 
-        auto& group = panel_groups[panel_group.orientation][panel_group.profile][panel_group.position][joint_profile_group.hashes]; // Panels with different joints are being grouped together
+        auto& group = panel_groups[panel_group.orientation][panel_group.profile][panel_group.position][joint_group.tag.value]; // Panels with different joints are being grouped together
 
         group.names.insert(panel_extrusion.name);
         group.panels[panel_group.distance].insert(panel_extrusion);
@@ -119,6 +119,10 @@ void DirectRenderer::processPanelGroups(
                         auto       length_dir        = vectors[0];
                         auto       width_dir         = vectors[1];
 
+                        PLOG_DEBUG << "Profile length: " << profile.length.value;
+                        PLOG_DEBUG << "Profile width: " << profile.width.value;
+                        PLOG_DEBUG << "Panel distance: " << panel.distance.value;
+
                         auto bounding_box = OrientedBoundingBox3D::create(
                             center,
                             length_dir,
@@ -128,11 +132,16 @@ void DirectRenderer::processPanelGroups(
                             panel.distance.value
                         );
                         auto box          = m_temp_mgr->createBox(bounding_box);
+                        if (!box) {
+                            PLOG_DEBUG << "invalid box";
+                            return;
+                        }
 
                         auto transform = Matrix3D::create();
                         transform->translation(transform_vector);
                         m_temp_mgr->transform(box, transform);
 
+                        PLOG_DEBUG << "Rendering joints";
                         for (auto const& [joint_type, joint_data]: joint_group.joints) {
                             PLOG_DEBUG << "Joint type is " << (int)joint_type;
                             for (auto const& [joint_direction, direction_data]: joint_data) {
@@ -140,10 +149,14 @@ void DirectRenderer::processPanelGroups(
                                 renderNormalJoints(model_orientation, axis, joint_group, panel, box, direction_data);
                             }
                         }
+                        PLOG_DEBUG << "Finished rendering joints";
 
+                        PLOG_DEBUG << "Adding panel body";
                         auto body = m_bodies->add(box);
                         body->name(panel.name + " Panel Body");
+                        PLOG_DEBUG << "Panel body added.";
 
+                        PLOG_DEBUG << "Processing Panel Extrusions";
                         for (auto const& copy_panel: std::vector<PanelExtrusion>{panels.begin() + 1, panels.end()}) {
                             auto offset   = copy_panel.offset.value;
                             auto copy_box = m_temp_mgr->copy(box);
@@ -155,6 +168,7 @@ void DirectRenderer::processPanelGroups(
                             auto copy_body = m_bodies->add(copy_box);
                             copy_body->name(copy_panel.name + " Panel Body");
                         }
+                        PLOG_DEBUG << "Finished Processing Panel Extrusions";
 
                     }
                 }
@@ -171,6 +185,7 @@ void DirectRenderer::renderNormalJoints(
     const Ptr<BRepBody> &box,
     const renderJointTypeMap& joints_group
 ) {
+    PLOG_DEBUG << "started renderNormalJoints";
     for (auto const&[joint_orientation, joint_groups]: joints_group) {
         for (auto const&[joint_profile, joint_profile_data]: joint_groups) {
             renderNormalJoint(model_orientation, axis, panel, box, joint_orientation, joint_profile, joint_profile_data);
@@ -182,6 +197,7 @@ void DirectRenderer::renderNormalJoints(
             renderCornerJoint(model_orientation, axis, panel, box, joint_orientation, joint_profile, joint_profile_data);
         }
     }
+    PLOG_DEBUG << "finished renderNormalJoints";
 }
 
 void DirectRenderer::renderNormalJoint(
@@ -193,6 +209,8 @@ void DirectRenderer::renderNormalJoint(
     const JointProfile &joint_profile,
     const JointRenderGroup &joint_profile_data
 ) {
+    PLOG_DEBUG << "renderNormalJoint";
+
     auto finger_count      = joint_profile.finger_count;
     auto finger_width      = joint_profile.finger_width;
     auto pattern_offset    = joint_profile.pattern_offset;

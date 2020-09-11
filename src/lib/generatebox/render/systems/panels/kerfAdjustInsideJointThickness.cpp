@@ -13,13 +13,31 @@
 
 using namespace silvanus::generatebox::entities;
 
-void kerfAdjustInsideJointThickness(entt::registry& registry) {
-    auto thickness_view = registry.view<JointThickness, const Kerf, const JointPosition>();
-    for (auto &&[entity, thickness, kerf, position]: thickness_view.proxy()) {
+void kerfAdjustInsideJointThicknessValues(entt::registry& registry) {
+    auto thickness_view = registry.view<JointThickness, const Kerf, const KerfParam, const JointPosition>();
+    for (auto &&[entity, thickness, kerf, param, position]: thickness_view.proxy()) {
         PLOG_DEBUG << "Checking joint thickness for kerf adjustment";
         if (position.value == Position::Outside) continue;
 
         PLOG_DEBUG << "Adjusting joint thickness";
         thickness.value -= kerf.value;
+
+        thickness.expression = thickness.expression + " - " + param.expression;
+        PLOG_DEBUG << "Kerf adjusting joint thickness parameter " << thickness.expression;
     }
+}
+
+void kerfAdjustInsideJointThicknessExpressions(entt::registry& registry) {
+    auto thickness_view = registry.view<JointThicknessParam, const KerfParam, const JointPosition>();
+    for (auto &&[entity, thickness, kerf, position]: thickness_view.proxy()) {
+        PLOG_DEBUG << "Checking joint thickness for kerf adjustment";
+        if (position.value == Position::Outside) continue;
+
+        thickness.expression = thickness.expression + " - " + kerf.expression;
+        PLOG_DEBUG << "Kerf adjusting joint thickness parameter " << thickness.expression;
+    }
+}
+
+void kerfAdjustInsideJointThickness(entt::registry& registry) {
+    kerfAdjustInsideJointThicknessValues(registry);
 }

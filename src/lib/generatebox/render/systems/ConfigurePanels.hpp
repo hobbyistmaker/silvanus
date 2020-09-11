@@ -14,7 +14,6 @@
 #include <entt/entt.hpp>
 
 #include "entities/AxisFlag.hpp"
-#include "entities/AxisProfile.hpp"
 #include "entities/Dimensions.hpp"
 #include "entities/Point.hpp"
 
@@ -28,47 +27,6 @@ namespace silvanus::generatebox::systems
     {
             adsk::core::Ptr<adsk::core::Application> m_app;
             entt::registry &m_registry;
-
-            std::unordered_map<std::string, adsk::fusion::DistanceUnits> m_units = {
-                    {"cm", adsk::fusion::CentimeterDistanceUnits},
-                    {"ft", adsk::fusion::FootDistanceUnits},
-                    {"in", adsk::fusion::InchDistanceUnits},
-                    {"m", adsk::fusion::MeterDistanceUnits},
-                    {"mm", adsk::fusion::MillimeterDistanceUnits}
-            };
-
-            std::map<
-                entities::AxisFlag,
-                std::function<std::tuple<entities::AxisProfile, entities::AxisProfile, entities::AxisProfile>(entities::Dimensions)>
-            > dimensions_selector = {
-                {
-                    entities::AxisFlag::Length, [](entities::Dimensions d) {
-                        return std::tuple<entities::AxisProfile, entities::AxisProfile, entities::AxisProfile>{
-                            entities::AxisProfile{{0, 0, 0}, {d.width, d.height, 0}},
-                            entities::AxisProfile{{d.length - d.thickness, 0, 0}, {d.length, d.height, 0}},
-                            entities::AxisProfile{{d.length - d.thickness, 0, 0}, {d.length, d.width, 0}}
-                        };
-                    }
-                },
-                {
-                    entities::AxisFlag::Width, [](entities::Dimensions d) {
-                        return std::tuple<entities::AxisProfile, entities::AxisProfile, entities::AxisProfile>{
-                            entities::AxisProfile{{d.width - d.thickness, 0, 0}, {d.width, d.height, 0}},
-                            entities::AxisProfile{{0, 0, 0}, {d.length, d.height, 0}},
-                            entities::AxisProfile{{d.width - d.thickness, 0, 0}, {d.width, d.length, 0}}
-                        };
-                    }
-                },
-                {
-                    entities::AxisFlag::Height, [](entities::Dimensions d) {
-                        return std::tuple<entities::AxisProfile, entities::AxisProfile, entities::AxisProfile>{
-                            entities::AxisProfile{{0, d.height - d.thickness, 0}, {d.width, d.height, 0}},
-                            entities::AxisProfile{{0, d.height - d.thickness, 0}, {d.length, d.height, 0}},
-                            entities::AxisProfile{{0, 0, 0}, {d.length, d.width, 0}}
-                        };
-                    }
-                }
-            };
 
         public:
             ConfigurePanels(
@@ -84,6 +42,7 @@ namespace silvanus::generatebox::systems
                 updateJointProfilesFromPanelAndJointOrientations(m_registry);
                 updateJointProfilesFromJointPatterns(m_registry);
                 updateJointPatternPositionsFromPanelAndJointPositions(m_registry);
+
                 tagLengthOrientationPanels(m_registry);
                 tagWidthOrientationPanels(m_registry);
                 tagHeightOrientationPanels(m_registry);
@@ -104,14 +63,13 @@ namespace silvanus::generatebox::systems
                 logInitialJointProperties(m_registry);
 
                 updateExtrusionDistancesFromDimensions(m_registry);
-                updateEndReferencePointsFromDimensions(m_registry);
-                updatePanelProfilesFromEndReferencePoints(m_registry);
+                updatePanelProfilesFromPanelMinPoints(m_registry);
                 kerfAdjustPanelProfiles(m_registry);
 
-                updateStartReferencePointsFromEndReferencePoints(m_registry);
-                updatePanelOffsetsFromEndReferencePoints(m_registry);
+                updatePanelOffsetsFromPanelMinPoints(m_registry);
                 kerfAdjustOutsidePanelOffsets(m_registry);
                 kerfAdjustInsidePanelOffsets(m_registry);
+                updateJointPanelOffsetsFromExpressions(m_registry);
                 kerfAdjustOutsideJointPanelOffsets(m_registry);
                 kerfAdjustInsideJointPanelOffsets(m_registry);
 

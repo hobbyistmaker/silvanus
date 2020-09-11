@@ -23,6 +23,9 @@ namespace silvanus::generatebox::fusion {
         adsk::core::Ptr<adsk::core::Point3D> m_start;
         adsk::core::Ptr<adsk::core::Point3D> m_end;
 
+        adsk::core::Ptr<adsk::fusion::SketchLinearDimension> m_finger_length;
+        adsk::core::Ptr<adsk::fusion::SketchLinearDimension> m_origin_offset;
+
         adsk::core::Ptr<adsk::fusion::SketchLineList> drawFinger(
             const adsk::core::Ptr<adsk::core::Point3D>& offset,
             const adsk::core::Ptr<adsk::core::Point3D>& end
@@ -37,6 +40,13 @@ namespace silvanus::generatebox::fusion {
             const std::string& name
         );
 
+        auto fingerLength() const -> adsk::core::Ptr<adsk::fusion::ModelParameter> {
+            return m_finger_length->parameter();
+        }
+
+        auto originOffset() const -> adsk::core::Ptr<adsk::fusion::ModelParameter> {
+            return m_origin_offset->parameter();
+        }
     };
 
 }

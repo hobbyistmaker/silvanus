@@ -15,6 +15,9 @@
 #include "entities/Dimensions.hpp"
 #include "entities/ExtrusionDistance.hpp"
 #include "entities/PanelOffset.hpp"
+#include "entities/JointThickness.hpp"
+#include "entities/JointPanel.hpp"
+#include "entities/JointPanelOffset.hpp"
 
 #include <functional>
 #include <map>
@@ -29,33 +32,41 @@ namespace silvanus::generatebox::fusion {
     using axisFaceSelector = std::map<entities::AxisFlag, std::function<adsk::core::Ptr<adsk::fusion::BRepFace>(adsk::core::Ptr<adsk::fusion::BRepBody>)>>;
     using orientationAxisSelector = std::map<adsk::core::DefaultModelingOrientations, axisFaceSelector>;
 
-    adsk::core::Ptr<adsk::fusion::ExtrudeFeatureInput> createSimpleExtrusion(
+    auto createSimpleExtrusion(
         const adsk::core::Ptr<adsk::fusion::Sketch>& sketch,
         const adsk::core::Ptr<adsk::fusion::Profile>& profile,
-        entities::ExtrusionDistance distance,
-        entities::PanelOffset offset
-    );
+        const entities::ExtrusionDistance& distance,
+        const entities::PanelOffset& offset
+    ) -> adsk::core::Ptr<adsk::fusion::ExtrudeFeatureInput>;
 
-    adsk::core::Ptr<adsk::fusion::ExtrudeFeatureInput> createSimpleExtrusion(
+    auto createSimpleExtrusion(
         const adsk::core::Ptr<adsk::fusion::BRepFace>& face,
-        entities::ExtrusionDistance distance,
-        entities::PanelOffset offset
-    );
+        const entities::ExtrusionDistance& distance,
+        const entities::PanelOffset& offset
+    ) -> adsk::core::Ptr<adsk::fusion::ExtrudeFeatureInput>;
 
-    adsk::core::Ptr<adsk::fusion::ExtrudeFeatureInput> createSimpleExtrusion(
+    auto createSimpleExtrusion(
         const adsk::core::Ptr<adsk::fusion::BRepFace>& face,
-        entities::ExtrusionDistance distance,
-        entities::PanelOffset offset,
-        entities::PanelOffset start
-    );
+        const entities::ExtrusionDistance& distance,
+        const entities::PanelOffset& offset,
+        const entities::PanelOffset& start
+    ) -> adsk::core::Ptr<adsk::fusion::ExtrudeFeatureInput>;
 
-    adsk::core::Ptr<adsk::fusion::ExtrudeFeature> cutSimpleExtrusion(
+    auto cutSimpleExtrusion(
         const adsk::core::Ptr<adsk::fusion::Sketch>& sketch,
         const adsk::core::Ptr<adsk::fusion::Profile>& profile,
         double distance,
         double offset,
-        adsk::core::Ptr<adsk::fusion::BRepBody>& body
-    );
+        const adsk::core::Ptr<adsk::fusion::BRepBody>& body
+    ) -> adsk::core::Ptr<adsk::fusion::ExtrudeFeature>;
+
+    auto cutSimpleExtrusion(
+        const adsk::core::Ptr<adsk::fusion::Sketch>& sketch,
+        const adsk::core::Ptr<adsk::fusion::Profile>& profile,
+        const entities::JointThickness& distance,
+        const entities::JointPanelOffset& offset,
+        const adsk::core::Ptr<adsk::fusion::BRepBody>& body
+    ) -> adsk::core::Ptr<adsk::fusion::ExtrudeFeature>;
 }
 
 #endif /* silvanuspro_fusionsupport_hpp */

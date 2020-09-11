@@ -12,17 +12,7 @@
 #include "fusion/FingerCutsPattern.hpp"
 #include "fusion/PanelFingerSketch.hpp"
 #include "fusion/PanelFeature.hpp"
-#include "entities/AxisFlag.hpp"
-#include "entities/Enabled.hpp"
-#include "entities/JointEnabled.hpp"
-#include "entities/JointOrientation.hpp"
-#include "entities/JointName.hpp"
-#include "entities/JointProfileGroup.hpp"
-#include "entities/JoinedPanels.hpp"
-#include "entities/Panel.hpp"
-#include "entities/PanelExtrusion.hpp"
-#include "entities/PanelProfile.hpp"
-#include "entities/PanelGroup.hpp"
+#include "entities/EntitiesAll.hpp"
 
 #include <map>
 #include <set>
@@ -40,7 +30,89 @@ using namespace silvanus::generatebox::render;
 using std::map;
 using std::unordered_map;
 
-void ParametricRenderer::execute(DefaultModelingOrientations model_orientation, const Ptr<Component>& component) {
+using jointProfileSet = std::set<size_t>;
+using panelJointGroup = std::map<jointProfileSet, PanelRenderData>;
+using positionPanelGroup = std::map<Position, panelJointGroup>;
+using profilePositionGroup = std::map<PanelProfile, positionPanelGroup, ComparePanelProfile>;
+using axisProfileGroup = std::map<AxisFlag, profilePositionGroup>;
+
+auto ParametricRenderer::update_parameter(
+    Ptr<Parameter> &parameter, FloatParameter& input
+) -> void {
+    PLOG_DEBUG << "Updating parameter for " << input.name;
+    parameter->expression(input.expression);
+}
+
+auto ParametricRenderer::create_parameter(
+    Ptr<UserParameters> &parameters, FloatParameter& input
+) -> void {
+    PLOG_DEBUG << "Creating new parameter for " << input.name;
+    auto value = ValueInput::createByString(input.expression);
+    parameters->add(input.name, value, input.unit_type, "");
+}
+
+auto ParametricRenderer::find_or_create_parameter(Ptr<ParameterList>& all_parameters, Ptr<UserParameters>& user_parameters, FloatParameter& input) -> void {
+    auto existing = all_parameters->itemByName(input.name);
+
+    if (existing) {
+        update_parameter(existing, input);
+        return;
+    } else {
+        create_parameter(user_parameters, input);
+    }
+}
+
+auto ParametricRenderer::initializeParameters() -> void{
+    auto app = adsk::core::Application::get();
+    auto all_parameters = Ptr<Design>{app->activeProduct()}->allParameters();
+    auto user_parameters = Ptr<Design>{app->activeProduct()}->userParameters();
+
+    auto param_init_view = m_registry.view<FloatParameter>();
+    for (auto &&[entity, parameter]: param_init_view.proxy()) {
+        find_or_create_parameter(all_parameters, user_parameters, parameter);
+    }
+}
+
+auto ParametricRenderer::initializePanelGroups() -> void {
+    auto panel_groups = axisProfileGroup{};
+
+    auto view = m_registry.view<Enabled, JointEnabled, Panel, PanelGroup, PanelExtrusion, JointGroup, JointName, JointExtrusion>();
+    for (auto &&[entity, enabled, joint_enabled, panel, panel_group, panel_extrusion, joint_group, joint_name, joint_extrusion]: view.proxy()) {
+        PLOG_DEBUG << panel.name << " enabled == " << (int) enabled.value;
+        PLOG_DEBUG << panel.name << " joint to " << joint_name.value << " enabled == " << (int) joint_enabled.value;
+
+        if (!enabled.value || !joint_enabled.value) continue;
+
+        PLOG_DEBUG << "Adding Panel " << panel.name << " with joint to " << joint_name.value << " for direct render";
+        PLOG_DEBUG << "Joint direction is " << (int)joint_group.profile.joint_direction;
+        PLOG_DEBUG << "Joint thickness is " << joint_group.joint_thickness.value;
+        PLOG_DEBUG << "Joint pattern type is " << (int)joint_group.profile.joint_type;
+
+        auto &group = panel_groups[panel_group.orientation][panel_group.profile][panel_group.position][joint_group.tag.value];
+
+        if (group.parent == entt::null) { group.parent = entity; };
+
+        group.names.insert(panel_extrusion.name);
+        group.panels[panel_group.distance].insert(panel_extrusion);
+
+        if ((joint_group.profile.finger_type == FingerPatternType::None) || (joint_group.profile.joint_type == JointPatternType::None)) {
+            continue;
+        }
+
+        auto& joined_panel_group = group.joints[joint_group.profile.joint_type][joint_group.profile.joint_direction][joint_group.profile.joint_orientation][joint_group.profile];
+        joined_panel_group.names.insert(joint_name.value);
+        joined_panel_group.extrusions.insert(joint_extrusion);
+    }
+
+    if (panel_groups.empty()) {
+        return;
+    }
+
+    m_renders.set<axisProfileGroup>(panel_groups);
+}
+
+auto ParametricRenderer::renderPanelGroups(DefaultModelingOrientations model_orientation, const Ptr<Component>& component) -> void {
+    auto panel_groups = m_renders.ctx<axisProfileGroup>();
 
     auto yup_planes   = axis_plane_map{
         {AxisFlag::Height, component->xZConstructionPlane()},
@@ -57,43 +129,7 @@ void ParametricRenderer::execute(DefaultModelingOrientations model_orientation, 
         {ZUpModelingOrientation, zup_planes}
     };
 
-    using jointProfileSet = std::set<size_t>;
-    using panelJointGroup = std::map<jointProfileSet, PanelRenderData>;
-    using positionPanelGroup = std::map<Position, panelJointGroup>;
-    using profilePositionGroup = std::map<PanelProfile, positionPanelGroup, ComparePanelProfile>;
-    using axisProfileGroup = std::map<AxisFlag, profilePositionGroup>;
-
-    auto panel_groups = axisProfileGroup{};
-
-    auto      view = m_registry.view<Enabled, JointProfileGroup, JointEnabled, Panel, PanelGroup, JointGroup, PanelExtrusion, JointOrientation, JointName, JointExtrusion, JointDirection>().proxy();
-    for (auto &&[entity, enabled, joint_profile_group, joint_enabled, panel, panel_group, joint_group, panel_extrusion, joint_orientation, joint_name, joint_extrusion, joint_direction]: view) {
-        PLOG_DEBUG << panel.name << " enabled == " << (int) enabled.value;
-        PLOG_DEBUG << panel.name << " joint to " << joint_name.value << " enabled == " << (int) joint_enabled.value;
-
-        if (!enabled.value || !joint_enabled.value) continue;
-
-        PLOG_DEBUG << "Adding Panel " << panel.name << " with joint to " << joint_name.value << " for direct render";
-        PLOG_DEBUG << "Joint direction is " << (int)joint_direction.value;
-        PLOG_DEBUG << "Joint thickness is " << joint_group.joint_thickness.value;
-        PLOG_DEBUG << "Joint pattern type is " << (int)joint_group.profile.joint_type;
-
-        auto &group = panel_groups[panel_group.orientation][panel_group.profile][panel_group.position][joint_profile_group.hashes];
-
-        group.names.insert(panel_extrusion.name);
-        group.panels[panel_group.distance].insert(panel_extrusion);
-
-        if ((joint_group.profile.finger_type == FingerPatternType::None) || (joint_group.profile.joint_type == JointPatternType::None)) {
-            continue;
-        }
-
-        auto& joined_panel_group = group.joints[joint_group.profile.joint_type][joint_group.profile.joint_direction][joint_orientation.axis][joint_group.profile];
-        joined_panel_group.names.insert(joint_name.value);
-        joined_panel_group.extrusions.insert(joint_extrusion);
-    }
-
-    if (panel_groups.empty()) {
-        return;
-    }
+    auto& existing_params = m_renders.ctx<ExpressionParameterMap>().parameters;
 
     for (auto& [axis, axis_data] : panel_groups) {
         for (auto& [profile, profile_data] : axis_data) {
@@ -106,7 +142,7 @@ void ParametricRenderer::execute(DefaultModelingOrientations model_orientation, 
                     auto start_pos = timeline->markerPosition();
 
                     auto const names  = concat_names(std::vector<std::string>(joint_group.names.begin(), joint_group.names.end()));
-                    auto const sketch = PanelProfileSketch(names + " Profile Sketch", plane, transform, profile);
+                    auto sketch = PanelProfileSketch(names + " Profile Sketch", plane, transform, profile);
 
                     for (auto const&[distance, extrusions]: joint_group.panels) {
 
@@ -116,13 +152,9 @@ void ParametricRenderer::execute(DefaultModelingOrientations model_orientation, 
 
                         auto const feature = renderSinglePanel(names, sketch, panels[0], model_orientation, joint_group.joints);
 
-                        if (!feature->isValid()) {
-                            m_app->userInterface()->messageBox("Extrusion has been invalidated.");
-                        }
-
                         if (panels.size() == 1) { continue; }
 
-                        renderPanelCopies(feature, std::vector<PanelExtrusion>{panels.begin() + 1, panels.end()}, panels[0]);
+                        renderPanelCopies(feature, panels);
                     }
 
                     auto const end_pos = timeline->markerPosition() - 1;
@@ -134,7 +166,17 @@ void ParametricRenderer::execute(DefaultModelingOrientations model_orientation, 
             }
         }
     }
+}
 
+void ParametricRenderer::execute(DefaultModelingOrientations model_orientation, const Ptr<Component>& component) {
+
+    m_renders.set<ExpressionParameterMap>();
+
+    initializeParameters();
+    initializePanelGroups();
+    renderPanelGroups(model_orientation, component);
+
+    m_renders.unset<ExpressionParameterMap>();
     m_renders.clear();
 }
 
@@ -145,26 +187,92 @@ auto ParametricRenderer::renderSinglePanel(
     const DefaultModelingOrientations& model_orientation,
     jointPatternTypeMap& joints
 ) -> Ptr<ExtrudeFeature> {
+    PLOG_DEBUG << "Extruding " << data.name << " with distance " << data.distance.expression << " and offset " << data.offset.expression;
+    auto& existing_params = m_renders.ctx<ExpressionParameterMap>().parameters;
+
     auto const extrusion = sketch.extrudeProfile(data.distance, data.offset);
 
     extrusion->name(data.name + " Panel Extrusion");
     auto const body = extrusion->bodies()->item(0);
     body->name(data.name + " Panel Body");
 
-    auto cuts = renderJointSketches(names, data.distance, model_orientation, extrusion, joints);
+    auto cuts = renderJointSketches(names, data, model_orientation, extrusion, joints);
 
     for (auto const& cut_pairs: cuts) {
         for (auto const& cut: cut_pairs) {
-            auto const &cut_sketch = cut.sketch;
+            auto &cut_sketch = cut.sketch;
             auto const &cut_names  = cut.group.names;
 
             std::vector<Ptr<ExtrudeFeature>> features;
 
             for (auto const& cut_extrusion: cut.group.extrusions) {
-                auto const& cut_feature = cut_sketch.cut(cut_extrusion.offset, cut_extrusion.distance, body);
-                if (cut_feature) {
+                auto const& cut_feature = cut_sketch.cutJoint(cut_extrusion.offset, cut_extrusion.distance, body);
+                auto const& offset_dimension = Ptr<Parameter>{Ptr<FromEntityStartDefinition>{cut_feature->startExtent()}->offset()};
+                auto const& distance_dimension = Ptr<DistanceExtentDefinition>{cut_feature->extentOne()}->distance();
+                PLOG_DEBUG << "Updating offset dimension: " << offset_dimension->name();
+                PLOG_DEBUG << (int)cut_extrusion.joint_id << "Finger cut offset is " << std::to_string(offset_dimension->value()) << " from " << offset_dimension->expression();
+                PLOG_DEBUG << (int)cut_extrusion.joint_id << "Finger cut offset expression is " << cut_extrusion.offset.expression;
+                PLOG_DEBUG << "Updating distance dimension: " << distance_dimension->name();
+                PLOG_DEBUG << (int)cut_extrusion.joint_id << "Finger cut distance expression is " << cut_extrusion.distance.expression;
+
+                auto offset_expression = cut_extrusion.offset.expression;
+                offset_expression.shrink_to_fit();
+                if (offset_expression.length() > 0) {
+                    auto offset = cut_extrusion.offset;
+
+                    if (offset_dimension->value() > 0) {
+                        auto existing_offset = existing_params[offset.expression];
+                        existing_offset.shrink_to_fit();
+                        if (existing_offset.length() > 0) {
+                            offset_dimension->expression(existing_offset);
+                        } else {
+                            offset_dimension->expression(offset.expression);
+                            existing_params[offset.expression] = offset_dimension->name();
+                        }
+                    } else if (offset_dimension->value() < 0) {
+                        auto negative_offset = "-(" + offset.expression + ")";
+                        auto existing_negative = existing_params[negative_offset];
+                        existing_negative.shrink_to_fit();
+
+                        if (existing_negative.length() > 0) {
+                            offset_dimension->expression(existing_negative);
+                        } else {
+                            offset_dimension->expression(negative_offset);
+                            existing_params[negative_offset] = offset_dimension->name();
+                        }
+                    }
+                }
+
+                auto distance_expression = cut_extrusion.distance.expression;
+                distance_expression.shrink_to_fit();
+                if (distance_expression.length() > 0) {
+                    if (distance_dimension->value() > 0) {
+                        auto existing_thickness = existing_params[distance_expression];
+                        if (existing_thickness.length()) {
+                            distance_dimension->expression(existing_thickness);
+                        } else {
+                            distance_dimension->expression(distance_expression);
+                            existing_params[distance_expression] = distance_dimension->name();
+                        }
+                    } else if (distance_dimension->value() < 0) {
+                        auto negative_thickness = "-(" + distance_expression + ")";
+                        auto existing_negative = existing_params[negative_thickness];
+
+                        if (existing_negative.length()) {
+                            distance_dimension->expression(existing_negative);
+                        } else {
+                            distance_dimension->expression(negative_thickness);
+                            existing_params[negative_thickness] = distance_dimension->name();
+                        }
+                    }
+
                     auto group = cut.group.names;
-                    cut_feature->name(names + " " + concat_names({group.begin(), group.end()}) + " Finger Extrusion");
+                    auto feature_prefix = names + " " + concat_names({group.begin(), group.end()});
+                    if (cut.corner) {
+                        cut_feature->name(feature_prefix + " Corner Extrusion");
+                    } else {
+                        cut_feature->name(feature_prefix + " Finger Extrusion");
+                    }
                     features.emplace_back(cut_feature);
                 }
             }
@@ -181,7 +289,39 @@ auto ParametricRenderer::renderSinglePanel(
 
             auto const &copy_feature = replicator.copy(model_orientation, features, cut.profile, cut.corner);
             if (copy_feature) {
-                copy_feature->name(names + " " + concat_names({cut_names.begin(), cut_names.end()}) + " Finger Pattern");
+                auto feature_prefix = names + " " + concat_names({cut_names.begin(), cut_names.end()});
+                if (cut.corner) {
+                    auto const& distance = copy_feature->distanceOne();
+
+                    auto existing_distance = existing_params[cut.profile.parameters.corner_distance];
+                    if (existing_distance.length()) {
+                        distance->expression(existing_distance);
+                    } else {
+                        distance->expression(cut.profile.parameters.corner_distance);
+                        existing_params[cut.profile.parameters.corner_distance] = distance->name();
+                    }
+                    copy_feature->name(feature_prefix.append(" Corner Pattern"));
+                } else {
+                    auto const& distance = copy_feature->distanceOne();
+                    auto const& quantity = copy_feature->quantityOne();
+
+                    auto existing_distance = existing_params[cut.profile.parameters.pattern_distance];
+                    if (existing_distance.length()) {
+                        distance->expression(existing_distance);
+                    } else {
+                        distance->expression(cut.profile.parameters.pattern_distance);
+                        existing_params[cut.profile.parameters.pattern_distance] = distance->name();
+                    }
+
+                    auto existing_quantity = existing_params[cut.profile.parameters.finger_count];
+                    if (existing_quantity.length()) {
+                        quantity->expression(existing_quantity);
+                    } else {
+                        quantity->expression(cut.profile.parameters.finger_count);
+                        existing_params[cut.profile.parameters.finger_count] = quantity->name();
+                    }
+                    copy_feature->name(feature_prefix.append(" Finger Pattern"));
+                }
             }
         }
     }
@@ -191,12 +331,14 @@ auto ParametricRenderer::renderSinglePanel(
 
 void ParametricRenderer::renderPanelCopies(
     const Ptr<ExtrudeFeature>& feature,
-    const std::vector<PanelExtrusion>& panels,
-    const PanelExtrusion &data
+    const std::vector<PanelExtrusion>& panels
 ) {
+    auto copies = std::vector<PanelExtrusion>{panels.begin() + 1, panels.end()};
+
     auto      parent = PanelFeature(feature);
-    for (auto &panel : panels) {
-        auto extrusion = parent.extrudeCopy(panel.distance, panel.offset, data.offset);
+    for (auto &panel : copies) {
+        auto extrusion = parent.extrudeCopy(panel.distance, panel.offset, panels[0].offset);
+
         extrusion->name(panel.name + " Panel Extrusion");
         auto body = extrusion->bodies()->item(0);
         body->name(panel.name + " Panel Body");
@@ -205,7 +347,7 @@ void ParametricRenderer::renderPanelCopies(
 
 auto ParametricRenderer::renderJointSketches(
     const std::string& panel_name,
-    const ExtrusionDistance& panel_thickness,
+    const PanelExtrusion& panel,
     const DefaultModelingOrientations& model_orientation,
     const adsk::core::Ptr<ExtrudeFeature>& extrusion,
     jointPatternTypeMap& joints
@@ -227,12 +369,12 @@ auto ParametricRenderer::renderJointSketches(
             for (auto &[joint_orientation, joint_groups]: direction_data) {
                 for (auto const&[joint_profile, joint_profile_data]: joint_groups) {
                     cuts.emplace_back(
-                        renderJointSketch(panel_name, panel_thickness, model_orientation, extrusion, joint_name, joint_orientation, joint_groups));
+                        renderJointSketch(panel_name, panel, model_orientation, extrusion, joint_name, joint_orientation, joint_groups));
 
                     if (joint_profile.corner_width == 0) continue;
 
                     cuts.emplace_back(
-                        renderCornerJointSketch(panel_name, panel_thickness, model_orientation, extrusion, joint_name + "Corner", joint_orientation, joint_groups));
+                        renderCornerJointSketch(panel_name, panel, model_orientation, extrusion, joint_name + " Corner", joint_orientation, joint_groups));
 
                 }
             }
@@ -244,14 +386,15 @@ auto ParametricRenderer::renderJointSketches(
 
 auto ParametricRenderer::renderJointSketch(
     const std::string& panel_name,
-    const ExtrusionDistance &panel_thickness,
+    const PanelExtrusion& panel,
     const DefaultModelingOrientations &model_orientation,
     const Ptr<ExtrudeFeature> &extrusion,
     const std::string& sketch_prefix,
     const AxisFlag &joint_orientation,
     const profileRenderGroupMap &joint_groups
 ) -> std::vector<CutProfile>{
-    auto pairs    = std::vector<CutProfile>{};
+    auto profiles    = std::vector<CutProfile>{};
+    auto panel_thickness = panel.distance;
 
     for (auto const& [profile, joints]: joint_groups) {
         if ((profile.joint_direction == JointDirectionType::Inverted) && (profile.finger_count < 1)) {
@@ -269,27 +412,29 @@ auto ParametricRenderer::renderJointSketch(
             Point3D::create(finger_width, panel_thickness.value, 0),
             profile_name
         );
-        pairs.emplace_back(CutProfile{sketch, joints, profile});
+        PLOG_DEBUG << "Finger profile width: " << profile.parameters.finger_width;
+        if (profile.parameters.finger_width.length() > 0) sketch.fingerLength()->expression(profile.parameters.finger_width);
+        if (profile.parameters.pattern_offset.length() > 0) sketch.originOffset()->expression(profile.parameters.pattern_offset);
+
+        profiles.emplace_back(CutProfile{sketch, joints, profile});
     }
 
-    return pairs;
+    return profiles;
 }
 
 auto ParametricRenderer::renderCornerJointSketch(
     const std::string& panel_name,
-    const ExtrusionDistance &panel_thickness,
-    const DefaultModelingOrientations &model_orientation,
-    const Ptr<ExtrudeFeature> &extrusion,
+    const PanelExtrusion& panel,
+    const DefaultModelingOrientations& model_orientation,
+    const Ptr<ExtrudeFeature>& extrusion,
     const std::string& sketch_prefix,
-    const AxisFlag &joint_orientation,
-    const profileRenderGroupMap &joint_groups
+    const AxisFlag& joint_orientation,
+    const profileRenderGroupMap& joint_groups
 ) -> std::vector<CutProfile>{
     auto pairs    = std::vector<CutProfile>{};
+    auto panel_thickness = panel.distance;
 
     for (auto const& [profile, joints]: joint_groups) {
-//        if ((profile.joint_direction == JointDirectionType::Inverted) && (profile.finger_count < 1)) {
-//            continue;
-//        }
         auto const suffix         = " " + concat_names(std::vector<std::string>(joints.names.begin(), joints.names.end())) + " " + sketch_prefix + " Sketch";
         auto const profile_name   = panel_name + suffix;
         auto const pattern_offset = 0;
@@ -302,6 +447,7 @@ auto ParametricRenderer::renderCornerJointSketch(
             Point3D::create(finger_width, panel_thickness.value, 0),
             profile_name
         );
+        sketch.fingerLength()->expression(profile.parameters.corner_width);
         pairs.emplace_back(CutProfile{sketch, joints, profile, true});
     }
 

@@ -5,63 +5,144 @@
 
 #include "DialogSystemManager.hpp"
 
-#include "entities/OrientationTags.hpp"
 #include "entities/PanelDimension.hpp"
+#include "entities/PanelMax.hpp"
 
 #include <entt/entt.hpp>
+#include <Core/UserInterface/CommandInput.h>
 
+using namespace adsk::core;
 using namespace silvanus::generatebox::entities;
 
 using adsk::core::DefaultModelingOrientations::YUpModelingOrientation;
 
-template<class L, class W, class H>
-void updatePanelDimensions(entt::registry& registry, entt::entity entity) {
-    auto length = registry.ctx<L>().control;
-    auto width  = registry.ctx<W>().control;
-    auto height = registry.ctx<H>().control;
-
-    PLOG_DEBUG << "Panel dimensions: " << length->value() << ", " << width->value() << ", " << height->value();
-    registry.replace<PanelDimensionInputs>(entity, length, width, height);
-}
-
-void updatePanelDimensionInputsImpl(entt::registry& registry) {
-    auto orientation = registry.ctx<DialogModelingOrientation>();
-
-    auto top    = registry.ctx<DialogTopPanel>().id;
-    auto bottom = registry.ctx<DialogBottomPanel>().id;
-    auto left   = registry.ctx<DialogLeftPanel>().id;
-    auto right  = registry.ctx<DialogRightPanel>().id;
-    auto front  = registry.ctx<DialogFrontPanel>().id;
-    auto back   = registry.ctx<DialogBackPanel>().id;
-
-    PLOG_DEBUG << "Top Panel ID: " + std::to_string((int) top);
-    PLOG_DEBUG << "Bottom Panel ID: " + std::to_string((int) bottom);
-    PLOG_DEBUG << "Left Panel ID: " + std::to_string((int) left);
-    PLOG_DEBUG << "Right Panel ID: " + std::to_string((int) right);
-    PLOG_DEBUG << "Front Panel ID: " + std::to_string((int) front);
-    PLOG_DEBUG << "Back Panel ID: " + std::to_string((int) back);
-
-    updatePanelDimensions<DialogLengthInput, DialogWidthInput, DialogTopThickness>(registry, top);
-    updatePanelDimensions<DialogLengthInput, DialogWidthInput, DialogBottomThickness>(registry, bottom);
-    updatePanelDimensions<DialogLeftThickness, DialogWidthInput, DialogHeightInput>(registry, left);
-    updatePanelDimensions<DialogRightThickness, DialogWidthInput, DialogHeightInput>(registry, right);
-
-    if (orientation.value == YUpModelingOrientation) {
-        updatePanelDimensions<DialogLengthInput, DialogFrontThickness, DialogHeightInput>(registry, front);
-        updatePanelDimensions<DialogLengthInput, DialogBackThickness, DialogHeightInput>(registry, back);
-    } else {
-        updatePanelDimensions<DialogLengthInput, DialogFrontThickness, DialogHeightInput>(registry, front);
-        updatePanelDimensions<DialogLengthInput, DialogBackThickness, DialogHeightInput>(registry, back);
-    }
-}
-
-void updatePanelDimensionsImpl(entt::registry& registry) {
-    registry.view<PanelDimensions, PanelDimensionInputs>().each([](
-        auto &dimensions, auto const &inputs
+void updatePanelMinPointFromThickness(entt::registry &registry) {
+    registry.view<PanelMinPoint, const PanelMaxPoint, const PanelThickness, const PanelAxis>().each([](
+        auto &dimensions, auto const& max_point, auto const& thickness, auto const& normal
     ){
-        dimensions.length = inputs.length->value();
-        dimensions.width = inputs.width->value();
-        dimensions.height = inputs.height->value();
+        dimensions.length = (max_point.length - (thickness.value * normal.length)) * normal.length;
+        dimensions.width = (max_point.width - (thickness.value * normal.width)) * normal.width;
+        dimensions.height = (max_point.height - (thickness.value * normal.height)) * normal.height;
+        PLOG_DEBUG << "Updated min point is (" << dimensions.length << ", " << dimensions.width << ", " << dimensions.height << ")";
+    });
+
+    registry.view<PanelMinParam, const PanelMaxParam, const ThicknessParameter, const PanelAxis>().each([](
+       auto &dimensions, auto const& max_point, auto const& thickness, auto const& normal
+    ){
+        dimensions.length = normal.length ? max_point.length + " - " + thickness.name : dimensions.length;
+        dimensions.width  = normal.width  ? max_point.width  + " - " + thickness.name : dimensions.width ;
+        dimensions.height = normal.height ? max_point.height + " - " + thickness.name : dimensions.height;
+        PLOG_DEBUG << "Updated min point param from thickness and axis is (" << dimensions.length << ", " << dimensions.width << ", " << dimensions.height << ")";
+    });
+
+    registry.view<PanelMinParam, const ThicknessParameter>().each([](
+       auto &dimensions, auto const& thickness
+    ){
+        auto invalid = thickness.name + " - " + thickness.name;
+        dimensions.length = dimensions.length == invalid ? "" : dimensions.length;
+        dimensions.width = dimensions.width == invalid ? "" : dimensions.width;
+        dimensions.height = dimensions.height == invalid ? "" : dimensions.height;
+        PLOG_DEBUG << "Updated min point param from thickness is (" << dimensions.length << ", " << dimensions.width << ", " << dimensions.height << ")";
     });
 }
 
+void updatePanelMaxPointFromHeightInput(entt::registry &registry) {
+    registry.view<PanelMaxPoint, PanelMaxHeightInput>().each([](
+        auto &dimensions, auto const &height
+    ){
+        dimensions.height = height.control->value();
+        PLOG_DEBUG << "Updated max point is (" << dimensions.length << ", " << dimensions.width << ", " << dimensions.height << ")";
+    });
+
+    registry.view<PanelMaxParam, MaxHeightParam>().each([](
+        auto &dimensions, auto const &height
+    ){
+        dimensions.height = height.expression.length() > 0 ? height.expression : dimensions.length;
+        PLOG_DEBUG << "Updated max point param from height is (" << dimensions.length << ", " << dimensions.width << ", " << dimensions.height << ")";
+    });
+}
+
+void updatePanelMaxPointFromWidthInput(entt::registry &registry) {
+    registry.view<PanelMaxPoint, PanelMaxWidthInput>().each([](
+        auto &dimensions, auto const &width
+    ){
+        dimensions.width = width.control->value();
+        PLOG_DEBUG << "Updated max point is (" << dimensions.length << ", " << dimensions.width << ", " << dimensions.height << ")";
+    });
+
+    registry.view<PanelMaxParam, MaxWidthParam>().each([](
+        auto &dimensions, auto const &width
+    ){
+        dimensions.width = width.expression.length() > 0 ? width.expression : dimensions.length;
+        PLOG_DEBUG << "Updated max point param from width is (" << dimensions.length << ", " << dimensions.width << ", " << dimensions.height << ")";
+    });
+}
+
+void updatePanelMaxPointFromLengthInput(entt::registry &registry) {
+    registry.view<PanelMaxPoint, PanelMaxLengthInput>().each([](
+        auto &dimensions, auto const &length
+    ){
+        dimensions.length = length.control->value();
+        PLOG_DEBUG << "Updated max point from length is (" << dimensions.length << ", " << dimensions.width << ", " << dimensions.height << ")";
+    });
+
+    registry.view<PanelMaxParam, MaxLengthParam>().each([](
+       auto &dimensions, auto const &length
+    ){
+        dimensions.length = length.expression.length() > 0 ? length.expression : dimensions.length;
+        PLOG_DEBUG << "Updated max point param from length is (" << dimensions.length << ", " << dimensions.width << ", " << dimensions.height << ")";
+    });
+}
+
+void updatePanelMaxPointFromPanelMaximums(entt::registry &registry) {
+    registry.view<PanelMaxPoint, PanelMaximums>().each([](
+        auto &dimensions, auto const &maximums
+    ){
+        dimensions.length = maximums.length;
+        dimensions.width = maximums.width;
+        dimensions.height = maximums.height;
+        PLOG_DEBUG << "Updated max point is (" << dimensions.length << ", " << dimensions.width << ", " << dimensions.height << ")";
+    });
+
+    registry.view<PanelMaxParam, PanelMaximumExpressions>().each([](
+        auto &dimensions, auto const &maximums
+    ){
+        dimensions.length = maximums.length.length() > 0 ? maximums.length : dimensions.length;
+        dimensions.width = maximums.width.length() > 0 ? maximums.width : dimensions.width;
+        dimensions.height = maximums.height.length() > 0 ? maximums.height : dimensions.height;
+        PLOG_DEBUG << "Updated max point param is (" << dimensions.length << ", " << dimensions.width << ", " << dimensions.height << ")";
+    });
+}
+
+void initializePanelMaxPointFromThickness(entt::registry &registry) {
+    registry.view<PanelMaxPoint, PanelThickness, PanelAxis>().each([](
+        auto &dimensions, auto const& thickness, auto const& normal
+    ){
+        dimensions.length = thickness.value * normal.length;
+        dimensions.width = thickness.value * normal.width;
+        dimensions.height = thickness.value * normal.height;
+        PLOG_DEBUG << "Updated max point is (" << dimensions.length << ", " << dimensions.width << ", " << dimensions.height << ")";
+    });
+
+    registry.view<PanelMaxParam, ThicknessParameter, PanelAxis>().each([](
+        auto &dimensions, auto const& thickness, auto const& normal
+    ){
+        dimensions.length = normal.length ? thickness.name : "";
+        dimensions.width = normal.width ? thickness.name : "";
+        dimensions.height = normal.height ? thickness.name : "";
+        PLOG_DEBUG << "Updated max point param is (" << dimensions.length << ", " << dimensions.width << ", " << dimensions.height << ")";
+    });
+}
+
+void updatePanelDimensionsImpl(entt::registry& registry) {
+    PLOG_DEBUG << "starting updatePanelDimensionsImpl";
+
+    initializePanelMaxPointFromThickness(registry);
+    updatePanelMaxPointFromPanelMaximums(registry);
+    updatePanelMaxPointFromLengthInput(registry);
+    updatePanelMaxPointFromWidthInput(registry);
+    updatePanelMaxPointFromHeightInput(registry);
+    updatePanelMinPointFromThickness(registry);
+
+    PLOG_DEBUG << "finished updatePanelDimensionsImpl";
+}

@@ -24,6 +24,7 @@
 #include "entities/JointThickness.hpp"
 #include "entities/PanelExtrusion.hpp"
 #include "entities/PanelProfile.hpp"
+#include "entities/Parameter.hpp"
 
 #include <map>
 #include <set>
@@ -116,31 +117,23 @@ namespace silvanus::generatebox::render {
                 jointPatternTypeMap& joints
             ) -> adsk::core::Ptr<adsk::fusion::ExtrudeFeature>;
 
-            static void renderPanelCopies(
+            auto renderPanelCopies(
                 const adsk::core::Ptr<adsk::fusion::ExtrudeFeature> &feature,
-                const std::vector<entities::PanelExtrusion> &panels,
-                const entities::PanelExtrusion &extrusion
-            );
+                const std::vector<entities::PanelExtrusion> &panels
+            ) -> void;
 
             auto renderJointSketches(
                 const std::string& panel_name,
-                const entities::ExtrusionDistance& panel_thickness,
+                const entities::PanelExtrusion& panel,
                 const adsk::core::DefaultModelingOrientations& orientation,
                 const adsk::core::Ptr<adsk::fusion::ExtrudeFeature>& extrusion,
                 jointPatternTypeMap& joints
             ) -> std::vector<std::vector<CutProfile>>;
 
-        public:
-            ParametricRenderer(adsk::core::Ptr<adsk::core::Application> &app, entt::registry &registry) : m_app{app}, m_registry{registry} {};
-
-            void execute(
-                adsk::core::DefaultModelingOrientations orientation,
-                const adsk::core::Ptr<adsk::fusion::Component> &component
-            ) override;
 
             auto renderJointSketch(
                 const std::string& panel_name,
-                const entities::ExtrusionDistance& panel_thickness,
+                const entities::PanelExtrusion& panel,
                 const adsk::core::DefaultModelingOrientations& model_orientation,
                 const adsk::core::Ptr<adsk::fusion::ExtrudeFeature>& extrusion,
                 const std::string& sketch_prefix,
@@ -150,13 +143,55 @@ namespace silvanus::generatebox::render {
 
             auto renderCornerJointSketch(
                 const std::string& panel_name,
-                const entities::ExtrusionDistance& panel_thickness,
+                const entities::PanelExtrusion& panel,
                 const adsk::core::DefaultModelingOrientations& model_orientation,
                 const adsk::core::Ptr<adsk::fusion::ExtrudeFeature>& extrusion,
                 const std::string& sketch_prefix,
                 const entities::AxisFlag& joint_orientation,
                 const profileRenderGroupMap& joint_groups
             ) -> std::vector<CutProfile>;
+
+            static auto find_or_create_parameter(
+                adsk::core::Ptr<adsk::fusion::ParameterList>& all_parameters,
+                adsk::core::Ptr<adsk::fusion::UserParameters>& user_parameters,
+                entities::FloatParameter& input
+                ) -> void;
+            static auto create_parameter(
+                adsk::core::Ptr<adsk::fusion::UserParameters>& all_parameters,
+                entities::FloatParameter& input
+                ) -> void;
+            static auto update_parameter(
+                adsk::core::Ptr<adsk::fusion::Parameter>& parameter,
+                entities::FloatParameter& input
+            ) -> void;
+
+            auto initializeParameters() -> void;
+            auto initializePanelGroups() -> void;
+            auto renderPanelGroups(
+                adsk::core::DefaultModelingOrientations orientation,
+                const adsk::core::Ptr<adsk::fusion::Component> &component
+                ) -> void;
+            auto updatePanelOffsetDimensions() -> void;
+            auto updatePanelThicknessDimensions() -> void;
+            auto updatePanelProfileDimensions() -> void;
+            auto updateFingerWidthDimensions() -> void;
+            auto updatePatternOffsetDimensions() -> void;
+            auto updateCornerWidthDimensions() -> void;
+            auto updateFingerExtrusionParameters() -> void;
+            auto updateCornerExtrusionParameters() -> void;
+            auto updateFingerPatternParameters() -> void;
+            auto updateCornerPatternParameters() -> void;
+            auto updateFingerExtrusionOffsetParameters() -> void;
+            auto updateCornerExtrusionOffsetParameters() -> void;
+
+        public:
+            ParametricRenderer(adsk::core::Ptr<adsk::core::Application> &app, entt::registry &registry) : m_app{app}, m_registry{registry} {};
+
+            void execute(
+                adsk::core::DefaultModelingOrientations orientation,
+                const adsk::core::Ptr<adsk::fusion::Component> &component
+            ) override;
+
     };
 }
 

@@ -11,10 +11,12 @@
 #include "lib/generatebox/render/presentation/ParametricRenderer.hpp"
 #include "systems/ConfigureJoints.hpp"
 #include "systems/ConfigurePanels.hpp"
+#include "entities/ProgressDialogControl.hpp"
 
 using namespace adsk::core;
 using namespace adsk::fusion;
 
+using namespace silvanus::generatebox::entities;
 using namespace silvanus::generatebox::render;
 using namespace silvanus::generatebox::systems;
 

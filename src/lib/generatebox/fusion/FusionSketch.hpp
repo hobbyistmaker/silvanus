@@ -18,6 +18,7 @@
 #include "entities/Dimensions.hpp"
 #include "entities/ExtrusionDistance.hpp"
 #include "entities/JointThickness.hpp"
+#include "entities/JointPanelOffset.hpp"
 #include "entities/PanelOffset.hpp"
 
 using sketchPointTuple = std::tuple<adsk::core::Ptr<adsk::fusion::SketchPoint>, adsk::core::Ptr<adsk::fusion::SketchPoint>>;
@@ -64,17 +65,20 @@ namespace silvanus::generatebox::fusion {
                     const adsk::core::Ptr<adsk::fusion::SketchPoint>& point
             );
             void addOriginConstraint(const adsk::core::Ptr<adsk::fusion::SketchLineList>& lines);
-            void addDistanceDimension(const adsk::core::Ptr<adsk::fusion::SketchLine>& line);
-            void addDistanceDimension(
+            auto addDistanceDimension(const adsk::core::Ptr<adsk::fusion::SketchLine>& line) -> adsk::core::Ptr<adsk::fusion::SketchLinearDimension>;
+            auto addDistanceDimension(
                 const adsk::core::Ptr<adsk::fusion::SketchLine>& line,
                 const adsk::core::Ptr<adsk::fusion::SketchLine>& normal
-            );
-            void addDistanceDimension(const adsk::core::Ptr<adsk::fusion::SketchPoint>& lhs, const adsk::core::Ptr<adsk::fusion::SketchPoint>& rhs);
-            void addDistanceDimension(
+            ) -> adsk::core::Ptr<adsk::fusion::SketchLinearDimension>;
+            auto addDistanceDimension(
+                const adsk::core::Ptr<adsk::fusion::SketchPoint>& lhs,
+                const adsk::core::Ptr<adsk::fusion::SketchPoint>& rhs
+                ) -> adsk::core::Ptr<adsk::fusion::SketchLinearDimension>;
+            auto addDistanceDimension(
                 const adsk::core::Ptr<adsk::fusion::SketchPoint>& lhs,
                 const adsk::core::Ptr<adsk::fusion::SketchPoint>& rhs,
                 const adsk::core::Ptr<adsk::fusion::SketchLine>& normal
-            );
+                ) -> adsk::core::Ptr<adsk::fusion::SketchLinearDimension>;
             void addExtrusionSideConstraints(const adsk::core::Ptr<adsk::fusion::SketchLineList>& lines);
 
             adsk::core::Ptr<adsk::fusion::SketchPoint> minPoint();
@@ -99,9 +103,9 @@ namespace silvanus::generatebox::fusion {
             ~FusionSketch();
 
             [[nodiscard]] adsk::core::Ptr<adsk::fusion::Profiles> profiles() const { return m_sketch->profiles(); };
-            [[nodiscard]] adsk::core::Ptr<adsk::fusion::ExtrudeFeature> cut(
-                const entities::PanelOffset& offset,
-                const entities::ExtrusionDistance& depth,
+            [[nodiscard]] adsk::core::Ptr<adsk::fusion::ExtrudeFeature> cutJoint(
+                const entities::JointPanelOffset& offset,
+                const entities::JointThickness& depth,
                 adsk::core::Ptr<adsk::fusion::BRepBody> body
             ) const;
             [[nodiscard]] adsk::core::Ptr<adsk::fusion::Component> parentComponent() const;

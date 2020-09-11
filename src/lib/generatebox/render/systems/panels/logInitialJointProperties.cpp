@@ -9,11 +9,13 @@
 #include "entities/JointDirection.hpp"
 #include "entities/JointName.hpp"
 #include "entities/JointOrientation.hpp"
+#include "entities/JointPanelOffset.hpp"
 #include "entities/JointPattern.hpp"
 #include "entities/JointPatternDistance.hpp"
 #include "entities/JointPosition.hpp"
 #include "entities/JointThickness.hpp"
 #include "entities/Panel.hpp"
+#include "entities/PanelOffset.hpp"
 #include "entities/PanelPosition.hpp"
 #include "entities/Thickness.hpp"
 
@@ -28,6 +30,7 @@ void logInitialJointProperties(entt::registry &registry) {
         Enabled,
         Dimensions,
         Thickness,
+        PanelOffset,
         JointPanelOffset,
         JointPatternDistance,
         JointName,
@@ -44,6 +47,7 @@ void logInitialJointProperties(entt::registry &registry) {
         auto const &enable,
         auto const &dimensions,
         auto const &thickness,
+        auto const &panel_offset,
         auto const &joint_panel_offset,
         auto const &distance,
         auto const &joint_name,
@@ -63,6 +67,7 @@ void logInitialJointProperties(entt::registry &registry) {
         PLOG_DEBUG << " width is " << dimensions.width;
         PLOG_DEBUG << " height is " << dimensions.height;
         PLOG_DEBUG << " orientation is " << (int)panel.orientation;
+        PLOG_DEBUG << " panel offset == " << panel_offset.value;
         PLOG_DEBUG << " joint panel offset == " << joint_panel_offset.value;
         PLOG_DEBUG << " joint distance == " << distance.value << " along orientation " << (int)joint_orientation.axis;
         PLOG_DEBUG << " joint direction == " << (int)joint_direction.value;

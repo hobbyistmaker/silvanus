@@ -14,14 +14,24 @@
 using namespace silvanus::generatebox::entities;
 
 void initializePanelExtrusionsFromOffsetAndDistance(entt::registry& registry) {
-    PLOG_DEBUG << "Started addPanelExtrusions";
-    auto view = registry.view<Panel, PanelOffset, ExtrusionDistance>().proxy();
-    for (auto &&[entity, panel, offset, distance]: view) {
+    PLOG_DEBUG << "Started initializePanelExtrusionsFromOffsetAndDistance";
+    auto view = registry.view<Panel, const PanelOffset, const ExtrusionDistance>();
+    for (auto &&[entity, panel, offset, distance]: view.proxy()) {
         PLOG_DEBUG << "Creating panel extrusions";
         registry.emplace_or_replace<PanelExtrusion>(
-            entity, distance, offset, panel.name
+            entity, entity, distance, offset, panel.name
         );
     }
-    PLOG_DEBUG << "Finished addPanelExtrusions";
+    PLOG_DEBUG << "Finished initializePanelExtrusionsFromOffsetAndDistance";
+
+    PLOG_DEBUG << "Started initializePanelExtrusionParamsFromOffsetAndDistance";
+    auto param_view = registry.view<PanelOffsetParam, ExtrusionDistanceParam>();
+    for (auto &&[entity, offset, distance]: param_view.proxy()) {
+        PLOG_DEBUG << "Creating panel extrusion parameters (distance, offset): " << distance.expression << ", " << offset.expression;
+        registry.emplace_or_replace<PanelExtrusionParams>(
+            entity, distance.expression, offset.expression
+        );
+    }
+    PLOG_DEBUG << "Finished initializePanelExtrusionParamsFromOffsetAndDistance";
 }
 
