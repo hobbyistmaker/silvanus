@@ -107,7 +107,7 @@ namespace silvanus::generatebox::render {
 
             adsk::core::Ptr<adsk::core::Application> &m_app;
             entt::registry                           &m_registry;
-            entt::registry m_renders;
+            entt::registry                           m_renders;
 
             auto renderSinglePanel(
                 const std::string& names,
@@ -165,24 +165,17 @@ namespace silvanus::generatebox::render {
                 entities::FloatParameter& input
             ) -> void;
 
+            auto updateFormula(const adsk::core::Ptr<adsk::fusion::Parameter>& parameter, std::string expression) -> void;
+            auto updateFormula(
+                const adsk::core::Ptr<adsk::fusion::Parameter>& parameter,
+                const std::string& expression,
+                const std::string& negative) -> void;
             auto initializeParameters() -> void;
             auto initializePanelGroups() -> void;
             auto renderPanelGroups(
                 adsk::core::DefaultModelingOrientations orientation,
                 const adsk::core::Ptr<adsk::fusion::Component> &component
                 ) -> void;
-            auto updatePanelOffsetDimensions() -> void;
-            auto updatePanelThicknessDimensions() -> void;
-            auto updatePanelProfileDimensions() -> void;
-            auto updateFingerWidthDimensions() -> void;
-            auto updatePatternOffsetDimensions() -> void;
-            auto updateCornerWidthDimensions() -> void;
-            auto updateFingerExtrusionParameters() -> void;
-            auto updateCornerExtrusionParameters() -> void;
-            auto updateFingerPatternParameters() -> void;
-            auto updateCornerPatternParameters() -> void;
-            auto updateFingerExtrusionOffsetParameters() -> void;
-            auto updateCornerExtrusionOffsetParameters() -> void;
 
         public:
             ParametricRenderer(adsk::core::Ptr<adsk::core::Application> &app, entt::registry &registry) : m_app{app}, m_registry{registry} {};

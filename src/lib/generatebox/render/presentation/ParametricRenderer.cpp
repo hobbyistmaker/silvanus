@@ -36,6 +36,38 @@ using positionPanelGroup = std::map<Position, panelJointGroup>;
 using profilePositionGroup = std::map<PanelProfile, positionPanelGroup, ComparePanelProfile>;
 using axisProfileGroup = std::map<AxisFlag, profilePositionGroup>;
 
+auto ParametricRenderer::updateFormula(
+    const Ptr<Parameter>& parameter, std::string expression
+    ) -> void {
+    expression.shrink_to_fit();
+    auto original = expression;
+
+    if (expression.length() == 0) return;
+
+    auto& existing_params = m_renders.ctx<ExpressionParameterMap>().parameters;
+
+    PLOG_DEBUG << "Updating parameter " << parameter->name() << " for " << expression;
+
+    auto existing_expression = existing_params[expression];
+    if (existing_expression.length() > 0) {
+        parameter->expression(existing_expression);
+    } else {
+        parameter->expression(expression);
+        existing_params[original] = parameter->name();
+        PLOG_DEBUG << "Updated parameter " << parameter->name() << " for " << expression;
+    }
+}
+
+auto ParametricRenderer::updateFormula(
+    const Ptr<Parameter>& parameter, const std::string& expression, const std::string& negative
+) -> void {
+    if (parameter->value() > 0) {
+        updateFormula(parameter, expression);
+    } else if (parameter->value() < 0) {
+        updateFormula(parameter, negative);
+    }
+}
+
 auto ParametricRenderer::update_parameter(
     Ptr<Parameter> &parameter, FloatParameter& input
 ) -> void {
@@ -129,8 +161,6 @@ auto ParametricRenderer::renderPanelGroups(DefaultModelingOrientations model_ori
         {ZUpModelingOrientation, zup_planes}
     };
 
-    auto& existing_params = m_renders.ctx<ExpressionParameterMap>().parameters;
-
     for (auto& [axis, axis_data] : panel_groups) {
         for (auto& [profile, profile_data] : axis_data) {
             for (auto& [position, position_data]: profile_data) {
@@ -143,6 +173,14 @@ auto ParametricRenderer::renderPanelGroups(DefaultModelingOrientations model_ori
 
                     auto const names  = concat_names(std::vector<std::string>(joint_group.names.begin(), joint_group.names.end()));
                     auto sketch = PanelProfileSketch(names + " Profile Sketch", plane, transform, profile);
+
+                    if (model_orientation == ZUpModelingOrientation && axis == AxisFlag::Length) { // TODO: This shouldn't be needed
+                        updateFormula(sketch.lengthDimension()->parameter(), profile.width.expression);
+                        updateFormula(sketch.widthDimension()->parameter(), profile.length.expression);
+                    } else {
+                        updateFormula(sketch.lengthDimension()->parameter(), profile.length.expression);
+                        updateFormula(sketch.widthDimension()->parameter(), profile.width.expression);
+                    }
 
                     for (auto const&[distance, extrusions]: joint_group.panels) {
 
@@ -188,9 +226,10 @@ auto ParametricRenderer::renderSinglePanel(
     jointPatternTypeMap& joints
 ) -> Ptr<ExtrudeFeature> {
     PLOG_DEBUG << "Extruding " << data.name << " with distance " << data.distance.expression << " and offset " << data.offset.expression;
-    auto& existing_params = m_renders.ctx<ExpressionParameterMap>().parameters;
-
     auto const extrusion = sketch.extrudeProfile(data.distance, data.offset);
+
+    auto distance_param = Ptr<DistanceExtentDefinition>{extrusion->extentOne()}->distance();
+    updateFormula(distance_param, data.distance.expression); // Reassign since Fusion appears to throw away the string expression
 
     extrusion->name(data.name + " Panel Extrusion");
     auto const body = extrusion->bodies()->item(0);
@@ -217,64 +256,22 @@ auto ParametricRenderer::renderSinglePanel(
 
                 auto offset_expression = cut_extrusion.offset.expression;
                 offset_expression.shrink_to_fit();
-                if (offset_expression.length() > 0) {
-                    auto offset = cut_extrusion.offset;
-
-                    if (offset_dimension->value() > 0) {
-                        auto existing_offset = existing_params[offset.expression];
-                        existing_offset.shrink_to_fit();
-                        if (existing_offset.length() > 0) {
-                            offset_dimension->expression(existing_offset);
-                        } else {
-                            offset_dimension->expression(offset.expression);
-                            existing_params[offset.expression] = offset_dimension->name();
-                        }
-                    } else if (offset_dimension->value() < 0) {
-                        auto negative_offset = "-(" + offset.expression + ")";
-                        auto existing_negative = existing_params[negative_offset];
-                        existing_negative.shrink_to_fit();
-
-                        if (existing_negative.length() > 0) {
-                            offset_dimension->expression(existing_negative);
-                        } else {
-                            offset_dimension->expression(negative_offset);
-                            existing_params[negative_offset] = offset_dimension->name();
-                        }
-                    }
-                }
+                auto negative_offset = offset_expression.length() > 0 ? "-(" + offset_expression + ")" : "";
+                updateFormula(offset_dimension, offset_expression, negative_offset);
 
                 auto distance_expression = cut_extrusion.distance.expression;
                 distance_expression.shrink_to_fit();
-                if (distance_expression.length() > 0) {
-                    if (distance_dimension->value() > 0) {
-                        auto existing_thickness = existing_params[distance_expression];
-                        if (existing_thickness.length()) {
-                            distance_dimension->expression(existing_thickness);
-                        } else {
-                            distance_dimension->expression(distance_expression);
-                            existing_params[distance_expression] = distance_dimension->name();
-                        }
-                    } else if (distance_dimension->value() < 0) {
-                        auto negative_thickness = "-(" + distance_expression + ")";
-                        auto existing_negative = existing_params[negative_thickness];
+                auto negative_distance = distance_expression.length() > 0 ? "-(" + distance_expression + ")" : "";
+                updateFormula(distance_dimension, distance_expression, negative_distance);
 
-                        if (existing_negative.length()) {
-                            distance_dimension->expression(existing_negative);
-                        } else {
-                            distance_dimension->expression(negative_thickness);
-                            existing_params[negative_thickness] = distance_dimension->name();
-                        }
-                    }
-
-                    auto group = cut.group.names;
-                    auto feature_prefix = names + " " + concat_names({group.begin(), group.end()});
-                    if (cut.corner) {
-                        cut_feature->name(feature_prefix + " Corner Extrusion");
-                    } else {
-                        cut_feature->name(feature_prefix + " Finger Extrusion");
-                    }
-                    features.emplace_back(cut_feature);
+                auto group = cut.group.names;
+                auto feature_prefix = names + " " + concat_names({group.begin(), group.end()});
+                if (cut.corner) {
+                    cut_feature->name(feature_prefix + " Corner Extrusion");
+                } else {
+                    cut_feature->name(feature_prefix + " Finger Extrusion");
                 }
+                features.emplace_back(cut_feature);
             }
 
             if ((cut.profile.finger_count <= 1) && (!cut.corner)) {
@@ -293,33 +290,18 @@ auto ParametricRenderer::renderSinglePanel(
                 if (cut.corner) {
                     auto const& distance = copy_feature->distanceOne();
 
-                    auto existing_distance = existing_params[cut.profile.parameters.corner_distance];
-                    if (existing_distance.length()) {
-                        distance->expression(existing_distance);
-                    } else {
-                        distance->expression(cut.profile.parameters.corner_distance);
-                        existing_params[cut.profile.parameters.corner_distance] = distance->name();
-                    }
+                    auto distance_expression = cut.profile.parameters.corner_distance;
+                    updateFormula(distance, distance_expression);
                     copy_feature->name(feature_prefix.append(" Corner Pattern"));
                 } else {
                     auto const& distance = copy_feature->distanceOne();
                     auto const& quantity = copy_feature->quantityOne();
 
-                    auto existing_distance = existing_params[cut.profile.parameters.pattern_distance];
-                    if (existing_distance.length()) {
-                        distance->expression(existing_distance);
-                    } else {
-                        distance->expression(cut.profile.parameters.pattern_distance);
-                        existing_params[cut.profile.parameters.pattern_distance] = distance->name();
-                    }
+                    auto distance_expression = cut.profile.parameters.pattern_distance;
+                    updateFormula(distance, distance_expression);
 
-                    auto existing_quantity = existing_params[cut.profile.parameters.finger_count];
-                    if (existing_quantity.length()) {
-                        quantity->expression(existing_quantity);
-                    } else {
-                        quantity->expression(cut.profile.parameters.finger_count);
-                        existing_params[cut.profile.parameters.finger_count] = quantity->name();
-                    }
+                    auto quantity_expression = cut.profile.parameters.finger_count;
+                    updateFormula(quantity, quantity_expression);
                     copy_feature->name(feature_prefix.append(" Finger Pattern"));
                 }
             }

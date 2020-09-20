@@ -11,8 +11,14 @@
 
 namespace silvanus::generatebox::entities {
 
+    struct CompareExpressionParameter {
+        bool operator()(const std::string& a, const std::string& b) const {
+            return a.length() > b.length();
+        };
+    };
+
     struct ExpressionParameterMap {
-        std::map<std::string, std::string> parameters;
+        std::map<std::string, std::string, CompareExpressionParameter> parameters;
     };
 
 }

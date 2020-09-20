@@ -43,9 +43,6 @@ void PanelProfileSketch::initialize_profile() {
     addGeometricConstraints(m_profile_lines);
     addOriginConstraint(m_profile_lines);
     addProfileDimensions();
-
-    m_profile_length->parameter()->expression(m_profile.length.expression);
-    m_profile_width->parameter()->expression(m_profile.width.expression);
 }
 
 auto PanelProfileSketch::draw_profile() -> Ptr<SketchLineList> {
@@ -66,11 +63,5 @@ void PanelProfileSketch::addProfileDimensions() {
 auto PanelProfileSketch::extrudeProfile(const ExtrusionDistance& distance, const PanelOffset& offset) const -> Ptr<ExtrudeFeature> {
     const auto& input = silvanus::generatebox::fusion::createSimpleExtrusion(m_sketch, m_sketch->profiles()->item(0), distance, offset);
 
-    auto feature = m_sketch->parentComponent()->features()->extrudeFeatures()->add(input);
-
-    auto has_distance_expression = distance.expression.length() > 0;
-    auto distance_param = Ptr<DistanceExtentDefinition>{feature->extentOne()}->distance();
-    if (has_distance_expression) distance_param->expression(distance.expression); // Reassign since Fusion appears to throw away the string expression
-
-    return feature;
+    return m_sketch->parentComponent()->features()->extrudeFeatures()->add(input);
 }
